@@ -26,6 +26,18 @@ namespace Panoptes.Infrastructure.Persistence
                 entity.Property(e => e.TargetUrl)
                     .IsRequired();
             });
+            
+            // Configure cascade delete: when a subscription is deleted, delete all its logs
+            modelBuilder.Entity<DeliveryLog>(entity =>
+            {
+                entity.HasOne(d => d.Subscription)
+                    .WithMany()
+                    .HasForeignKey(d => d.SubscriptionId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                    
+                entity.Property(e => e.Status)
+                    .HasConversion<string>();
+            });
         }
     }
 }

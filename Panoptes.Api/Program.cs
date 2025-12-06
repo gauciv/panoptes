@@ -29,8 +29,9 @@ builder.Services.AddHttpClient();
 builder.Services.AddScoped<IWebhookDispatcher, WebhookDispatcher>();
 builder.Services.AddScoped<PanoptesReducer>();
 
-// Register Worker
+// Register Workers
 builder.Services.AddHostedService<ArgusWorker>();
+builder.Services.AddHostedService<WebhookRetryWorker>();
 
 var app = builder.Build();
 

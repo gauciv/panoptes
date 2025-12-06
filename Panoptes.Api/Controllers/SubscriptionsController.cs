@@ -104,6 +104,17 @@ namespace Panoptes.Api.Controllers
             };
             
             var log = await _dispatcher.DispatchAsync(sub, testPayload);
+            
+            // Set delivery status based on response
+            if (log.ResponseStatusCode >= 200 && log.ResponseStatusCode < 300)
+            {
+                log.Status = DeliveryStatus.Success;
+            }
+            else
+            {
+                log.Status = DeliveryStatus.Retrying;
+                log.NextRetryAt = DateTime.UtcNow.AddSeconds(30);
+            }
 
             _dbContext.DeliveryLogs.Add(log);
             await _dbContext.SaveChangesAsync();

@@ -40,7 +40,11 @@ namespace Panoptes.Infrastructure.Services
             var blockHash = block.Header().Hash();
             var blockHeight = block.Header().HeaderBody().BlockNumber();
 
-            _logger?.LogInformation("Processing block at slot {Slot}, height {Height}", slot, blockHeight);
+            // Only log every 100 blocks to reduce spam during sync
+            if (blockHeight % 100 == 0)
+            {
+                _logger?.LogInformation("Processing block at slot {Slot}, height {Height}", slot, blockHeight);
+            }
 
             // Fetch all active subscriptions
             var subscriptions = await _dbContext.WebhookSubscriptions
@@ -211,12 +215,25 @@ namespace Panoptes.Infrastructure.Services
             try
             {
                 var log = await _dispatcher.DispatchAsync(sub, payload);
+                
+                // Set status based on response
+                if (log.IsSuccess)
+                {
+                    log.Status = DeliveryStatus.Success;
+                }
+                else
+                {
+                    // Schedule for retry with exponential backoff
+                    log.Status = DeliveryStatus.Retrying;
+                    log.NextRetryAt = DateTime.UtcNow.AddSeconds(30); // First retry in 30 seconds
+                }
+                
                 _dbContext.DeliveryLogs.Add(log);
                 await _dbContext.SaveChangesAsync();
 
                 _logger?.LogInformation(
-                    "Dispatched webhook to {Name} ({Url}) - Status: {Status}", 
-                    sub.Name, sub.TargetUrl, log.ResponseStatusCode);
+                    "Dispatched webhook to {Name} ({Url}) - Status: {StatusCode}, DeliveryStatus: {Status}", 
+                    sub.Name, sub.TargetUrl, log.ResponseStatusCode, log.Status);
             }
             catch (Exception ex)
             {
