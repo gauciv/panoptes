@@ -17,3 +17,11 @@
 # Environment Variables (CRITICAL for security)
 .env
 appsettings.Development.json
+
+# node
+node_modules/
+npm-debug.log
+yarn-error.log
+.pnp.*
+.cache/
+dist/
