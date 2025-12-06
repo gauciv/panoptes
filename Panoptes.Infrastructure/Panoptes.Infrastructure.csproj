@@ -13,6 +13,7 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.11" />
     <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.0" />
+    <PackageReference Include="Argus.Sync" Version="2.0.0" />
   </ItemGroup>
 
 </Project>

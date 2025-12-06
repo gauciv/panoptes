@@ -1,13 +1,13 @@
 using Microsoft.EntityFrameworkCore;
 using Panoptes.Core.Entities;
-using Panoptes.Core.External;
 using Panoptes.Core.Interfaces;
+using Argus.Sync;
 using System.Linq;
 using System.Threading.Tasks;
 
 namespace Panoptes.Infrastructure.Services
 {
-    public class PanoptesReducer : IReducer
+    public class PanoptesReducer : IReducer<Block>
     {
         private readonly IAppDbContext _dbContext;
         private readonly IWebhookDispatcher _dispatcher;

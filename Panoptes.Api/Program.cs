@@ -4,6 +4,8 @@ using Panoptes.Core.Interfaces;
 using Panoptes.Infrastructure.Persistence;
 using Panoptes.Infrastructure.Services;
 using Panoptes.Infrastructure.Configurations;
+using Panoptes.Api.Workers;
+using Argus.Sync;
 using System;
 using System.IO;
 
@@ -27,7 +29,10 @@ builder.Services.AddScoped<IAppDbContext>(provider => provider.GetRequiredServic
 // Register Services
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<IWebhookDispatcher, WebhookDispatcher>();
-builder.Services.AddScoped<IReducer, PanoptesReducer>();
+builder.Services.AddScoped<PanoptesReducer>();
+
+// Register Worker
+builder.Services.AddHostedService<ArgusWorker>();
 
 var app = builder.Build();
 
