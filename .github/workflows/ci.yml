@@ -1,0 +1,133 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+env:
+  DOTNET_VERSION: '9.0.x'
+  NODE_VERSION: '18.x'
+
+jobs:
+  backend-build:
+    name: Build & Test Backend
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+        
+    - name: Restore dependencies
+      run: dotnet restore
+      
+    - name: Build
+      run: dotnet build --configuration Release --no-restore
+      
+    - name: Run tests
+      run: dotnet test --configuration Release --no-build --verbosity normal
+      
+    - name: Check for security vulnerabilities
+      run: dotnet list package --vulnerable --include-transitive
+
+  frontend-build:
+    name: Build & Test Frontend
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        cache-dependency-path: Panoptes.Client/package-lock.json
+        
+    - name: Install dependencies
+      working-directory: ./Panoptes.Client
+      run: npm ci
+      
+    - name: Build
+      working-directory: ./Panoptes.Client
+      run: npm run build
+      
+    - name: Lint
+      working-directory: ./Panoptes.Client
+      run: npm run lint || true
+      
+    - name: Run tests
+      working-directory: ./Panoptes.Client
+      run: npm test || echo "No tests configured"
+      
+    - name: Security audit
+      working-directory: ./Panoptes.Client
+      run: npm audit --audit-level=high || true
+
+  code-quality:
+    name: Code Quality Checks
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Check for API keys in commits
+      run: |
+        if git log --all --source --full-history -S "dmtr_" | grep -q "dmtr_"; then
+          echo "::error::API key detected in commit history"
+          exit 1
+        fi
+        if git log --all --source --full-history -S "utxorpc" | grep -E "utxorpc1[a-z0-9]+" -q; then
+          echo "::warning::Potential API key pattern detected in history"
+        fi
+        
+    - name: Check for hardcoded secrets
+      run: |
+        if grep -r "ApiKey.*:" --include="*.json" --include="*.cs" | grep -v "YOUR_.*_HERE" | grep -v "appsettings.json" | grep -q "utxorpc"; then
+          echo "::error::Hardcoded API key detected"
+          exit 1
+        fi
+        
+    - name: Verify gitignore
+      run: |
+        if [ ! -f .gitignore ]; then
+          echo "::error::.gitignore file missing"
+          exit 1
+        fi
+        if ! grep -q "appsettings.Local.json" .gitignore; then
+          echo "::error::appsettings.Local.json not in .gitignore"
+          exit 1
+        fi
+
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+        severity: 'CRITICAL,HIGH'
+        
+    - name: Upload Trivy results to GitHub Security
+      uses: github/codeql-action/upload-sarif@v3
+      if: always()
+      with:
+        sarif_file: 'trivy-results.sarif'

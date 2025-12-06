@@ -8,6 +8,8 @@
   [![Powered by Argus.Sync](https://img.shields.io/badge/Powered%20by-Argus.Sync-green)](https://github.com/txpipe/argus)
   [![.NET 9.0](https://img.shields.io/badge/.NET-9.0-512BD4)](https://dotnet.microsoft.com/)
   [![React](https://img.shields.io/badge/React-18-61DAFB)](https://reactjs.org/)
+  [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+  [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](.github/CONTRIBUTING.md)
   
   <p>
     <strong>Panoptes</strong> is a production-ready webhook notification system for the Cardano blockchain. 
@@ -323,10 +325,32 @@ This indicates a parsing issue with the CBOR structure. Report these logs for in
 
 ## 🤝 Contributing
 
-Built for the [SAIB Competition](https://github.com/txpipe/saib) using:
-- [Argus.Sync](https://github.com/txpipe/argus) - Blockchain indexing framework
-- [Chrysalis.Cbor](https://www.nuget.org/packages/Chrysalis.Cbor) - CBOR deserialization
+We welcome contributions from the community! Whether you're fixing bugs, adding features, or improving documentation, your help makes Panoptes better for everyone.
+
+### How to Contribute
+
+1. **Read the Guidelines**: Check out our [Contributing Guide](.github/CONTRIBUTING.md)
+2. **Find an Issue**: Look for issues tagged with `good first issue` or `help wanted`
+3. **Fork & Code**: Make your changes following our coding standards
+4. **Submit PR**: Use our [Pull Request Template](.github/PULL_REQUEST_TEMPLATE.md)
+
+### Ways to Contribute
+
+- 🐛 **Report Bugs**: Use our [Bug Report Template](.github/ISSUE_TEMPLATE/bug_report.md)
+- ✨ **Request Features**: Use our [Feature Request Template](.github/ISSUE_TEMPLATE/feature_request.md)
+- 📝 **Improve Docs**: Fix typos, add examples, write tutorials
+- 🧪 **Write Tests**: Improve test coverage
+- 🔍 **Review PRs**: Help review pull requests from other contributors
+
+### Built With
+
+- [Argus.Sync](https://github.com/txpipe/argus) - Blockchain indexing framework by TxPipe
+- [Chrysalis.Cbor](https://www.nuget.org/packages/Chrysalis.Cbor) - CBOR deserialization for Cardano
 - [UtxoRPC](https://utxorpc.org/) - Cardano data provider (via Demeter)
+
+### Code of Conduct
+
+This project follows the [Contributor Covenant Code of Conduct](.github/CODE_OF_CONDUCT.md). By participating, you are expected to uphold this code.
 
 ---
 
