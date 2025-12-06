@@ -1,0 +1,58 @@
+using Microsoft.EntityFrameworkCore;
+using Panoptes.Core.Entities;
+using Panoptes.Core.External;
+using Panoptes.Core.Interfaces;
+using System.Linq;
+using System.Threading.Tasks;
+
+namespace Panoptes.Infrastructure.Services
+{
+    public class PanoptesReducer : IReducer
+    {
+        private readonly IAppDbContext _dbContext;
+        private readonly IWebhookDispatcher _dispatcher;
+
+        public PanoptesReducer(IAppDbContext dbContext, IWebhookDispatcher dispatcher)
+        {
+            _dbContext = dbContext;
+            _dispatcher = dispatcher;
+        }
+
+        public async Task ProcessBlockAsync(Block block)
+        {
+            // Fetch all active subscriptions
+            var subscriptions = await _dbContext.WebhookSubscriptions
+                .Where(s => s.IsActive)
+                .AsNoTracking()
+                .ToListAsync();
+
+            if (!subscriptions.Any())
+            {
+                return;
+            }
+
+            if (block.Transactions == null)
+            {
+                return;
+            }
+
+            foreach (var transaction in block.Transactions)
+            {
+                foreach (var sub in subscriptions)
+                {
+                    if (sub.Matches(transaction.Address, transaction.PolicyId))
+                    {
+                        // Dispatch the webhook
+                        var log = await _dispatcher.DispatchAsync(sub, transaction);
+
+                        // Add the log to the database
+                        _dbContext.DeliveryLogs.Add(log);
+                    }
+                }
+            }
+
+            // Save all delivery logs
+            await _dbContext.SaveChangesAsync();
+        }
+    }
+}
