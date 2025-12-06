@@ -114,7 +114,7 @@ namespace Panoptes.Api.Workers
 
                         await foreach (var response in provider.StartChainSyncAsync(intersections, networkMagic, stoppingToken))
                         {
-                            if (response.Action == NextResponseAction.RollForward)
+                            if (response.Action == NextResponseAction.RollForward && response.Block != null)
                             {
                                 await reducer.RollForwardAsync(response.Block);
                             }
