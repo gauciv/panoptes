@@ -1,0 +1,99 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., v1.0.0)'
+        required: true
+        type: string
+
+env:
+  DOTNET_VERSION: '9.0.x'
+  NODE_VERSION: '18.x'
+
+jobs:
+  create-release:
+    name: 🚀 Create Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      
+    steps:
+    - name: 📥 Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        
+    - name: 🏷️ Get version
+      id: version
+      run: |
+        if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+          echo "version=${{ inputs.version }}" >> $GITHUB_OUTPUT
+        else
+          echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+        fi
+        
+    - name: 📝 Generate changelog
+      id: changelog
+      run: |
+        echo "## What's Changed" > changelog.md
+        git log --pretty=format:"- %s (%h)" $(git describe --tags --abbrev=0 HEAD^)..HEAD >> changelog.md || echo "Initial release" >> changelog.md
+        
+    - name: 🔧 Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+        
+    - name: 🔧 Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        cache-dependency-path: Panoptes.Client/package-lock.json
+        
+    - name: 🏗️ Build backend
+      run: |
+        dotnet restore
+        dotnet build --configuration Release --no-restore
+        dotnet publish Panoptes.Api/Panoptes.Api.csproj -c Release -o ./publish/backend
+        
+    - name: 🏗️ Build frontend
+      working-directory: ./Panoptes.Client
+      run: |
+        npm ci
+        npm run build
+        
+    - name: 📦 Package artifacts
+      run: |
+        # Create release packages
+        mkdir -p release-artifacts
+        
+        # Backend package
+        cd publish/backend
+        zip -r ../../release-artifacts/panoptes-backend-${{ steps.version.outputs.version }}.zip .
+        cd ../..
+        
+        # Frontend package
+        cd Panoptes.Client/dist
+        zip -r ../../release-artifacts/panoptes-frontend-${{ steps.version.outputs.version }}.zip .
+        cd ../..
+        
+        # Source package
+        git archive --format=zip --output=release-artifacts/panoptes-source-${{ steps.version.outputs.version }}.zip HEAD
+        
+    - name: 🚀 Create GitHub Release
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: ${{ steps.version.outputs.version }}
+        name: Release ${{ steps.version.outputs.version }}
+        body_path: changelog.md
+        draft: false
+        prerelease: false
+        files: |
+          release-artifacts/*.zip
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

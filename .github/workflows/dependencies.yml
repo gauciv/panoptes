@@ -1,0 +1,204 @@
+name: Dependency Updates
+
+on:
+  schedule:
+    # Run weekly on Monday at 9am UTC
+    - cron: '0 9 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update-dotnet-dependencies:
+    name: 📦 Update .NET Dependencies
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: 🔧 Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '9.0.x'
+        
+    - name: 🔍 Check for updates
+      id: check
+      run: |
+        echo "🔍 Checking for outdated packages..."
+        dotnet list package --outdated > outdated.txt
+        cat outdated.txt
+        
+        if grep -q "Top-level Package" outdated.txt; then
+          echo "has_updates=true" >> $GITHUB_OUTPUT
+        else
+          echo "has_updates=false" >> $GITHUB_OUTPUT
+        fi
+        
+    - name: 📊 Update packages
+      if: steps.check.outputs.has_updates == 'true'
+      run: |
+        # Update packages (one at a time for safety)
+        dotnet list package --outdated | grep ">" | awk '{print $2}' | while read package; do
+          echo "Updating $package..."
+          dotnet add package $package || echo "Failed to update $package"
+        done
+        
+    - name: 🧪 Test after updates
+      if: steps.check.outputs.has_updates == 'true'
+      run: |
+        dotnet restore
+        dotnet build --no-restore
+        dotnet test --no-build
+        
+    - name: 📤 Create Pull Request
+      if: steps.check.outputs.has_updates == 'true'
+      uses: peter-evans/create-pull-request@v5
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        commit-message: 'chore(deps): update .NET dependencies'
+        title: '🔄 Update .NET Dependencies'
+        body: |
+          ## 📦 Dependency Updates
+          
+          This PR updates outdated .NET packages.
+          
+          ### Changes
+          - Automated package updates via `dotnet list package --outdated`
+          
+          ### Testing
+          - ✅ Build successful
+          - ✅ Tests passing
+          
+          ### Review
+          Please review the changes and ensure everything works as expected.
+          
+          ---
+          *Automated by GitHub Actions*
+        branch: chore/update-dotnet-deps
+        delete-branch: true
+        labels: dependencies, automated
+
+  update-npm-dependencies:
+    name: 📦 Update NPM Dependencies
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: 🔧 Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18.x'
+        cache: 'npm'
+        cache-dependency-path: Panoptes.Client/package-lock.json
+        
+    - name: 📊 Update npm packages
+      working-directory: ./Panoptes.Client
+      run: |
+        npm update
+        npm audit fix || true
+        
+    - name: 🧪 Test after updates
+      working-directory: ./Panoptes.Client
+      run: |
+        npm ci
+        npm run build
+        
+    - name: 📤 Create Pull Request
+      uses: peter-evans/create-pull-request@v5
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        commit-message: 'chore(deps): update npm dependencies'
+        title: '🔄 Update NPM Dependencies'
+        body: |
+          ## 📦 Dependency Updates
+          
+          This PR updates npm packages in the frontend.
+          
+          ### Changes
+          - Ran `npm update`
+          - Ran `npm audit fix` (if applicable)
+          
+          ### Testing
+          - ✅ Build successful
+          
+          ### Review
+          Please review the changes and test the frontend thoroughly.
+          
+          ---
+          *Automated by GitHub Actions*
+        branch: chore/update-npm-deps
+        delete-branch: true
+        labels: dependencies, automated
+
+  security-audit:
+    name: 🔒 Security Audit
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: 🔧 Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '9.0.x'
+        
+    - name: 🔧 Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18.x'
+        cache: 'npm'
+        cache-dependency-path: Panoptes.Client/package-lock.json
+        
+    - name: 🛡️ .NET vulnerability check
+      run: |
+        echo "🔍 Checking for .NET vulnerabilities..."
+        dotnet list package --vulnerable --include-transitive > vulnerabilities.txt
+        cat vulnerabilities.txt
+        
+        if grep -q "has the following vulnerable packages" vulnerabilities.txt; then
+          echo "::warning::⚠️ Vulnerable .NET packages found!"
+          cat vulnerabilities.txt >> $GITHUB_STEP_SUMMARY
+        fi
+        
+    - name: 🛡️ NPM vulnerability check
+      working-directory: ./Panoptes.Client
+      run: |
+        echo "🔍 Running npm audit..."
+        npm audit --json > ../npm-audit.json || true
+        
+        if [ -s ../npm-audit.json ]; then
+          echo "### 📊 NPM Security Audit" >> $GITHUB_STEP_SUMMARY
+          npm audit >> $GITHUB_STEP_SUMMARY || true
+        fi
+        
+    - name: 📊 Create issue if vulnerabilities found
+      if: failure()
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const title = '🔒 Security Vulnerabilities Detected';
+          const body = `## Security Audit Report
+          
+          Automated security audit detected vulnerabilities in dependencies.
+          
+          ### Action Required
+          Please review the workflow run for details and update affected packages.
+          
+          🔗 [View Workflow Run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+          
+          ---
+          *Automated by GitHub Actions*`;
+          
+          await github.rest.issues.create({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            title: title,
+            body: body,
+            labels: ['security', 'dependencies']
+          });
