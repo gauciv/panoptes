@@ -51,6 +51,25 @@ namespace Panoptes.Infrastructure.Services
                 }
             }
 
+            // Update Checkpoint
+            var state = await _dbContext.SystemStates.FirstOrDefaultAsync(s => s.Key == "LastSyncedSlot");
+            if (state == null)
+            {
+                state = new SystemState { Key = "LastSyncedSlot", Value = block.Slot.ToString() };
+                _dbContext.SystemStates.Add(state);
+            }
+            else
+            {
+                state.Value = block.Slot.ToString();
+            }
+
+            await _dbContext.SaveChangesAsync();
+        }
+    }
+}
+                }
+            }
+
             // Save all delivery logs
             await _dbContext.SaveChangesAsync();
         }

@@ -12,6 +12,7 @@ namespace Panoptes.Infrastructure.Persistence
 
         public DbSet<WebhookSubscription> WebhookSubscriptions { get; set; }
         public DbSet<DeliveryLog> DeliveryLogs { get; set; }
+        public DbSet<SystemState> SystemStates { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

@@ -2,12 +2,15 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.DependencyInjection;
+using Panoptes.Core.Interfaces;
 using Panoptes.Infrastructure.Configurations;
 using Panoptes.Infrastructure.Services;
 using Argus.Sync;
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 
 namespace Panoptes.Api.Workers
 {
@@ -43,13 +46,25 @@ namespace Panoptes.Api.Workers
                     using (var scope = _serviceProvider.CreateScope())
                     {
                         var reducer = scope.ServiceProvider.GetRequiredService<PanoptesReducer>();
+                        var dbContext = scope.ServiceProvider.GetRequiredService<IAppDbContext>();
                         
-                        // Start syncing
-                        // Assuming StartSyncAsync takes the reducer and token
-                        // Also assuming StartSlot is used if provided
+                        // Determine start slot
                         long? startSlot = _config.StartSlot;
-                        
-                        _logger.LogInformation("Starting sync from slot {Slot}", startSlot?.ToString() ?? "Tip");
+
+                        // Check DB for checkpoint
+                        var lastSyncedState = await dbContext.SystemStates
+                            .AsNoTracking()
+                            .FirstOrDefaultAsync(s => s.Key == "LastSyncedSlot", stoppingToken);
+
+                        if (lastSyncedState != null && long.TryParse(lastSyncedState.Value, out var savedSlot))
+                        {
+                            startSlot = savedSlot;
+                            _logger.LogInformation("Resuming from checkpoint slot {Slot}", startSlot);
+                        }
+                        else
+                        {
+                            _logger.LogInformation("Starting sync from config slot {Slot}", startSlot?.ToString() ?? "Tip");
+                        }
 
                         await client.StartSyncAsync(reducer, startSlot, stoppingToken);
                     }
