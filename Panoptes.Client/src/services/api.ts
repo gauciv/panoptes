@@ -20,8 +20,24 @@ export const createSubscription = async (data: Omit<WebhookSubscription, 'id' | 
     return response.data;
 };
 
-export const getLogs = async (): Promise<DeliveryLog[]> => {
-    const response = await api.get<DeliveryLog[]>('/logs');
+export const getLogs = async (skip?: number, take?: number): Promise<DeliveryLog[]> => {
+    const params = new URLSearchParams();
+    if (skip !== undefined) params.append('skip', skip.toString());
+    if (take !== undefined) params.append('take', take.toString());
+    const response = await api.get<DeliveryLog[]>(`/logs?${params.toString()}`);
+    return response.data;
+};
+
+export const getSubscriptionLogs = async (subscriptionId: string, skip?: number, take?: number): Promise<DeliveryLog[]> => {
+    const params = new URLSearchParams();
+    if (skip !== undefined) params.append('skip', skip.toString());
+    if (take !== undefined) params.append('take', take.toString());
+    const response = await api.get<DeliveryLog[]>(`/Subscriptions/${subscriptionId}/logs?${params.toString()}`);
+    return response.data;
+};
+
+export const getSubscription = async (id: string): Promise<WebhookSubscription> => {
+    const response = await api.get<WebhookSubscription>(`/Subscriptions/${id}`);
     return response.data;
 };
 

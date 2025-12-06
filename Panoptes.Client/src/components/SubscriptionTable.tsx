@@ -24,7 +24,7 @@ const SubscriptionTable: React.FC<SubscriptionTableProps> = ({ subscriptions, on
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                         {subscriptions.map((sub) => (
-                            <tr key={sub.id} className="hover:bg-gray-50">
+                            <tr key={sub.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => window.location.href = `/subscriptions/${sub.id}`}>
                                 <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 max-w-[120px] truncate" title={sub.name}>{sub.name}</td>
                                 <td className="px-4 py-3 text-sm text-gray-500 max-w-[200px]">
                                     <span className="block truncate" title={sub.targetUrl}>{sub.targetUrl}</span>
@@ -44,7 +44,7 @@ const SubscriptionTable: React.FC<SubscriptionTableProps> = ({ subscriptions, on
                                     </span>
                                 </td>
                                 <td className="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
-                                    <div className="flex justify-end gap-1">
+                                    <div className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
                                         <button
                                             onClick={() => onTest(sub.id)}
                                             className="text-indigo-600 hover:text-indigo-900 bg-indigo-50 px-2 py-1 rounded text-xs transition-colors"

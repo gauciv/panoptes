@@ -221,9 +221,16 @@ const Dashboard: React.FC = () => {
             />
           </div>
 
-          {/* Right Column: Logs (1/3 width) */}
-          <div className="lg:col-span-1 h-[600px]">
-            <LogViewer logs={logs} />
+          {/* Right Column: All Delivery Logs (1/3 width) */}
+          <div className="lg:col-span-1">
+            <div className="bg-white shadow rounded-lg">
+              <div className="px-6 py-5 border-b border-gray-200">
+                <h2 className="text-lg font-medium text-gray-900">All Delivery Logs</h2>
+              </div>
+              <div className="px-6 py-5 max-h-[600px] overflow-y-auto">
+                <LogViewer logs={logs} />
+              </div>
+            </div>
           </div>
         </div>
       </main>
