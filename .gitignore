@@ -17,6 +17,9 @@
 # Environment Variables (CRITICAL for security)
 .env
 appsettings.Development.json
+appsettings.Local.json
+**/appsettings.*.json
+!**/appsettings.json
 
 # node
 node_modules/
