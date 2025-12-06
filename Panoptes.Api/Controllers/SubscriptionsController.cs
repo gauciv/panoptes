@@ -24,10 +24,22 @@ namespace Panoptes.Api.Controllers
         [HttpPost]
         public async Task<ActionResult<WebhookSubscription>> CreateSubscription(WebhookSubscription subscription)
         {
+            // Validate TargetUrl
+            if (string.IsNullOrWhiteSpace(subscription.TargetUrl) ||
+                !Uri.TryCreate(subscription.TargetUrl, UriKind.Absolute, out var uri) ||
+                (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+            {
+                return BadRequest("Invalid TargetUrl. Must be a valid HTTP or HTTPS URL.");
+            }
+
+            // Auto-generate ID if not provided
             if (subscription.Id == Guid.Empty)
             {
                 subscription.Id = Guid.NewGuid();
             }
+            
+            // Auto-generate SecretKey (ignore any client-provided value)
+            subscription.SecretKey = Guid.NewGuid().ToString("N");
             
             if (subscription.CreatedAt == default)
             {
@@ -74,16 +86,24 @@ namespace Panoptes.Api.Controllers
         }
 
         [HttpPost("test/{id}")]
-        public async Task<ActionResult> TestSubscription(Guid id)
+        public async Task<ActionResult<DeliveryLog>> TestSubscription(Guid id)
         {
             var sub = await _dbContext.WebhookSubscriptions.FindAsync(id);
             if (sub == null)
             {
-                return NotFound();
+                return NotFound($"Subscription with ID {id} not found.");
             }
 
-            var fakePayload = new { Message = "This is a test event", Timestamp = DateTime.UtcNow };
-            var log = await _dispatcher.DispatchAsync(sub, fakePayload);
+            var testPayload = new 
+            { 
+                Event = "test",
+                Message = "This is a test event from Panoptes", 
+                SubscriptionId = sub.Id,
+                SubscriptionName = sub.Name,
+                Timestamp = DateTime.UtcNow 
+            };
+            
+            var log = await _dispatcher.DispatchAsync(sub, testPayload);
 
             _dbContext.DeliveryLogs.Add(log);
             await _dbContext.SaveChangesAsync();
