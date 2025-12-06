@@ -5,7 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Panoptes.Core.Interfaces;
 using Panoptes.Infrastructure.Configurations;
 using Panoptes.Infrastructure.Services;
-using Argus.Sync.Providers;
+using Panoptes.Infrastructure.Providers;
 using Argus.Sync.Data.Models;
 using Chrysalis.Cbor.Extensions.Cardano.Core;
 using Chrysalis.Cbor.Extensions.Cardano.Core.Header;
@@ -47,7 +47,8 @@ namespace Panoptes.Api.Workers
                         { "dmtr-api-key", _config.ApiKey }
                     };
                     
-                    var provider = new U5CProvider(_config.GrpcEndpoint, headers);
+                    // Use our custom provider that handles UtxoRPC format correctly
+                    var provider = new PanoptesU5CProvider(_config.GrpcEndpoint, headers);
 
                     using (var scope = _serviceProvider.CreateScope())
                     {

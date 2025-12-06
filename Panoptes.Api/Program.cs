@@ -29,8 +29,8 @@ builder.Services.AddHttpClient();
 builder.Services.AddScoped<IWebhookDispatcher, WebhookDispatcher>();
 builder.Services.AddScoped<PanoptesReducer>();
 
-// Register Worker (disabled until Argus.Sync CBOR issue is resolved)
-// builder.Services.AddHostedService<ArgusWorker>();
+// Register Worker
+builder.Services.AddHostedService<ArgusWorker>();
 
 var app = builder.Build();
 
