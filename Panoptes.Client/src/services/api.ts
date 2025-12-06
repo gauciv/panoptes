@@ -28,11 +28,11 @@ export const getLogs = async (skip?: number, take?: number): Promise<{ logs: Del
     return response.data;
 };
 
-export const getSubscriptionLogs = async (subscriptionId: string, skip?: number, take?: number): Promise<DeliveryLog[]> => {
+export const getSubscriptionLogs = async (subscriptionId: string, skip?: number, take?: number): Promise<{ logs: DeliveryLog[], totalCount: number }> => {
     const params = new URLSearchParams();
     if (skip !== undefined) params.append('skip', skip.toString());
     if (take !== undefined) params.append('take', take.toString());
-    const response = await api.get<DeliveryLog[]>(`/Subscriptions/${subscriptionId}/logs?${params.toString()}`);
+    const response = await api.get<{ logs: DeliveryLog[], totalCount: number }>(`/Subscriptions/${subscriptionId}/logs?${params.toString()}`);
     return response.data;
 };
 

@@ -122,7 +122,7 @@ namespace Panoptes.Api.Controllers
         }
 
         [HttpGet("{id}/logs")]
-        public async Task<ActionResult<System.Collections.Generic.IEnumerable<DeliveryLog>>> GetSubscriptionLogs(
+        public async Task<ActionResult> GetSubscriptionLogs(
             Guid id,
             [FromQuery] int? skip = 0,
             [FromQuery] int? take = 50)
@@ -136,6 +136,10 @@ namespace Panoptes.Api.Controllers
                     return NotFound($"Subscription with ID {id} not found.");
                 }
 
+                var totalCount = await _dbContext.DeliveryLogs
+                    .Where(l => l.SubscriptionId == id)
+                    .CountAsync();
+
                 var logs = await _dbContext.DeliveryLogs
                     .Where(l => l.SubscriptionId == id)
                     .OrderByDescending(l => l.AttemptedAt)
@@ -143,7 +147,7 @@ namespace Panoptes.Api.Controllers
                     .Take(Math.Min(take ?? 50, 100)) // Max 100 per request
                     .ToListAsync();
 
-                return Ok(logs);
+                return Ok(new { logs, totalCount });
             }
             catch (Exception ex)
             {

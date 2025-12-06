@@ -1,15 +1,21 @@
 import React, { useState } from 'react';
-import { DeliveryLog } from '../types';
+import { DeliveryLog, WebhookSubscription } from '../types';
 
 interface LogViewerProps {
     logs: DeliveryLog[];
+    subscriptions?: WebhookSubscription[];
 }
 
-const LogViewer: React.FC<LogViewerProps> = ({ logs }) => {
+const LogViewer: React.FC<LogViewerProps> = ({ logs, subscriptions = [] }) => {
     const [expandedLogId, setExpandedLogId] = useState<string | null>(null);
 
     const toggleExpand = (id: string) => {
         setExpandedLogId(expandedLogId === id ? null : id);
+    };
+
+    const getSubscriptionName = (subscriptionId: string) => {
+        const sub = subscriptions.find(s => s.id === subscriptionId);
+        return sub?.name || `ID: ${subscriptionId.substring(0, 8)}...`;
     };
 
     return (
@@ -29,7 +35,7 @@ const LogViewer: React.FC<LogViewerProps> = ({ logs }) => {
                                     className="px-6 py-4 cursor-pointer"
                                     onClick={() => toggleExpand(log.id)}
                                 >
-                                    <div className="flex items-center justify-between">
+                                    <div className="flex items-center justify-between mb-2">
                                         <div className="flex items-center space-x-3">
                                             <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
                                                 isSuccess ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
@@ -44,6 +50,11 @@ const LogViewer: React.FC<LogViewerProps> = ({ logs }) => {
                                             {log.latencyMs.toFixed(0)}ms
                                         </div>
                                     </div>
+                                    {subscriptions.length > 0 && (
+                                        <div className="text-xs text-gray-600 pl-1">
+                                            📌 {getSubscriptionName(log.subscriptionId)}
+                                        </div>
+                                    )}
                                 </div>
                                 {isExpanded && (
                                     <div className="px-6 pb-4 bg-gray-50 border-t border-gray-100">

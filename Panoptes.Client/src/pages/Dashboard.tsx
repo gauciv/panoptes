@@ -35,7 +35,7 @@ const Dashboard: React.FC = () => {
 
   const fetchLogs = async () => {
     try {
-      const logsData = await getLogs();
+      const logsData = await getLogs(0, 10); // Limit to 10 most recent logs for dashboard
       setLogs(logsData.logs);
       setTotalLogs(logsData.totalCount);
       setError(null);
@@ -243,11 +243,16 @@ const Dashboard: React.FC = () => {
           {/* Right Column: All Delivery Logs (1/3 width) */}
           <div className="lg:col-span-1">
             <div className="bg-white shadow rounded-lg">
-              <div className="px-6 py-5 border-b border-gray-200">
-                <h2 className="text-lg font-medium text-gray-900">All Delivery Logs</h2>
+              <div className="px-6 py-5 border-b border-gray-200 flex justify-between items-center">
+                <h2 className="text-lg font-medium text-gray-900">Recent Logs</h2>
+                {totalLogs > 0 && (
+                  <span className="text-xs text-gray-500">
+                    Showing {Math.min(10, logs.length)} of {totalLogs}
+                  </span>
+                )}
               </div>
               <div className="px-6 py-5 max-h-[600px] overflow-y-auto">
-                <LogViewer logs={logs} />
+                <LogViewer logs={logs} subscriptions={subscriptions} />
               </div>
             </div>
           </div>

@@ -12,6 +12,7 @@ const SubscriptionDetail: React.FC = () => {
   
   const [subscription, setSubscription] = useState<WebhookSubscription | null>(null);
   const [logs, setLogs] = useState<DeliveryLog[]>([]);
+  const [totalLogs, setTotalLogs] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -34,7 +35,8 @@ const SubscriptionDetail: React.FC = () => {
     if (!id) return;
     try {
       const logsData = await getSubscriptionLogs(id, 0, 100);
-      setLogs(logsData);
+      setLogs(logsData.logs);
+      setTotalLogs(logsData.totalCount);
       setError(null);
     } catch (error: any) {
       console.error("Error fetching logs:", error);
@@ -321,7 +323,13 @@ const SubscriptionDetail: React.FC = () => {
             <h2 className="text-lg font-medium text-gray-900">Delivery Logs</h2>
           </div>
           <div className="px-6 py-5">
-            <DeliveryLogsTable logs={logs} showSubscriptionId={false} />
+            <DeliveryLogsTable 
+              logs={logs} 
+              showSubscriptionId={false}
+              totalCount={totalLogs}
+              currentPage={1}
+              pageSize={100}
+            />
           </div>
         </div>
       </main>
