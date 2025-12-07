@@ -3,10 +3,12 @@ import { getSubscriptions, getLogs, createSubscription, triggerTestEvent, update
 import { WebhookSubscription, DeliveryLog } from '../types';
 import StatCard from '../components/StatCard';
 import SubscriptionTable from '../components/SubscriptionTable';
+import SubscriptionFilters from '../components/SubscriptionFilters';
 import LogViewer from '../components/LogViewer';
 import CreateSubscriptionModal from '../components/CreateSubscriptionModal';
 import EditSubscriptionModal from '../components/EditSubscriptionModal';
 import ConfirmationModal from '../components/ConfirmationModal';
+import { useSubscriptionFilters } from '../hooks/useSubscriptionFilters';
 
 const Dashboard: React.FC = () => {
   const [subscriptions, setSubscriptions] = useState<WebhookSubscription[]>([]);
@@ -18,6 +20,22 @@ const Dashboard: React.FC = () => {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedSubscription, setSelectedSubscription] = useState<WebhookSubscription | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Subscription filters
+  const {
+    searchQuery,
+    statusFilter,
+    eventTypeFilter,
+    sortBy,
+    availableEventTypes,
+    activeFilterCount,
+    filteredSubscriptions,
+    setSearchQuery,
+    setStatusFilter,
+    setEventTypeFilter,
+    setSortBy,
+    clearFilters,
+  } = useSubscriptionFilters(subscriptions);
 
   const fetchSubscriptions = async () => {
     try {
@@ -228,16 +246,41 @@ const Dashboard: React.FC = () => {
               <h2 className="text-lg font-medium text-gray-900">Subscriptions</h2>
               <button 
                 onClick={() => setIsModalOpen(true)}
-                className="bg-indigo-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-indigo-700"
+                className="bg-sentinel text-white px-4 py-2 rounded-tech text-sm font-medium hover:bg-sentinel-hover transition-colors"
               >
                 New Subscription
               </button>
             </div>
+            
+            {/* Filter Bar */}
+            <SubscriptionFilters
+              searchQuery={searchQuery}
+              statusFilter={statusFilter}
+              eventTypeFilter={eventTypeFilter}
+              sortBy={sortBy}
+              activeFilterCount={activeFilterCount}
+              availableEventTypes={availableEventTypes}
+              onSearchChange={setSearchQuery}
+              onStatusChange={setStatusFilter}
+              onEventTypeChange={setEventTypeFilter}
+              onSortChange={setSortBy}
+              onClearFilters={clearFilters}
+            />
+            
+            {/* Results count */}
+            {subscriptions.length > 0 && (
+              <div className="text-sm text-gray-500">
+                Showing {filteredSubscriptions.length} of {subscriptions.length} subscription{subscriptions.length !== 1 ? 's' : ''}
+                {activeFilterCount > 0 && ' (filtered)'}
+              </div>
+            )}
+            
             <SubscriptionTable 
-              subscriptions={subscriptions} 
+              subscriptions={filteredSubscriptions}
               onTest={handleTest} 
               onEdit={handleEdit}
               onDelete={handleDeleteClick}
+              hasActiveFilters={activeFilterCount > 0}
             />
           </div>
 

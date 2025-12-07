@@ -6,9 +6,10 @@ interface SubscriptionTableProps {
     onTest: (id: string) => void;
     onEdit: (subscription: WebhookSubscription) => void;
     onDelete: (subscription: WebhookSubscription) => void;
+    hasActiveFilters?: boolean;
 }
 
-const SubscriptionTable: React.FC<SubscriptionTableProps> = ({ subscriptions, onTest, onEdit, onDelete }) => {
+const SubscriptionTable: React.FC<SubscriptionTableProps> = ({ subscriptions, onTest, onEdit, onDelete, hasActiveFilters = false }) => {
     return (
         <div className="bg-white shadow rounded-lg overflow-hidden">
             <div className="overflow-x-auto">
@@ -111,10 +112,22 @@ const SubscriptionTable: React.FC<SubscriptionTableProps> = ({ subscriptions, on
             </div>
             {subscriptions.length === 0 && (
                 <div className="text-center py-12 text-gray-500">
-                    <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                    </svg>
-                    <p className="mt-2">No subscriptions yet. Create one to get started!</p>
+                    {hasActiveFilters ? (
+                        <>
+                            <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                            <p className="mt-2">No subscriptions match your filters.</p>
+                            <p className="text-sm text-gray-400 mt-1">Try adjusting your search or filters.</p>
+                        </>
+                    ) : (
+                        <>
+                            <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                            </svg>
+                            <p className="mt-2">No subscriptions yet. Create one to get started!</p>
+                        </>
+                    )}
                 </div>
             )}
         </div>
