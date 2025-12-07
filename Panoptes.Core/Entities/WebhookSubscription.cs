@@ -14,6 +14,9 @@ namespace Panoptes.Core.Entities
         public bool IsActive { get; set; }
         public DateTime CreatedAt { get; set; }
         
+        // Address filtering: null = listen to all, empty = none, populated = filter by these addresses
+        public List<string>? WalletAddresses { get; set; }
+        
         // Rate Limiting
         public int MaxWebhooksPerMinute { get; set; } = 60;
         public int MaxWebhooksPerHour { get; set; } = 1000;

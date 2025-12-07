@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 interface CreateSubscriptionModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onCreate: (data: { name: string; targetUrl: string; eventType: string }) => void;
+  onCreate: (data: { name: string; targetUrl: string; eventType: string; walletAddresses?: string[] }) => void;
 }
 
 const CreateSubscriptionModal: React.FC<CreateSubscriptionModalProps> = ({
@@ -14,9 +14,18 @@ const CreateSubscriptionModal: React.FC<CreateSubscriptionModalProps> = ({
   const [name, setName] = useState('');
   const [targetUrl, setTargetUrl] = useState('');
   const [eventType, setEventType] = useState('Transaction');
+  const [walletAddressesText, setWalletAddressesText] = useState('');
 
   const isValidUrl = (url: string): boolean => {
     return url.startsWith('http://') || url.startsWith('https://');
+  };
+
+  const parseWalletAddresses = (text: string): string[] => {
+    if (!text.trim()) return [];
+    return text
+      .split(/[,\n]+/)  // Split by comma or newline
+      .map(addr => addr.trim())
+      .filter(addr => addr.length > 0);
   };
 
   const isFormValid = name.trim().length > 0 && isValidUrl(targetUrl);
@@ -25,22 +34,27 @@ const CreateSubscriptionModal: React.FC<CreateSubscriptionModalProps> = ({
     e.preventDefault();
     if (!isFormValid) return;
 
+    const walletAddresses = parseWalletAddresses(walletAddressesText);
+
     onCreate({
       name: name.trim(),
       targetUrl: targetUrl.trim(),
       eventType,
+      walletAddresses: walletAddresses.length > 0 ? walletAddresses : undefined,
     });
 
     // Reset form
     setName('');
     setTargetUrl('');
     setEventType('Transaction');
+    setWalletAddressesText('');
   };
 
   const handleClose = () => {
     setName('');
     setTargetUrl('');
     setEventType('Transaction');
+    setWalletAddressesText('');
     onClose();
   };
 
@@ -134,6 +148,26 @@ const CreateSubscriptionModal: React.FC<CreateSubscriptionModalProps> = ({
                   <option value="NFT Mint">NFT Mint</option>
                   <option value="Asset Move">Asset Move</option>
                 </select>
+              </div>
+
+              {/* Wallet Addresses (Optional) */}
+              <div>
+                <label htmlFor="walletAddresses" className="block text-sm font-medium text-gray-700 mb-1">
+                  Wallet Addresses (Optional)
+                </label>
+                <textarea
+                  id="walletAddresses"
+                  value={walletAddressesText}
+                  onChange={(e) => setWalletAddressesText(e.target.value)}
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono text-xs"
+                  placeholder="addr1... or addr_test1...\nOne per line or comma-separated\nLeave empty to listen to all addresses"
+                />
+                {walletAddressesText && (
+                  <p className="mt-1 text-xs text-gray-500">
+                    {parseWalletAddresses(walletAddressesText).length} address(es) specified
+                  </p>
+                )}
               </div>
 
               {/* Info about Secret Key */}

@@ -16,6 +16,7 @@ export interface WebhookSubscription {
     webhooksInLastHour?: number;
     lastWebhookAt?: string | null;
     isRateLimited?: boolean;
+    walletAddresses?: string[] | null;
 }
 
 export interface DeliveryLog {

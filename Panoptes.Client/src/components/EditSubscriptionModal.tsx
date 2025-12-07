@@ -20,7 +20,16 @@ const EditSubscriptionModal: React.FC<EditSubscriptionModalProps> = ({
     const [isActive, setIsActive] = useState(true);
     const [targetAddress, setTargetAddress] = useState('');
     const [policyId, setPolicyId] = useState('');
+    const [walletAddressesText, setWalletAddressesText] = useState('');
     const [urlError, setUrlError] = useState('');
+
+    const parseWalletAddresses = (text: string): string[] => {
+        if (!text.trim()) return [];
+        return text
+            .split(/[,\n]+/)  // Split by comma or newline
+            .map(addr => addr.trim())
+            .filter(addr => addr.length > 0);
+    };
 
     useEffect(() => {
         if (subscription) {
@@ -30,6 +39,7 @@ const EditSubscriptionModal: React.FC<EditSubscriptionModalProps> = ({
             setIsActive(subscription.isActive);
             setTargetAddress(subscription.targetAddress || '');
             setPolicyId(subscription.policyId || '');
+            setWalletAddressesText(subscription.walletAddresses?.join('\n') || '');
             setUrlError('');
         }
     }, [subscription]);
@@ -53,6 +63,8 @@ const EditSubscriptionModal: React.FC<EditSubscriptionModalProps> = ({
             return;
         }
 
+        const walletAddresses = parseWalletAddresses(walletAddressesText);
+
         onSave({
             id: subscription.id,
             name,
@@ -61,6 +73,7 @@ const EditSubscriptionModal: React.FC<EditSubscriptionModalProps> = ({
             isActive,
             targetAddress: targetAddress || null,
             policyId: policyId || null,
+            walletAddresses: walletAddresses.length > 0 ? walletAddresses : null,
         });
     };
 
@@ -177,6 +190,26 @@ const EditSubscriptionModal: React.FC<EditSubscriptionModalProps> = ({
                                 className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                                 placeholder="Policy ID for filtering"
                             />
+                        </div>
+
+                        {/* Wallet Addresses (optional) */}
+                        <div>
+                            <label htmlFor="edit-walletAddresses" className="block text-sm font-medium text-gray-700 mb-1">
+                                Wallet Addresses <span className="text-gray-400">(optional)</span>
+                            </label>
+                            <textarea
+                                id="edit-walletAddresses"
+                                value={walletAddressesText}
+                                onChange={(e) => setWalletAddressesText(e.target.value)}
+                                rows={3}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono text-xs"
+                                placeholder="addr1... or addr_test1...&#10;One per line or comma-separated&#10;Leave empty to listen to all addresses"
+                            />
+                            {walletAddressesText && (
+                                <p className="mt-1 text-xs text-gray-500">
+                                    {parseWalletAddresses(walletAddressesText).length} address(es) specified
+                                </p>
+                            )}
                         </div>
 
                         {/* Active Status */}

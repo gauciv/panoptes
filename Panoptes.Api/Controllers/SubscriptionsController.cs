@@ -22,6 +22,30 @@ namespace Panoptes.Api.Controllers
             _dispatcher = dispatcher;
         }
 
+        /// <summary>
+        /// Validates Cardano addresses (bech32 format starting with addr1, or hex format).
+        /// Basic validation - checks format but doesn't verify checksum.
+        /// </summary>
+        private bool IsValidCardanoAddress(string address)
+        {
+            if (string.IsNullOrWhiteSpace(address))
+                return false;
+            
+            // Bech32 mainnet address
+            if (address.StartsWith("addr1", StringComparison.OrdinalIgnoreCase))
+                return address.Length >= 50 && address.Length <= 110;
+            
+            // Bech32 testnet address
+            if (address.StartsWith("addr_test1", StringComparison.OrdinalIgnoreCase))
+                return address.Length >= 50 && address.Length <= 110;
+            
+            // Hex format (56 bytes = 112 hex chars for payment address)
+            if (address.All(c => "0123456789abcdefABCDEF".Contains(c)))
+                return address.Length >= 56 && address.Length <= 120;
+            
+            return false;
+        }
+
         [HttpPost]
         public async Task<ActionResult<WebhookSubscription>> CreateSubscription(WebhookSubscription subscription)
         {
@@ -31,6 +55,19 @@ namespace Panoptes.Api.Controllers
                 (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
             {
                 return BadRequest("Invalid TargetUrl. Must be a valid HTTP or HTTPS URL.");
+            }
+
+            // Validate wallet addresses if provided
+            if (subscription.WalletAddresses != null && subscription.WalletAddresses.Any())
+            {
+                var invalidAddresses = subscription.WalletAddresses
+                    .Where(addr => !IsValidCardanoAddress(addr))
+                    .ToList();
+                
+                if (invalidAddresses.Any())
+                {
+                    return BadRequest($"Invalid Cardano address(es): {string.Join(", ", invalidAddresses)}");
+                }
             }
 
             // Auto-generate ID if not provided
@@ -297,6 +334,22 @@ namespace Panoptes.Api.Controllers
             existingSub.IsActive = subscription.IsActive;
             existingSub.TargetAddress = subscription.TargetAddress;
             existingSub.PolicyId = subscription.PolicyId;
+
+            // Update wallet address filter if provided
+            if (subscription.WalletAddresses != null)
+            {
+                // Validate addresses
+                var invalidAddresses = subscription.WalletAddresses
+                    .Where(addr => !string.IsNullOrWhiteSpace(addr) && !IsValidCardanoAddress(addr))
+                    .ToList();
+                
+                if (invalidAddresses.Any())
+                {
+                    return BadRequest($"Invalid Cardano address(es): {string.Join(", ", invalidAddresses)}");
+                }
+                
+                existingSub.WalletAddresses = subscription.WalletAddresses;
+            }
 
             await _dbContext.SaveChangesAsync();
 

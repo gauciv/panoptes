@@ -48,6 +48,33 @@ namespace Panoptes.Infrastructure.Services
             _logger = logger;
         }
 
+        /// <summary>
+        /// Checks if a transaction is relevant for a subscription based on wallet address filtering.
+        /// Returns true if: subscription has no address filter (null/empty), or transaction involves any filtered address.
+        /// </summary>
+        private bool IsRelevantForSubscription(WebhookSubscription subscription, HashSet<string> outputAddresses)
+        {
+            // No filter = listen to all
+            if (subscription.WalletAddresses == null || !subscription.WalletAddresses.Any())
+                return true;
+            
+            // Check if any of the subscription's addresses appear in transaction outputs
+            foreach (var filterAddress in subscription.WalletAddresses)
+            {
+                var filterLower = filterAddress.ToLowerInvariant();
+                
+                // Try exact match first
+                if (outputAddresses.Contains(filterLower))
+                    return true;
+                
+                // Also support partial matching (for hex addresses)
+                if (outputAddresses.Any(addr => addr.Contains(filterLower) || filterLower.Contains(addr)))
+                    return true;
+            }
+            
+            return false;
+        }
+
         public async Task RollForwardAsync(Block block)
         {
             var slot = block.Header().HeaderBody().Slot();
@@ -177,14 +204,21 @@ namespace Panoptes.Infrastructure.Services
                 // Check each subscription for matches
                 foreach (var sub in subscriptions)
                 {
+                    // First check: wallet address filtering (if enabled)
+                    if (!IsRelevantForSubscription(sub, outputAddresses))
+                    {
+                        // Transaction doesn't involve any of the filtered addresses - skip
+                        continue;
+                    }
+
                     bool shouldDispatch = false;
                     string matchReason = "";
                     
                     // Debug: Log subscription details on first transaction of significant blocks
                     if (txIndex == 0 && blockHeight % 500 == 0)
                     {
-                        _logger?.LogInformation("Checking subscription '{Name}' (EventType: '{EventType}', TargetAddress: '{Addr}', Active: {Active})", 
-                            sub.Name, sub.EventType, sub.TargetAddress ?? "(none)", sub.IsActive);
+                        _logger?.LogInformation("Checking subscription '{Name}' (EventType: '{EventType}', TargetAddress: '{Addr}', WalletFilter: {Filter}, Active: {Active})", 
+                            sub.Name, sub.EventType, sub.TargetAddress ?? "(none)", sub.WalletAddresses?.Count ?? 0, sub.IsActive);
                     }
 
                     switch (sub.EventType?.ToLowerInvariant())

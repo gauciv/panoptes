@@ -237,6 +237,27 @@ const SubscriptionDetail: React.FC = () => {
                 <dt className="text-sm font-medium text-gray-500">Policy ID</dt>
                 <dd className="mt-1 text-sm text-gray-900 font-mono">{subscription.policyId || '—'}</dd>
               </div>
+              <div className="sm:col-span-2">
+                <dt className="text-sm font-medium text-gray-500">Wallet Address Filter</dt>
+                <dd className="mt-1 text-sm text-gray-900">
+                  {subscription.walletAddresses && subscription.walletAddresses.length > 0 ? (
+                    <div className="space-y-1">
+                      <div className="text-xs text-gray-500 mb-1">
+                        Listening to {subscription.walletAddresses.length} address(es)
+                      </div>
+                      <div className="max-h-32 overflow-y-auto bg-gray-50 rounded p-2">
+                        {subscription.walletAddresses.map((addr, idx) => (
+                          <div key={idx} className="font-mono text-xs text-gray-700 break-all">
+                            {addr}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <span className="text-gray-500 italic">All addresses (no filter)</span>
+                  )}
+                </dd>
+              </div>
               <div>
                 <dt className="text-sm font-medium text-gray-500">Rate Limits</dt>
                 <dd className="mt-1 text-sm text-gray-900">

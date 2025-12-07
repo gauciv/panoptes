@@ -25,6 +25,13 @@ namespace Panoptes.Infrastructure.Persistence
 
                 entity.Property(e => e.TargetUrl)
                     .IsRequired();
+                
+                // Store wallet addresses as JSON array
+                entity.Property(e => e.WalletAddresses)
+                    .HasConversion(
+                        v => v == null ? null : System.Text.Json.JsonSerializer.Serialize(v, (System.Text.Json.JsonSerializerOptions)null),
+                        v => v == null ? null : System.Text.Json.JsonSerializer.Deserialize<List<string>>(v, (System.Text.Json.JsonSerializerOptions)null)
+                    );
             });
             
             // Configure cascade delete: when a subscription is deleted, delete all its logs
