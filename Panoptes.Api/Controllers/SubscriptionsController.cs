@@ -442,7 +442,7 @@ namespace Panoptes.Api.Controllers
         }
 
         /// <summary>
-        /// Reset a subscription's circuit breaker state. Use this when a subscription is disabled 
+        /// Reset a subscription's circuit breaker and rate limit state. Use this when a subscription is disabled 
         /// due to rate limiting or circuit breaker and you want to re-enable it.
         /// </summary>
         [HttpPost("{id}/reset")]
@@ -496,27 +496,20 @@ namespace Panoptes.Api.Controllers
                 // Resuming - clear the paused timestamp
                 sub.PausedAt = null;
                 
-                // Check for pending events
-                var pendingEventCount = await _dbContext.DeliveryLogs
-                    .CountAsync(l => l.SubscriptionId == id && l.Status == DeliveryStatus.Paused);
-                
                 // Mark all paused events as Retrying so they get picked up by the retry worker
-                if (pendingEventCount > 0)
+                var pausedEvents = await _dbContext.DeliveryLogs
+                    .Where(l => l.SubscriptionId == id && l.Status == DeliveryStatus.Paused)
+                    .ToListAsync();
+                
+                foreach (var log in pausedEvents)
                 {
-                    var pausedEvents = await _dbContext.DeliveryLogs
-                        .Where(l => l.SubscriptionId == id && l.Status == DeliveryStatus.Paused)
-                        .ToListAsync();
-                    
-                    foreach (var log in pausedEvents)
-                    {
-                        log.Status = DeliveryStatus.Retrying;
-                        log.NextRetryAt = DateTime.UtcNow;
-                        log.ResponseBody = "Subscription activated - queued for delivery";
-                    }
+                    log.Status = DeliveryStatus.Retrying;
+                    log.NextRetryAt = DateTime.UtcNow;
+                    log.ResponseBody = "Subscription activated - queued for delivery";
                 }
                 
                 _logger.LogInformation("▶️ Subscription {Name} (ID: {Id}) activated. {Count} pending events queued.", 
-                    sub.Name, sub.Id, pendingEventCount);
+                    sub.Name, sub.Id, pausedEvents.Count);
             }
             else
             {
