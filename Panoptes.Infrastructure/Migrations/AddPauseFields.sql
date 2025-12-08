@@ -1,4 +1,14 @@
 -- Migration: Add pause functionality to subscriptions
 -- Purpose: Allow users to temporarily pause webhook deliveries without losing pending events
 -- Date: 2024-12-08
--- Note: Pause state is tracked using the existing IsActive column
+--
+-- IMPLEMENTATION NOTE:
+-- This migration file documents that pause functionality has been implemented using the
+-- existing IsActive column on the WebhookSubscriptions table. No database schema changes
+-- are required because:
+--   - IsActive (boolean) already exists and serves as the pause state
+--   - When IsActive = false, the subscription is paused
+--   - When IsActive = true, the subscription is active
+--
+-- The ToggleSubscription endpoint (POST /subscriptions/{id}/toggle) manages the pause state
+-- by toggling IsActive and handling pending event delivery accordingly.
