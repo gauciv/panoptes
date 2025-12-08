@@ -7,7 +7,7 @@ import { WebhookSubscription, DeliveryLog } from '../types';
 // --- COMPONENTS ---
 import StatCard from '../components/StatCard';
 import { SubscriptionGrid } from '../components/SubscriptionGrid';
-import SubscriptionDetail from '../components/SubscriptionDetail';
+import SubscriptionDetail from '../pages/SubscriptionDetail';
 import SubscriptionFilters from '../components/SubscriptionFilters';
 import LogViewer from '../components/LogViewer';
 import CreateSubscriptionModal from '../components/CreateSubscriptionModal';

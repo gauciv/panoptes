@@ -1,36 +1,66 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getSubscription, getSubscriptionLogs, updateSubscription, deleteSubscription, triggerTestEvent } from '../services/api';
+import { 
+  getSubscription, 
+  getSubscriptionLogs, 
+  updateSubscription, 
+  deleteSubscription, 
+  triggerTestEvent 
+} from '../services/api';
 import { WebhookSubscription, DeliveryLog } from '../types';
-import DeliveryLogsTable from '../components/DeliveryLogsTable';
 import EditSubscriptionModal from '../components/EditSubscriptionModal';
 import ConfirmationModal from '../components/ConfirmationModal';
 import SubscriptionDetailSkeleton from '../components/SubscriptionDetailSkeleton';
 import Pagination from '../components/Pagination';
+import ExportButton from '../components/ExportButton.tsx'; 
+import { convertToCSV, downloadFile, generateFilename } from '../utils/exportUtils'; 
 
-const SubscriptionDetail: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
+// --- PROPS INTERFACE ---
+interface SubscriptionDetailProps {
+    subscription?: WebhookSubscription | null;
+    onBack?: () => void;
+}
+
+// --- HELPER COMPONENT FOR STATS ---
+const StatsCard = ({ label, value, subtext, alertColor }: { label: string, value: string, subtext?: string, alertColor?: string }) => (
+    <div className={`p-5 rounded-xl shadow-sm border border-gray-200 ${alertColor ? alertColor : 'bg-white'}`}>
+        <p className="text-gray-500 text-sm mb-1">{label}</p>
+        <p className={`text-2xl font-bold ${alertColor ? 'text-red-700' : 'text-gray-900'}`}>{value}</p>
+        {subtext && <p className="text-xs text-gray-500 mt-1">{subtext}</p>}
+    </div>
+);
+
+const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: propSubscription, onBack }) => {
+  const { id: paramId } = useParams<{ id: string }>();
   const navigate = useNavigate();
   
-  const [subscription, setSubscription] = useState<WebhookSubscription | null>(null);
+  const activeId = propSubscription?.id || paramId;
+
+  // --- STATE ---
+  const [subscription, setSubscription] = useState<WebhookSubscription | null>(propSubscription || null);
   const [logs, setLogs] = useState<DeliveryLog[]>([]);
   const [totalLogs, setTotalLogs] = useState<number>(0);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [itemsPerPage] = useState<number>(50);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!propSubscription); 
   const [error, setError] = useState<string | null>(null);
+  
+  // Modal States
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
+  // UI State for Logs Table
+  const [expandedLogId, setExpandedLogId] = useState<string | null>(null);
+
+  // --- API CALLS ---
   const fetchSubscription = async () => {
-    if (!id) return;
-    console.log('[SubscriptionDetail] Fetching subscription with id:', id);
+    if (propSubscription) {
+        setSubscription(propSubscription);
+        return;
+    }
+    if (!activeId) return;
     try {
-      const data = await getSubscription(id);
-      console.log('[SubscriptionDetail] Subscription data:', data);
-      console.log('[SubscriptionDetail] TargetAddress:', data.targetAddress);
-      console.log('[SubscriptionDetail] PolicyId:', data.policyId);
-      console.log('[SubscriptionDetail] TargetUrl:', data.targetUrl);
+      const data = await getSubscription(activeId);
       setSubscription(data);
       setError(null);
     } catch (error: any) {
@@ -41,431 +71,413 @@ const SubscriptionDetail: React.FC = () => {
   };
 
   const fetchLogs = async () => {
-    if (!id) return;
-    console.log('[SubscriptionDetail] Fetching logs for subscription:', id, 'page:', currentPage);
+    if (!activeId) return;
     try {
       const skip = (currentPage - 1) * itemsPerPage;
-      const logsData = await getSubscriptionLogs(id, skip, itemsPerPage);
-      console.log('[SubscriptionDetail] Logs data:', logsData);
-      
-      // Backend now consistently returns { logs, totalCount }
+      const logsData = await getSubscriptionLogs(activeId, skip, itemsPerPage);
+      // Ensure logs is always an array
       setLogs(logsData.logs || []);
       setTotalLogs(logsData.totalCount || 0);
-      setError(null);
     } catch (error: any) {
       console.error("Error fetching logs:", error);
-      const errorMsg = error.response?.data || error.message || "Failed to fetch delivery logs.";
-      setError(`API Error: ${errorMsg}`);
-      // Keep logs as empty array on error
       setLogs([]);
       setTotalLogs(0);
     }
   };
 
+  // --- NEW: EXPORT HANDLER ---
+  const handleExportLogs = async (format: 'csv' | 'json') => {
+    if (!activeId || !subscription) return;
+
+    try {
+      // 1. Fetch ALL logs (or a reasonable large limit like 1000) so we export more than just page 1
+      const limit = 1000;
+      const logsData = await getSubscriptionLogs(activeId, 0, limit);
+      const logsToExport = logsData.logs || [];
+
+      if (logsToExport.length === 0) {
+        alert("No logs available to export.");
+        return;
+      }
+
+      // 2. Generate Filename
+      const filename = generateFilename(subscription.name, format);
+
+      // 3. Convert and Download
+      if (format === 'json') {
+        const jsonContent = JSON.stringify(logsToExport, null, 2);
+        downloadFile(jsonContent, filename, 'application/json');
+      } else {
+        const csvContent = convertToCSV(logsToExport); // This utils uses the same safe extraction logic
+        downloadFile(csvContent, filename, 'text/csv');
+      }
+
+    } catch (err) {
+      console.error("Export failed", err);
+      alert("Failed to export logs. Please try again.");
+    }
+  };
+
+  // --- EFFECTS ---
   useEffect(() => {
-    const loadData = async () => {
-      setLoading(true);
-      await fetchSubscription();
-      await fetchLogs();
-      setLoading(false);
-    };
+      if (propSubscription) {
+          setSubscription(propSubscription);
+          setLoading(false);
+      } else {
+          setLoading(true);
+          fetchSubscription().then(() => setLoading(false));
+      }
+  }, [activeId, propSubscription]);
 
-    loadData();
-
-    // Refresh logs every 3 seconds
+  useEffect(() => {
+    fetchLogs();
     const interval = setInterval(fetchLogs, 3000);
     return () => clearInterval(interval);
-  }, [id, currentPage]); // Refetch when page changes
+  }, [activeId, currentPage]);
 
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page);
+  // --- ACTIONS ---
+  const handleBack = () => {
+      if (onBack) onBack();
+      else navigate('/');
   };
 
   const handleTest = async () => {
-    if (!id) return;
+    if (!activeId) return;
     try {
-      await triggerTestEvent(id);
-      fetchLogs();
-      setError(null);
+      await triggerTestEvent(activeId);
+      fetchLogs(); 
     } catch (error: any) {
       console.error("Error triggering test:", error);
-      const errorMsg = error.response?.data || error.message || "Failed to trigger test webhook.";
-      setError(`Test Failed: ${errorMsg}`);
+      alert("Failed to trigger test webhook.");
     }
   };
 
   const handleEditSave = async (data: Partial<WebhookSubscription>) => {
-    if (!id) return;
+    if (!activeId) return;
     try {
-      await updateSubscription(id, data);
+      await updateSubscription(activeId, data);
       setIsEditModalOpen(false);
-      fetchSubscription();
-      setError(null);
+      if (!propSubscription) await fetchSubscription(); 
     } catch (error: any) {
-      console.error("Error updating subscription:", error);
-      const errorMsg = error.response?.data || error.message || "Failed to update subscription.";
-      setError(`Update Failed: ${errorMsg}`);
+      alert(`Update Failed: ${error.message}`);
     }
   };
 
   const handleDeleteConfirm = async () => {
-    if (!id) return;
+    if (!activeId) return;
     try {
-      await deleteSubscription(id);
-      navigate('/');
+      await deleteSubscription(activeId);
+      if (onBack) onBack();
+      else navigate('/');
     } catch (error: any) {
-      console.error("Error deleting subscription:", error);
-      const errorMsg = error.response?.data || error.message || "Failed to delete subscription.";
-      setError(`Delete Failed: ${errorMsg}`);
+      alert(`Delete Failed: ${error.message}`);
       setIsDeleteModalOpen(false);
     }
   };
 
+  const handleResume = async () => {
+    if(!activeId) return;
+    try {
+        await fetch(`http://localhost:5186/subscriptions/${activeId}/resume`, { method: 'POST' });
+        if (!propSubscription) await fetchSubscription();
+    } catch (err: any) {
+        alert(`Failed to resume: ${err.message}`);
+    }
+  }
+
+  // --- HELPER: ROBUST PAYLOAD EXTRACTOR ---
+  const getPayload = (log: any) => {
+      if (!log) return null;
+      return (
+          log.payloadJson || 
+          log.PayloadJson ||  // PascalCase (Common in .NET)
+          log.requestPayload || 
+          log.RequestPayload || 
+          log.data || 
+          log.Data || 
+          log.body || 
+          log.Body || 
+          null
+      );
+  };
+
+  const getResponseBody = (log: any) => {
+      if (!log) return null;
+      return (
+          log.responseBody || 
+          log.ResponseBody || 
+          log.response || 
+          log.Response || 
+          null
+      );
+  };
+
+  const toggleRow = (logId: string) => {
+    setExpandedLogId(expandedLogId === logId ? null : logId);
+  };
+
+  const renderStatusBadge = (statusCode: number) => {
+    if (statusCode >= 200 && statusCode < 300) return <span className="text-green-600 font-bold">{statusCode}</span>;
+    if (statusCode === 429) return <span className="text-yellow-600 font-bold">{statusCode}</span>;
+    return <span className="text-red-600 font-bold">{statusCode}</span>;
+  };
+
+  const formatJson = (data: any) => {
+      if (!data) return null; 
+      try {
+          if (typeof data === 'object') {
+              return JSON.stringify(data, null, 2);
+          }
+          if (typeof data === 'string') {
+              try {
+                  const parsed = JSON.parse(data);
+                  return JSON.stringify(parsed, null, 2);
+              } catch {
+                  return data; 
+              }
+          }
+          return String(data);
+      } catch (e) { 
+          return String(data); 
+      }
+  };
+
   const calculateSuccessRate = () => {
-    if (!logs || logs.length === 0) return 0;
-    // Exclude 429 (rate limit) from both success and failure counts - they're retriable
+    if (!logs || logs.length === 0) return "-";
     const relevantLogs = logs.filter(l => l.responseStatusCode !== 429);
-    if (relevantLogs.length === 0) return 0;
+    if (relevantLogs.length === 0) return "-";
     const successCount = relevantLogs.filter(l => l.responseStatusCode >= 200 && l.responseStatusCode < 300).length;
-    return Math.round((successCount / relevantLogs.length) * 100);
+    return Math.round((successCount / relevantLogs.length) * 100) + "%";
   };
 
   const calculateAvgLatency = () => {
-    if (!logs || logs.length === 0) return 0;
+    if (!logs || logs.length === 0) return "0ms";
     const totalLatency = logs.reduce((sum, log) => sum + log.latencyMs, 0);
-    return Math.round(totalLatency / logs.length);
+    return Math.round(totalLatency / logs.length) + "ms";
   };
 
-  if (loading) {
-    return <SubscriptionDetailSkeleton />;
-  }
-
+  // --- RENDER ---
+  if (loading && !subscription) return <SubscriptionDetailSkeleton />;
+  
   if (!subscription) {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-red-600">Subscription not found</div>
+        <button onClick={handleBack} className="ml-4 text-blue-600 underline">Go Back</button>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <nav className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex items-center">
-              <button
-                onClick={() => navigate('/')}
-                className="mr-4 text-gray-600 hover:text-gray-900"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-              </button>
-              <h1 className="text-xl font-bold text-gray-900">{subscription.name}</h1>
-            </div>
-          </div>
-        </div>
-      </nav>
+    <div className="flex flex-col gap-6 w-full animate-in fade-in duration-300 relative max-w-7xl mx-auto p-4 sm:px-6 lg:px-8">
+      
+      {/* 1. Header Navigation */}
+      <div className="flex items-center gap-2">
+        <button onClick={handleBack} className="p-2 hover:bg-gray-200 rounded-full transition-colors text-gray-600 font-bold">
+            &larr; 
+        </button>
+        <h2 className="text-xl font-bold text-gray-900">{subscription.name}</h2>
+      </div>
 
-      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        {/* Error Banner */}
-        {error && (
-          <div className="mb-6 bg-red-50 border border-red-200 rounded-md p-4">
-            <div className="flex">
-              <div className="flex-shrink-0">
-                <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                </svg>
-              </div>
-              <div className="ml-3 flex-1">
-                <p className="text-sm text-red-700">{error}</p>
-              </div>
-              <div className="ml-auto pl-3">
-                <button onClick={() => setError(null)} className="text-red-400 hover:text-red-600">
-                  <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Subscription Details Card */}
-        <div className="bg-white shadow rounded-lg mb-6">
-          <div className="px-6 py-5 border-b border-gray-200 flex justify-between items-center">
-            <h2 className="text-lg font-medium text-gray-900">Subscription Details</h2>
-            <div className="flex space-x-3">
-              <button
-                onClick={handleTest}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700"
-              >
-                Test Webhook
-              </button>
-              <button
-                onClick={() => setIsEditModalOpen(true)}
-                className="px-4 py-2 bg-indigo-600 text-white rounded-md text-sm font-medium hover:bg-indigo-700"
-              >
-                Edit
-              </button>
-              <button
-                onClick={() => setIsDeleteModalOpen(true)}
-                className="px-4 py-2 bg-red-600 text-white rounded-md text-sm font-medium hover:bg-red-700"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-          <div className="px-6 py-5">
-            <dl className="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Status</dt>
-                <dd className="mt-1 text-sm text-gray-900">
-                  {subscription.isActive ? (
-                    <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">Active</span>
-                  ) : (
-                    <span className="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">Inactive</span>
-                  )}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Event Type</dt>
-                <dd className="mt-1 text-sm text-gray-900">{subscription.eventType}</dd>
-              </div>
-              <div className="sm:col-span-2">
-                <dt className="text-sm font-medium text-gray-500">Target URL</dt>
-                <dd className="mt-1 text-sm text-gray-900 font-mono break-all">{subscription.targetUrl}</dd>
-              </div>
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Target Address</dt>
-                <dd className="mt-1 text-sm text-gray-900 font-mono">{subscription.targetAddress || '—'}</dd>
-              </div>
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Policy ID</dt>
-                <dd className="mt-1 text-sm text-gray-900 font-mono">{subscription.policyId || '—'}</dd>
-              </div>
-              <div className="sm:col-span-2">
-                <dt className="text-sm font-medium text-gray-500">Wallet Address Filter</dt>
-                <dd className="mt-1 text-sm text-gray-900">
-                  {subscription.walletAddresses && subscription.walletAddresses.length > 0 ? (
-                    <div className="space-y-1">
-                      <div className="text-xs text-gray-500 mb-1">
-                        Listening to {subscription.walletAddresses.length} address(es)
-                      </div>
-                      <div className="max-h-32 overflow-y-auto bg-gray-50 rounded p-2">
-                        {subscription.walletAddresses.map((addr, idx) => (
-                          <div key={idx} className="font-mono text-xs text-gray-700 break-all">
-                            {addr}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ) : (
-                    <span className="text-gray-500 italic">All addresses (no filter)</span>
-                  )}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Rate Limits</dt>
-                <dd className="mt-1 text-sm text-gray-900">
-                  <div className="space-y-2">
-                    <div>{subscription.maxWebhooksPerMinute}/min, {subscription.maxWebhooksPerHour}/hour</div>
-                    {subscription.isRateLimited && (
-                      <div className="flex items-center gap-2">
-                        <span className="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
-                          🚫 Rate Limited
-                        </span>
-                        <span className="text-xs text-red-600">Webhooks are being throttled</span>
-                      </div>
-                    )}
-                  </div>
-                </dd>
-              </div>
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Created</dt>
-                <dd className="mt-1 text-sm text-gray-900">
-                  {new Date(subscription.createdAt).toLocaleString()}
-                </dd>
-              </div>
-            </dl>
-          </div>
-        </div>
-
-        {/* Circuit Breaker Banner */}
-        {subscription.isCircuitBroken && (
-          <div className="mb-6 bg-orange-50 border border-orange-300 rounded-md p-4">
+      {/* Warning Banners */}
+      {subscription.isCircuitBroken && (
+          <div className="bg-orange-50 border border-orange-300 rounded-md p-4 animate-in slide-in-from-top-2">
             <div className="flex items-start justify-between">
               <div className="flex items-start">
-                <svg className="h-6 w-6 text-orange-500 mr-3 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                </svg>
+                <span className="text-2xl mr-3">⚡</span>
                 <div className="flex-1">
-                  <span className="text-sm font-semibold text-orange-900">⚡ Circuit Breaker Triggered - Subscription Disabled</span>
-                  <p className="text-sm text-orange-800 mt-2">
-                    {subscription.circuitBrokenReason || "Your webhook endpoint has failed too many times and has been automatically disabled to prevent further issues."}
-                  </p>
-                  <p className="text-xs text-orange-700 mt-2">
-                    <strong>Consecutive failures:</strong> {subscription.consecutiveFailures || 0}
-                    {subscription.lastFailureAt && (
-                      <> • <strong>Last failure:</strong> {new Date(subscription.lastFailureAt).toLocaleString()}</>
-                    )}
-                  </p>
-                  <div className="mt-3 text-xs text-orange-700">
-                    <strong>What to do:</strong>
-                    <ul className="list-disc list-inside mt-1 space-y-1">
-                      <li>Check your webhook endpoint is running and accessible</li>
-                      <li>Verify your server can handle the request volume</li>
-                      <li>Check for rate limiting on your endpoint</li>
-                      <li>Once fixed, click "Resume Subscription" below to re-enable</li>
-                    </ul>
-                  </div>
+                  <span className="text-sm font-semibold text-orange-900">Circuit Breaker Triggered</span>
+                  <p className="text-sm text-orange-800 mt-1">{subscription.circuitBrokenReason}</p>
                 </div>
               </div>
-              <button
-                onClick={async () => {
-                  try {
-                    await fetch(`http://localhost:5186/subscriptions/${id}/resume`, { method: 'POST' });
-                    await fetchSubscription();
-                    setError(null);
-                  } catch (err: any) {
-                    setError(`Failed to resume: ${err.message}`);
-                  }
-                }}
-                className="ml-4 px-4 py-2 bg-orange-600 text-white text-sm font-medium rounded-md hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 whitespace-nowrap"
-              >
-                Resume Subscription
+              <button onClick={handleResume} className="ml-4 px-4 py-2 bg-orange-600 text-white text-sm font-medium rounded-md hover:bg-orange-700">
+                Resume
               </button>
             </div>
           </div>
         )}
 
-        {/* Sync Status Banner */}
-        {subscription.isSyncing && !subscription.isCircuitBroken && (
-          <div className="mb-6 bg-yellow-50 border border-yellow-200 rounded-md p-4">
-            <div className="flex items-center">
-              <svg className="animate-spin h-5 w-5 text-yellow-400 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              <div>
-                <span className="text-sm font-medium text-yellow-800">Syncing with Blockchain</span>
-                <p className="text-xs text-yellow-700 mt-1">
-                  This subscription is still catching up to the latest block. Webhooks will start arriving once sync is complete. This usually takes a few seconds after creating a new subscription.
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Rate Limit Warning Banner */}
-        {subscription.isRateLimited && (
-          <div className="mb-6 bg-red-50 border border-red-200 rounded-md p-4">
-            <div className="flex items-center">
-              <svg className="h-5 w-5 text-red-400 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-              </svg>
-              <div>
-                <span className="text-sm font-medium text-red-800">Rate Limit Exceeded</span>
-                <p className="text-xs text-red-700 mt-1">
-                  This subscription has hit its rate limit. New webhooks will resume after the limit window resets.
-                  Current usage: {subscription.webhooksInLastMinute}/{subscription.maxWebhooksPerMinute} per minute, 
-                  {subscription.webhooksInLastHour}/{subscription.maxWebhooksPerHour} per hour.
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-4 mb-6">
-          <div className="bg-white overflow-hidden shadow rounded-lg">
-            <div className="px-4 py-5 sm:p-6">
-              <dt className="text-sm font-medium text-gray-500 truncate">Total Deliveries</dt>
-              <dd className="mt-1 text-3xl font-semibold text-gray-900">{totalLogs}</dd>
-            </div>
-          </div>
-          <div className="bg-white overflow-hidden shadow rounded-lg">
-            <div className="px-4 py-5 sm:p-6">
-              <dt className="text-sm font-medium text-gray-500 truncate">Success Rate</dt>
-              <dd className="mt-1 text-3xl font-semibold text-gray-900">{calculateSuccessRate()}%</dd>
-            </div>
-          </div>
-          <div className="bg-white overflow-hidden shadow rounded-lg">
-            <div className="px-4 py-5 sm:p-6">
-              <dt className="text-sm font-medium text-gray-500 truncate">Avg Latency</dt>
-              <dd className="mt-1 text-3xl font-semibold text-gray-900">{calculateAvgLatency()}ms</dd>
-            </div>
-          </div>
-          <div className={`overflow-hidden shadow rounded-lg ${subscription.isRateLimited ? 'bg-red-50' : 'bg-white'}`}>
-            <div className="px-4 py-5 sm:p-6">
-              <dt className="text-sm font-medium text-gray-500 truncate">Rate Usage</dt>
-              <dd className="mt-1 space-y-1">
-                <div className={`text-lg font-semibold ${
-                  (subscription.webhooksInLastMinute || 0) >= subscription.maxWebhooksPerMinute 
-                    ? 'text-red-600' 
-                    : (subscription.webhooksInLastMinute || 0) >= subscription.maxWebhooksPerMinute * 0.8 
-                    ? 'text-yellow-600' 
-                    : 'text-green-600'
+      {/* 2. Subscription Details Card */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div className="flex justify-between items-start mb-6">
+             <div className="flex items-center gap-3">
+                <h3 className="text-lg font-bold text-gray-900">Subscription Details</h3>
+                <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${
+                    subscription.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
                 }`}>
-                  {subscription.webhooksInLastMinute || 0}/{subscription.maxWebhooksPerMinute} min
-                </div>
-                <div className={`text-sm ${
-                  (subscription.webhooksInLastHour || 0) >= subscription.maxWebhooksPerHour 
-                    ? 'text-red-600' 
-                    : (subscription.webhooksInLastHour || 0) >= subscription.maxWebhooksPerHour * 0.8 
-                    ? 'text-yellow-600' 
-                    : 'text-gray-600'
-                }`}>
-                  {subscription.webhooksInLastHour || 0}/{subscription.maxWebhooksPerHour} hour
-                </div>
-              </dd>
-            </div>
-          </div>
+                    {subscription.isActive ? 'Active' : 'Inactive'}
+                </span>
+             </div>
+             <div className="flex gap-2">
+                {/* NEW EXPORT BUTTON ADDED HERE */}
+                <ExportButton onExport={handleExportLogs} disabled={totalLogs === 0} />
+
+                <button onClick={handleTest} className="px-3 py-1.5 bg-indigo-600 text-white rounded-md text-sm font-medium hover:bg-indigo-700 shadow-sm">
+                    Test Webhook
+                </button>
+                <button onClick={() => setIsEditModalOpen(true)} className="px-3 py-1.5 bg-white border border-gray-300 text-gray-700 rounded-md text-sm font-medium hover:bg-gray-50 shadow-sm">
+                    Edit
+                </button>
+                <button onClick={() => setIsDeleteModalOpen(true)} className="px-3 py-1.5 bg-red-50 border border-red-200 text-red-600 rounded-md text-sm font-medium hover:bg-red-100 shadow-sm">
+                    Delete
+                </button>
+             </div>
         </div>
 
-        {/* Delivery Logs */}
-        <div className="bg-white shadow rounded-lg">
-          <div className="px-6 py-5 border-b border-gray-200">
-            <h2 className="text-lg font-medium text-gray-900">Delivery Logs</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-y-8 gap-x-12 text-sm">
+            <div>
+                <p className="text-gray-500 mb-1 font-medium">Target URL</p>
+                <div className="font-mono text-gray-900 break-all bg-gray-50 p-2 rounded border border-gray-200 text-xs">
+                    {subscription.targetUrl}
+                </div>
+            </div>
+            <div>
+                <p className="text-gray-500 mb-1 font-medium">Event Type</p>
+                <p className="font-bold text-gray-900 text-base">{subscription.eventType}</p>
+            </div>
+            {subscription.targetAddress && (
+                <div>
+                    <p className="text-gray-500 mb-1 font-medium">Target Address</p>
+                    <p className="font-mono text-gray-900 text-xs break-all">{subscription.targetAddress}</p>
+                </div>
+            )}
+            <div>
+                <p className="text-gray-500 mb-1 font-medium">Rate Limits</p>
+                <p className="font-medium text-gray-900">
+                    {subscription.maxWebhooksPerMinute}/min, {subscription.maxWebhooksPerHour}/hour
+                </p>
+            </div>
+        </div>
+      </div>
+
+      {/* 3. Stats Row */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatsCard label="Total Deliveries" value={String(totalLogs)} />
+        <StatsCard label="Success Rate" value={calculateSuccessRate()} />
+        <StatsCard label="Avg Latency" value={calculateAvgLatency()} />
+        <div className="p-5 rounded-xl shadow-sm border border-gray-200 bg-white">
+          <p className="text-gray-500 text-sm mb-1">Rate Usage</p>
+          <div className="text-2xl font-bold text-green-600 flex items-baseline gap-1">
+            {subscription.webhooksInLastMinute || 0}<span className="text-gray-400 text-base font-normal">/{subscription.maxWebhooksPerMinute} min</span>
           </div>
-          <div className="px-6 py-5">
-            <DeliveryLogsTable 
-              logs={logs || []} 
-              showSubscriptionId={false}
-              totalCount={totalLogs}
-              currentPage={currentPage}
-              pageSize={itemsPerPage}
+        </div>
+      </div>
+
+      {/* 4. Delivery Logs */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-10">
+         <div className="p-6 pb-2">
+            <h3 className="text-lg font-bold text-gray-900">Delivery Logs</h3>
+            <p className="text-xs text-gray-500 mt-2">
+                Showing page {currentPage} of {Math.ceil(totalLogs / itemsPerPage) || 1}
+            </p>
+         </div>
+         
+         {loading && logs.length === 0 ? (
+             <div className="p-10 text-center text-gray-500">Loading logs...</div>
+         ) : logs.length === 0 ? (
+             <div className="p-10 text-center text-gray-500 bg-gray-50">No logs found.</div>
+         ) : (
+             <div className="mt-4">
+                {/* Header */}
+                <div className="grid grid-cols-12 gap-4 px-6 py-2 text-xs font-bold text-gray-500 uppercase tracking-wider border-b border-gray-100 hidden sm:grid">
+                    <div className="col-span-3">Time</div>
+                    <div className="col-span-2">Status</div>
+                    <div className="col-span-2">Latency</div>
+                    <div className="col-span-5">Response</div>
+                </div>
+
+                {/* Rows */}
+                <div className="divide-y divide-gray-100">
+                    {logs.map((log) => {
+                        const timeValue = (log as any).timestamp || (log as any).createdAt || new Date();
+                        const isExpanded = expandedLogId === log.id;
+                        
+                        // Extract with the robust helper
+                        const payloadData = getPayload(log); 
+                        const responseData = getResponseBody(log);
+
+                        return (
+                            <div key={log.id} className="group transition-colors">
+                                <div 
+                                    onClick={() => toggleRow(log.id)}
+                                    className={`grid grid-cols-1 sm:grid-cols-12 gap-4 px-6 py-4 text-sm cursor-pointer hover:bg-gray-50 items-center ${isExpanded ? 'bg-gray-50' : ''}`}
+                                >
+                                    <div className="sm:col-span-3 text-gray-600 text-xs sm:text-sm">
+                                        {new Date(timeValue).toLocaleString()}
+                                    </div>
+                                    <div className="sm:col-span-2 font-mono flex items-center justify-between sm:justify-start gap-4">
+                                        <span className="sm:hidden font-bold text-gray-500">Status:</span>
+                                        {renderStatusBadge(log.responseStatusCode)}
+                                    </div>
+                                    <div className="sm:col-span-2 font-mono text-gray-500 flex items-center justify-between sm:justify-start gap-4">
+                                        <span className="sm:hidden font-bold text-gray-500">Latency:</span>
+                                        {log.latencyMs}ms
+                                    </div>
+                                    <div className="sm:col-span-5 font-mono text-xs text-gray-400 truncate hidden sm:block">
+                                        {responseData ? String(responseData).substring(0, 50) : '-'}
+                                    </div>
+                                </div>
+
+                                {isExpanded && (
+                                    <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 animate-in slide-in-from-top-2 duration-200">
+                                        <div className="space-y-6">
+                                            {/* PAYLOAD SECTION */}
+                                            <div>
+                                                <h4 className="text-xs font-bold text-gray-500 uppercase mb-2">Payload</h4>
+                                                <div className="bg-white rounded border border-gray-200 p-4 font-mono text-xs text-gray-700 overflow-x-auto">
+                                                    <pre>{payloadData ? formatJson(payloadData) : <span className="text-gray-400 italic">No payload content found (Received null)</span>}</pre>
+                                                </div>
+                                            </div>
+
+                                            {/* RESPONSE SECTION */}
+                                            <div>
+                                                <h4 className="text-xs font-bold text-gray-500 uppercase mb-2">Response</h4>
+                                                <div className="bg-white rounded border border-gray-200 p-4 font-mono text-xs text-gray-700 overflow-x-auto">
+                                                    <pre>{responseData ? formatJson(responseData) : <span className="text-gray-400 italic">No response content</span>}</pre>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })}
+                </div>
+                
+                {/* Pagination */}
+                <div className="p-4 border-t border-gray-200">
+                    <Pagination
+                        currentPage={currentPage}
+                        totalItems={totalLogs}
+                        itemsPerPage={itemsPerPage}
+                        onPageChange={setCurrentPage}
+                    />
+                </div>
+             </div>
+         )}
+      </div>
+
+      {/* MODALS */}
+      {subscription && (
+        <>
+            <EditSubscriptionModal
+                isOpen={isEditModalOpen}
+                subscription={subscription}
+                onClose={() => setIsEditModalOpen(false)}
+                onSave={handleEditSave}
             />
-          </div>
-          <Pagination
-            currentPage={currentPage}
-            totalItems={totalLogs}
-            itemsPerPage={itemsPerPage}
-            onPageChange={handlePageChange}
-          />
-        </div>
-      </main>
-
-      {/* Edit Subscription Modal */}
-      <EditSubscriptionModal
-        isOpen={isEditModalOpen}
-        subscription={subscription}
-        onClose={() => setIsEditModalOpen(false)}
-        onSave={handleEditSave}
-      />
-
-      {/* Delete Confirmation Modal */}
-      <ConfirmationModal
-        isOpen={isDeleteModalOpen}
-        title="Delete Subscription"
-        message={`Are you sure you want to delete "${subscription.name}"? This action cannot be undone.`}
-        confirmLabel="Delete"
-        cancelLabel="Cancel"
-        confirmVariant="danger"
-        onConfirm={handleDeleteConfirm}
-        onCancel={() => setIsDeleteModalOpen(false)}
-      />
+            <ConfirmationModal
+                isOpen={isDeleteModalOpen}
+                title="Delete Subscription"
+                message={`Are you sure you want to delete "${subscription.name}"?`}
+                confirmLabel="Delete"
+                cancelLabel="Cancel"
+                confirmVariant="danger"
+                onConfirm={handleDeleteConfirm}
+                onCancel={() => setIsDeleteModalOpen(false)}
+            />
+        </>
+      )}
     </div>
   );
 };
