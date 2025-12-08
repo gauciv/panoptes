@@ -8,6 +8,7 @@ import LogViewer from '../components/LogViewer';
 import CreateSubscriptionModal from '../components/CreateSubscriptionModal';
 import EditSubscriptionModal from '../components/EditSubscriptionModal';
 import ConfirmationModal from '../components/ConfirmationModal';
+import { SetupWizard } from '../components/SetupWizard';
 import { useSubscriptionFilters } from '../hooks/useSubscriptionFilters';
 
 interface SystemInfo {
@@ -15,6 +16,14 @@ interface SystemInfo {
   grpcEndpoint: string;
   hasApiKey: boolean;
   availableNetworks: string[];
+  configuredVia: string;
+}
+
+interface SetupStatus {
+  isConfigured: boolean;
+  network?: string;
+  grpcEndpoint?: string;
+  lastUpdated?: string;
 }
 
 const Dashboard: React.FC = () => {
@@ -28,6 +37,8 @@ const Dashboard: React.FC = () => {
   const [selectedSubscription, setSelectedSubscription] = useState<WebhookSubscription | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [systemInfo, setSystemInfo] = useState<SystemInfo | null>(null);
+  const [setupStatus, setSetupStatus] = useState<SetupStatus | null>(null);
+  const [showSetupWizard, setShowSetupWizard] = useState(false);
 
   // Subscription filters
   const {
@@ -84,7 +95,30 @@ const Dashboard: React.FC = () => {
     }
   };
 
+  const fetchSetupStatus = async () => {
+    try {
+      const response = await fetch('http://localhost:5186/setup/status');
+      const data = await response.json();
+      setSetupStatus(data);
+      
+      // Show setup wizard if not configured
+      if (!data.isConfigured) {
+        setShowSetupWizard(true);
+      }
+    } catch (error) {
+      console.error("Error fetching setup status:", error);
+    }
+  };
+
+  const handleSetupComplete = () => {
+    setShowSetupWizard(false);
+    fetchSetupStatus();
+    fetchSystemInfo();
+    fetchSubscriptions();
+  };
+
   useEffect(() => {
+    fetchSetupStatus();
     fetchSubscriptions();
     fetchLogs();
     fetchSystemInfo();

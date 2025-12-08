@@ -20,6 +20,11 @@ builder.Services.AddSwaggerGen();
 // Register Configuration
 builder.Services.Configure<PanoptesConfig>(builder.Configuration.GetSection("Argus"));
 
+// Register Data Protection for encrypting sensitive data (API keys)
+builder.Services.AddDataProtection()
+    .PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(Directory.GetCurrentDirectory(), "keys")))
+    .SetApplicationName("Panoptes");
+
 // Register Persistence
 var dbPath = Path.Combine(Directory.GetCurrentDirectory(), "panoptes.db");
 builder.Services.AddDbContext<AppDbContext>(options =>

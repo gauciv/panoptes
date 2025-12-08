@@ -10,6 +10,7 @@ namespace Panoptes.Core.Interfaces
         DbSet<WebhookSubscription> WebhookSubscriptions { get; }
         DbSet<DeliveryLog> DeliveryLogs { get; }
         DbSet<SystemState> SystemStates { get; }
+        DbSet<DemeterConfig> DemeterConfigs { get; }
 
         Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
     }

@@ -81,17 +81,51 @@ namespace Panoptes.Api.Controllers
         }
 
         [HttpGet("system-info")]
-        public ActionResult<SystemInfo> GetSystemInfo()
+        public async Task<ActionResult<SystemInfo>> GetSystemInfo()
         {
-            var info = new SystemInfo
+            // Try to load from database first
+            var dbConfig = await _dbContext.DemeterConfigs
+                .AsNoTracking()
+                .FirstOrDefaultAsync(c => c.IsActive);
+
+            if (dbConfig != null)
             {
-                Network = _config.Network,
-                GrpcEndpoint = _config.GrpcEndpoint,
-                HasApiKey = !string.IsNullOrWhiteSpace(_config.ApiKey),
-                AvailableNetworks = new[] { "Mainnet", "Preprod", "Preview" }
+                // Credentials configured in database
+                var info = new SystemInfo
+                {
+                    Network = dbConfig.Network,
+                    GrpcEndpoint = dbConfig.GrpcEndpoint,
+                    HasApiKey = true,
+                    AvailableNetworks = new[] { "Mainnet", "Preprod", "Preview" },
+                    ConfiguredVia = "Database"
+                };
+                return Ok(info);
+            }
+
+            // Fallback to appsettings
+            if (!string.IsNullOrWhiteSpace(_config.GrpcEndpoint))
+            {
+                var info = new SystemInfo
+                {
+                    Network = _config.Network,
+                    GrpcEndpoint = _config.GrpcEndpoint,
+                    HasApiKey = !string.IsNullOrWhiteSpace(_config.ApiKey),
+                    AvailableNetworks = new[] { "Mainnet", "Preprod", "Preview" },
+                    ConfiguredVia = "AppSettings"
+                };
+                return Ok(info);
+            }
+
+            // No configuration found
+            var defaultInfo = new SystemInfo
+            {
+                Network = "Not Configured",
+                GrpcEndpoint = "Not Configured",
+                HasApiKey = false,
+                AvailableNetworks = new[] { "Mainnet", "Preprod", "Preview" },
+                ConfiguredVia = "None"
             };
-            
-            return Ok(info);
+            return Ok(defaultInfo);
         }
     }
 
@@ -101,6 +135,7 @@ namespace Panoptes.Api.Controllers
         public string GrpcEndpoint { get; set; } = string.Empty;
         public bool HasApiKey { get; set; }
         public string[] AvailableNetworks { get; set; } = Array.Empty<string>();
+        public string ConfiguredVia { get; set; } = "None"; // "Database", "AppSettings", or "None"
     }
 
     public class HealthResponse
