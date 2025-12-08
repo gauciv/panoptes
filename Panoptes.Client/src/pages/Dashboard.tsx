@@ -20,6 +20,7 @@ const Dashboard: React.FC = () => {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedSubscription, setSelectedSubscription] = useState<WebhookSubscription | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isLoadingSubscriptions, setIsLoadingSubscriptions] = useState<boolean>(true);
 
   // Subscription filters
   const {
@@ -49,6 +50,7 @@ const Dashboard: React.FC = () => {
       setError(`API Error: ${errorMsg}`);
       setIsConnected(false);
     }
+    setIsLoadingSubscriptions(false);
   };
 
   const fetchLogs = async () => {
@@ -281,6 +283,7 @@ const Dashboard: React.FC = () => {
               onEdit={handleEdit}
               onDelete={handleDeleteClick}
               hasActiveFilters={activeFilterCount > 0}
+              isLoading={isLoadingSubscriptions && subscriptions.length === 0}
             />
           </div>
 

@@ -5,6 +5,7 @@ import { WebhookSubscription, DeliveryLog } from '../types';
 import DeliveryLogsTable from '../components/DeliveryLogsTable';
 import EditSubscriptionModal from '../components/EditSubscriptionModal';
 import ConfirmationModal from '../components/ConfirmationModal';
+import SubscriptionDetailSkeleton from '../components/SubscriptionDetailSkeleton';
 import Pagination from '../components/Pagination';
 
 const SubscriptionDetail: React.FC = () => {
@@ -136,11 +137,7 @@ const SubscriptionDetail: React.FC = () => {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <div className="text-gray-600">Loading...</div>
-      </div>
-    );
+    return <SubscriptionDetailSkeleton />;
   }
 
   if (!subscription) {

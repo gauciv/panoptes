@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { DeliveryLog, WebhookSubscription } from '../types';
+import DeliveryLogsTableSkeleton from './DeliveryLogsTableSkeleton';
 
 interface DeliveryLogsTableProps {
   logs: DeliveryLog[];
@@ -8,6 +9,7 @@ interface DeliveryLogsTableProps {
   totalCount?: number;
   currentPage?: number;
   pageSize?: number;
+  isLoading?: boolean;
 }
 
 const DeliveryLogsTable: React.FC<DeliveryLogsTableProps> = ({ 
@@ -15,7 +17,8 @@ const DeliveryLogsTable: React.FC<DeliveryLogsTableProps> = ({
   showSubscriptionId = false, 
   totalCount,
   currentPage = 1,
-  pageSize = 100
+  pageSize = 100,
+  isLoading = false,
 }) => {
   const [expandedLogId, setExpandedLogId] = useState<string | null>(null);
 
@@ -25,6 +28,10 @@ const DeliveryLogsTable: React.FC<DeliveryLogsTableProps> = ({
 
   // Defensive check for undefined logs
   const safeLogs = logs || [];
+
+  if (isLoading) {
+    return <DeliveryLogsTableSkeleton showSubscriptionId={showSubscriptionId} />;
+  }
   const getStatusBadge = (statusCode: number) => {
     if (statusCode >= 200 && statusCode < 300) {
       return <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">{statusCode}</span>;

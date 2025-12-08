@@ -1,5 +1,6 @@
 import React from 'react';
 import { WebhookSubscription } from '../types';
+import SubscriptionTableSkeleton from './SubscriptionTableSkeleton';
 
 interface SubscriptionTableProps {
     subscriptions: WebhookSubscription[];
@@ -7,9 +8,14 @@ interface SubscriptionTableProps {
     onEdit: (subscription: WebhookSubscription) => void;
     onDelete: (subscription: WebhookSubscription) => void;
     hasActiveFilters?: boolean;
+    isLoading?: boolean;
 }
 
-const SubscriptionTable: React.FC<SubscriptionTableProps> = ({ subscriptions, onTest, onEdit, onDelete, hasActiveFilters = false }) => {
+const SubscriptionTable: React.FC<SubscriptionTableProps> = ({ subscriptions, onTest, onEdit, onDelete, hasActiveFilters = false, isLoading = false }) => {
+    if (isLoading) {
+        return <SubscriptionTableSkeleton />;
+    }
+
     return (
         <div className="bg-white shadow rounded-lg overflow-hidden">
             <div className="overflow-x-auto">
