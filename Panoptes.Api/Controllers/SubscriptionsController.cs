@@ -105,6 +105,18 @@ namespace Panoptes.Api.Controllers
         [HttpPost]
         public async Task<ActionResult<WebhookSubscription>> CreateSubscription(WebhookSubscription subscription)
         {
+            // Check for duplicate subscription name
+            if (!string.IsNullOrWhiteSpace(subscription.Name))
+            {
+                var existingSubscription = await _dbContext.WebhookSubscriptions
+                    .FirstOrDefaultAsync(s => s.Name == subscription.Name);
+                
+                if (existingSubscription != null)
+                {
+                    return BadRequest($"A subscription with the name '{subscription.Name}' already exists. Please use a different name.");
+                }
+            }
+
             // Validate TargetUrl
             if (string.IsNullOrWhiteSpace(subscription.TargetUrl) ||
                 !Uri.TryCreate(subscription.TargetUrl, UriKind.Absolute, out var uri) ||
@@ -387,6 +399,15 @@ namespace Panoptes.Api.Controllers
             // Update allowed fields (SecretKey is NOT updatable by client)
             if (!string.IsNullOrWhiteSpace(subscription.Name))
             {
+                // Check if the new name conflicts with another subscription
+                var duplicateSubscription = await _dbContext.WebhookSubscriptions
+                    .FirstOrDefaultAsync(s => s.Name == subscription.Name && s.Id != id);
+                
+                if (duplicateSubscription != null)
+                {
+                    return BadRequest($"A subscription with the name '{subscription.Name}' already exists. Please use a different name.");
+                }
+                
                 existingSub.Name = subscription.Name;
             }
             

@@ -62,7 +62,7 @@ namespace Panoptes.Api.Workers
                         dbConfig.Network, dbConfig.GrpcEndpoint);
                     return (dbConfig.GrpcEndpoint, apiKey, dbConfig.Network);
                 }
-                catch (System.Security.Cryptography.CryptographicException ex)
+                catch (System.Security.Cryptography.CryptographicException)
                 {
                     _logger.LogWarning("Failed to decrypt stored credentials (encryption keys changed). Clearing invalid data...");
                     
