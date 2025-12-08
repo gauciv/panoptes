@@ -456,6 +456,7 @@ namespace Panoptes.Api.Controllers
 
             // Reset circuit breaker, rate limit, and re-enable subscription
             sub.IsActive = true;
+            sub.PausedAt = null;
             sub.IsCircuitBroken = false;
             sub.CircuitBrokenReason = null;
             sub.ConsecutiveFailures = 0;
