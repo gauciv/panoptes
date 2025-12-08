@@ -487,6 +487,7 @@ namespace Panoptes.Api.Controllers
             }
 
             // Toggle the active state
+            // Note: IsPaused is the inverse of IsActive (when active=false, isPaused=true)
             sub.IsActive = !sub.IsActive;
             sub.IsPaused = !sub.IsActive;
             
