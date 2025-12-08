@@ -177,6 +177,7 @@ const Dashboard: React.FC = () => {
         secretKey: '', 
         eventType: data.eventType,
         isActive: true,
+        isPaused: false,
         targetAddress: null,
         policyId: null,
         maxWebhooksPerMinute: 60,

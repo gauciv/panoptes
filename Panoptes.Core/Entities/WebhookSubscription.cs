@@ -12,6 +12,7 @@ namespace Panoptes.Core.Entities
         public string? PolicyId { get; set; }
         public string SecretKey { get; set; } = string.Empty;
         public bool IsActive { get; set; }
+        public bool IsPaused { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime? PausedAt { get; set; }
         
