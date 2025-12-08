@@ -7,7 +7,9 @@ export interface WebhookSubscription {
     policyId?: string | null;
     secretKey: string;
     isActive: boolean;
+    isPaused: boolean;
     createdAt: string;
+    pausedAt?: string | null;
     maxWebhooksPerMinute: number;
     maxWebhooksPerHour: number;
     enableBatching: boolean;
