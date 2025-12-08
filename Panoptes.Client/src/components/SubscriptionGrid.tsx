@@ -5,6 +5,7 @@ import { WebhookSubscription } from '../types';
 interface SubscriptionGridProps {
   subscriptions: WebhookSubscription[];
   loading?: boolean;
+  onSelectSubscription: (sub: WebhookSubscription) => void;
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
   onTest: (id: string) => void;
@@ -13,11 +14,13 @@ interface SubscriptionGridProps {
 export const SubscriptionGrid: React.FC<SubscriptionGridProps> = ({ 
   subscriptions, 
   loading,
+  onSelectSubscription,
   onEdit, 
   onDelete, 
   onTest 
 }) => {
   
+  // --- LOADING STATE ---
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-20">
@@ -30,6 +33,7 @@ export const SubscriptionGrid: React.FC<SubscriptionGridProps> = ({
     );
   }
 
+  // --- EMPTY STATE ---
   if (!subscriptions || subscriptions.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 px-4 border-2 border-dashed border-gray-300 rounded-xl bg-gray-50/50">
@@ -41,13 +45,14 @@ export const SubscriptionGrid: React.FC<SubscriptionGridProps> = ({
     );
   }
 
+  // --- LIST STATE ---
   return (
-    // 👇 FIXED: grid-cols-1 ensures cards take full width (like a table row)
     <div className="grid grid-cols-1 gap-3 p-4">
       {subscriptions.map((sub) => (
         <SubscriptionCard 
           key={sub.id} 
           subscription={sub}
+          onSelect={() => onSelectSubscription(sub)}
           onEdit={onEdit}
           onDelete={onDelete}
           onTest={onTest}
@@ -56,3 +61,5 @@ export const SubscriptionGrid: React.FC<SubscriptionGridProps> = ({
     </div>
   );
 };
+
+export default SubscriptionGrid;
