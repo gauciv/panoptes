@@ -365,7 +365,7 @@ const SubscriptionDetail: React.FC = () => {
         </div>
 
         {/* Paused Banner */}
-        {subscription.isPaused && (
+        {!subscription.isActive && !subscription.isCircuitBroken && !subscription.isRateLimited && (
           <div className="mb-6 bg-amber-50 border border-amber-300 rounded-md p-4">
             <div className="flex items-start justify-between">
               <div className="flex items-start">
@@ -378,15 +378,10 @@ const SubscriptionDetail: React.FC = () => {
                     This subscription is currently paused. Events are still being recorded, but webhooks are not being sent to your endpoint.
                     When you resume this subscription, all pending events will be delivered.
                   </p>
-                  {subscription.pausedAt && (
-                    <p className="text-xs text-amber-700 mt-2">
-                      <strong>Paused since:</strong> {new Date(subscription.pausedAt).toLocaleString()}
-                    </p>
-                  )}
                 </div>
               </div>
               <button
-                onClick={() => setIsResumeModalOpen(true)}
+                onClick={handleToggleActive}
                 className="ml-4 px-4 py-2 bg-amber-600 text-white text-sm font-medium rounded-md hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 whitespace-nowrap"
               >
                 Resume Subscription
@@ -420,24 +415,16 @@ const SubscriptionDetail: React.FC = () => {
                       <li>Check your webhook endpoint is running and accessible</li>
                       <li>Verify your server can handle the request volume</li>
                       <li>Check for rate limiting on your endpoint</li>
-                      <li>Once fixed, click "Resume Subscription" below to re-enable</li>
+                      <li>Once fixed, click "Reset Subscription" below to re-enable</li>
                     </ul>
                   </div>
                 </div>
               </div>
               <button
-                onClick={async () => {
-                  try {
-                    await fetch(`http://localhost:5186/subscriptions/${id}/resume`, { method: 'POST' });
-                    await fetchSubscription();
-                    setError(null);
-                  } catch (err: any) {
-                    setError(`Failed to resume: ${err.message}`);
-                  }
-                }}
+                onClick={handleReset}
                 className="ml-4 px-4 py-2 bg-orange-600 text-white text-sm font-medium rounded-md hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 whitespace-nowrap"
               >
-                Resume Subscription
+                Reset Subscription
               </button>
             </div>
           </div>
