@@ -9,6 +9,16 @@ export default defineConfig({
   server: {
     port: 3000,
     proxy: {
+      '/setup': {
+        target: 'http://localhost:5033',
+        changeOrigin: true,
+        secure: false,
+      },
+      '/health': {
+        target: 'http://localhost:5033',
+        changeOrigin: true,
+        secure: false,
+      },
       '/Subscriptions': {
         target: 'http://localhost:5033',
         changeOrigin: true,

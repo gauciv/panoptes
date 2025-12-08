@@ -87,7 +87,7 @@ const Dashboard: React.FC = () => {
 
   const fetchSystemInfo = async () => {
     try {
-      const response = await fetch('http://localhost:5186/health/system-info');
+      const response = await fetch('/health/system-info');
       const data = await response.json();
       setSystemInfo(data);
     } catch (error) {
@@ -97,7 +97,7 @@ const Dashboard: React.FC = () => {
 
   const fetchSetupStatus = async () => {
     try {
-      const response = await fetch('http://localhost:5186/setup/status');
+      const response = await fetch('/setup/status');
       const data = await response.json();
       setSetupStatus(data);
       

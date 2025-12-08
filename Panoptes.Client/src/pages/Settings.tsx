@@ -46,7 +46,7 @@ export default function Settings() {
   const fetchSetupStatus = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('http://localhost:5186/setup/status');
+      const response = await fetch('/setup/status');
       const data = await response.json();
       setSetupStatus(data);
 
@@ -81,7 +81,7 @@ export default function Settings() {
     setValidationResult(null);
 
     try {
-      const response = await fetch('http://localhost:5186/setup/validate-demeter', {
+      const response = await fetch('/setup/validate-demeter', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -131,7 +131,7 @@ export default function Settings() {
     setSuccess(null);
 
     try {
-      const response = await fetch('http://localhost:5186/setup/save-credentials', {
+      const response = await fetch('/setup/save-credentials', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -166,7 +166,7 @@ export default function Settings() {
     }
 
     try {
-      const response = await fetch('http://localhost:5186/setup/clear-credentials', {
+      const response = await fetch('/setup/clear-credentials', {
         method: 'DELETE',
       });
 

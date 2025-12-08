@@ -48,6 +48,7 @@ export function SetupWizard({ onComplete }: SetupWizardProps) {
     setValidationResult(null);
 
     try {
+      console.log('Validating credentials...', { grpcEndpoint, network });
       const response = await fetch('/setup/validate-demeter', {
         method: 'POST',
         headers: {
@@ -60,14 +61,17 @@ export function SetupWizard({ onComplete }: SetupWizardProps) {
         }),
       });
 
+      console.log('Response status:', response.status);
       const data = await response.json();
+      console.log('Response data:', data);
 
       if (!response.ok) {
+        const errorMsg = data.error || data.message || 'Validation failed';
         setValidationResult({
           isValid: false,
-          error: data.error || 'Validation failed',
+          error: errorMsg,
         });
-        setError(data.error || 'Failed to validate credentials');
+        setError(errorMsg);
         return;
       }
 
@@ -76,7 +80,15 @@ export function SetupWizard({ onComplete }: SetupWizardProps) {
         chainTipSlot: data.chainTipSlot,
       });
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Network error';
+      console.error('Validation error:', err);
+      let errorMessage = '🔌 Cannot connect to backend API';
+      if (err instanceof Error) {
+        if (err.message.includes('Failed to fetch')) {
+          errorMessage = '🔌 Backend API not responding. Please ensure:\n\n1. Backend is running: dotnet run --project Panoptes.Api\n2. Backend is accessible (check terminal for errors)\n3. Frontend dev server is running with proxy enabled';
+        } else {
+          errorMessage = `Error: ${err.message}`;
+        }
+      }
       setValidationResult({
         isValid: false,
         error: errorMessage,
@@ -118,7 +130,15 @@ export function SetupWizard({ onComplete }: SetupWizardProps) {
       // Success - notify parent component
       onComplete();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Network error');
+      let errorMessage = 'Network error';
+      if (err instanceof Error) {
+        if (err.message.includes('Failed to fetch')) {
+          errorMessage = 'Cannot connect to backend API. Make sure the API is running on http://localhost:5186';
+        } else {
+          errorMessage = err.message;
+        }
+      }
+      setError(errorMessage);
     } finally {
       setIsSaving(false);
     }
