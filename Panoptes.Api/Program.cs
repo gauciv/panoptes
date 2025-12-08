@@ -13,12 +13,31 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: true);
 
 // Add services to the container.
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowFrontend", policy =>
+    {
+        // Get allowed origins from configuration for production
+        var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>() 
+            ?? new[] { "http://localhost:3000", "https://localhost:3000" };
+        
+        policy.WithOrigins(allowedOrigins)
+              .AllowAnyMethod()
+              .AllowAnyHeader()
+              .AllowCredentials();
+    });
+});
+
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 // Register Configuration
 builder.Services.Configure<PanoptesConfig>(builder.Configuration.GetSection("Argus"));
+
+// Register Data Protection for encrypting sensitive data (API keys)
+builder.Services.AddDataProtection();
+// Keys are automatically persisted to ~/.aspnet/DataProtection-Keys/ by default
 
 // Register Persistence
 var dbPath = Path.Combine(Directory.GetCurrentDirectory(), "panoptes.db");
@@ -30,7 +49,7 @@ builder.Services.AddScoped<IAppDbContext>(provider => provider.GetRequiredServic
 // Register Services
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<IWebhookDispatcher, WebhookDispatcher>();
-builder.Services.AddSingleton<PanoptesReducer>(); // Singleton to share state across requests
+builder.Services.AddScoped<PanoptesReducer>(); // Scoped to allow access to scoped services
 
 // Register Workers
 builder.Services.AddHostedService<ArgusWorker>();
@@ -45,7 +64,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
+app.UseCors("AllowFrontend");
+app.UseAuthorization();
 
 app.UseCors(policy => policy
     .AllowAnyHeader()

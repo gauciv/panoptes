@@ -21,6 +21,10 @@ appsettings.Local.json
 **/appsettings.*.json
 !**/appsettings.json
 
+# Data Protection Keys (CRITICAL for security)
+keys/
+**/keys/
+
 # node
 node_modules/
 npm-debug.log
@@ -29,7 +33,7 @@ yarn-error.log
 .cache/
 dist/
 
-# SQLite
+# SQLite (contains encrypted credentials)
 *.db
 *.db-shm
 *.db-wal

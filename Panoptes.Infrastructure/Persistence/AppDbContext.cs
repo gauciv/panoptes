@@ -13,6 +13,7 @@ namespace Panoptes.Infrastructure.Persistence
         public DbSet<WebhookSubscription> WebhookSubscriptions { get; set; }
         public DbSet<DeliveryLog> DeliveryLogs { get; set; }
         public DbSet<SystemState> SystemStates { get; set; }
+        public DbSet<DemeterConfig> DemeterConfigs { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -55,6 +56,24 @@ namespace Panoptes.Infrastructure.Persistence
                 // Composite index for optimized rate limit calculations
                 entity.HasIndex(e => new { e.SubscriptionId, e.AttemptedAt })
                     .HasDatabaseName("IX_DeliveryLogs_SubscriptionId_AttemptedAt");
+            });
+            
+            // Configure DemeterConfig - only one active config allowed
+            modelBuilder.Entity<DemeterConfig>(entity =>
+            {
+                entity.Property(e => e.GrpcEndpoint)
+                    .IsRequired();
+                
+                entity.Property(e => e.ApiKeyEncrypted)
+                    .IsRequired();
+                
+                entity.Property(e => e.Network)
+                    .IsRequired()
+                    .HasDefaultValue("Preprod");
+                
+                // Index to quickly find active config
+                entity.HasIndex(e => e.IsActive)
+                    .HasDatabaseName("IX_DemeterConfigs_IsActive");
             });
         }
     }

@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Panoptes.Core.Entities;
 using Panoptes.Core.Interfaces;
+using Panoptes.Infrastructure.Configurations;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
@@ -13,10 +15,12 @@ namespace Panoptes.Api.Controllers
     public class HealthController : ControllerBase
     {
         private readonly IAppDbContext _dbContext;
+        private readonly PanoptesConfig _config;
 
-        public HealthController(IAppDbContext dbContext)
+        public HealthController(IAppDbContext dbContext, IOptions<PanoptesConfig> config)
         {
             _dbContext = dbContext;
+            _config = config.Value;
         }
 
         [HttpGet]
@@ -75,6 +79,63 @@ namespace Panoptes.Api.Controllers
 
             return Ok(response);
         }
+
+        [HttpGet("system-info")]
+        public async Task<ActionResult<SystemInfo>> GetSystemInfo()
+        {
+            // Try to load from database first
+            var dbConfig = await _dbContext.DemeterConfigs
+                .AsNoTracking()
+                .FirstOrDefaultAsync(c => c.IsActive);
+
+            if (dbConfig != null)
+            {
+                // Credentials configured in database
+                var info = new SystemInfo
+                {
+                    Network = dbConfig.Network,
+                    GrpcEndpoint = dbConfig.GrpcEndpoint,
+                    HasApiKey = true,
+                    AvailableNetworks = new[] { "Mainnet", "Preprod", "Preview" },
+                    ConfiguredVia = "Database"
+                };
+                return Ok(info);
+            }
+
+            // Fallback to appsettings
+            if (!string.IsNullOrWhiteSpace(_config.GrpcEndpoint))
+            {
+                var info = new SystemInfo
+                {
+                    Network = _config.Network,
+                    GrpcEndpoint = _config.GrpcEndpoint,
+                    HasApiKey = !string.IsNullOrWhiteSpace(_config.ApiKey),
+                    AvailableNetworks = new[] { "Mainnet", "Preprod", "Preview" },
+                    ConfiguredVia = "AppSettings"
+                };
+                return Ok(info);
+            }
+
+            // No configuration found
+            var defaultInfo = new SystemInfo
+            {
+                Network = "Not Configured",
+                GrpcEndpoint = "Not Configured",
+                HasApiKey = false,
+                AvailableNetworks = new[] { "Mainnet", "Preprod", "Preview" },
+                ConfiguredVia = "None"
+            };
+            return Ok(defaultInfo);
+        }
+    }
+
+    public class SystemInfo
+    {
+        public string Network { get; set; } = "Preprod";
+        public string GrpcEndpoint { get; set; } = string.Empty;
+        public bool HasApiKey { get; set; }
+        public string[] AvailableNetworks { get; set; } = Array.Empty<string>();
+        public string ConfiguredVia { get; set; } = "None"; // "Database", "AppSettings", or "None"
     }
 
     public class HealthResponse

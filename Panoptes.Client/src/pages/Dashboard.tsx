@@ -8,7 +8,23 @@ import LogViewer from '../components/LogViewer';
 import CreateSubscriptionModal from '../components/CreateSubscriptionModal';
 import EditSubscriptionModal from '../components/EditSubscriptionModal';
 import ConfirmationModal from '../components/ConfirmationModal';
+import { SetupWizard } from '../components/SetupWizard';
 import { useSubscriptionFilters } from '../hooks/useSubscriptionFilters';
+
+interface SystemInfo {
+  network: string;
+  grpcEndpoint: string;
+  hasApiKey: boolean;
+  availableNetworks: string[];
+  configuredVia: string;
+}
+
+interface SetupStatus {
+  isConfigured: boolean;
+  network?: string;
+  grpcEndpoint?: string;
+  lastUpdated?: string;
+}
 
 const Dashboard: React.FC = () => {
   const [subscriptions, setSubscriptions] = useState<WebhookSubscription[]>([]);
@@ -20,6 +36,9 @@ const Dashboard: React.FC = () => {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedSubscription, setSelectedSubscription] = useState<WebhookSubscription | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [systemInfo, setSystemInfo] = useState<SystemInfo | null>(null);
+  const [setupStatus, setSetupStatus] = useState<SetupStatus | null>(null);
+  const [showSetupWizard, setShowSetupWizard] = useState(false);
 
   // Subscription filters
   const {
@@ -66,9 +85,43 @@ const Dashboard: React.FC = () => {
     }
   };
 
+  const fetchSystemInfo = async () => {
+    try {
+      const response = await fetch('/health/system-info');
+      const data = await response.json();
+      setSystemInfo(data);
+    } catch (error) {
+      console.error("Error fetching system info:", error);
+    }
+  };
+
+  const fetchSetupStatus = async () => {
+    try {
+      const response = await fetch('/setup/status');
+      const data = await response.json();
+      setSetupStatus(data);
+      
+      // Show setup wizard if not configured
+      if (!data.isConfigured) {
+        setShowSetupWizard(true);
+      }
+    } catch (error) {
+      console.error("Error fetching setup status:", error);
+    }
+  };
+
+  const handleSetupComplete = () => {
+    setShowSetupWizard(false);
+    fetchSetupStatus();
+    fetchSystemInfo();
+    fetchSubscriptions();
+  };
+
   useEffect(() => {
+    fetchSetupStatus();
     fetchSubscriptions();
     fetchLogs();
+    fetchSystemInfo();
 
     // Refresh logs every 2 seconds for real-time feel
     const logInterval = setInterval(fetchLogs, 2000);
@@ -167,10 +220,36 @@ const Dashboard: React.FC = () => {
       <nav className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
-            <div className="flex">
+            <div className="flex items-center gap-4">
               <div className="flex-shrink-0 flex items-center">
                 <h1 className="text-xl font-bold text-gray-900">Panoptes Mission Control</h1>
               </div>
+              {systemInfo && (
+                <div className="flex items-center gap-2">
+                  <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                    systemInfo.network === 'Mainnet' 
+                      ? 'bg-green-100 text-green-800' 
+                      : systemInfo.network === 'Preprod'
+                      ? 'bg-blue-100 text-blue-800'
+                      : 'bg-purple-100 text-purple-800'
+                  }`}>
+                    {systemInfo.network}
+                  </span>
+                  {!systemInfo.hasApiKey && (
+                    <span className="px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800">
+                      ⚠️ No API Key
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+            <div className="flex items-center">
+              <a
+                href="/settings"
+                className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
+              >
+                ⚙️ Settings
+              </a>
             </div>
           </div>
         </div>
@@ -246,7 +325,13 @@ const Dashboard: React.FC = () => {
               <h2 className="text-lg font-medium text-gray-900">Subscriptions</h2>
               <button
                 onClick={() => setIsModalOpen(true)}
-                className="bg-sentinel text-white px-4 py-2 rounded-tech text-sm font-medium hover:bg-sentinel-hover transition-colors"
+                disabled={!setupStatus?.isConfigured}
+                className={`px-4 py-2 rounded-tech text-sm font-medium transition-colors ${
+                  setupStatus?.isConfigured
+                    ? 'bg-sentinel text-white hover:bg-sentinel-hover'
+                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                }`}
+                title={!setupStatus?.isConfigured ? 'Complete setup first' : ''}
               >
                 New Subscription
               </button>
@@ -340,6 +425,11 @@ const Dashboard: React.FC = () => {
           setSelectedSubscription(null);
         }}
       />
+
+      {/* Setup Wizard Modal */}
+      {showSetupWizard && (
+        <SetupWizard onComplete={handleSetupComplete} />
+      )}
     </div>
   );
 };

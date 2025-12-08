@@ -22,31 +22,37 @@ We aim to respond within 48 hours and will work with you to address the issue pr
 
 ### API Key Protection
 
-#### ⚠️ CRITICAL: Never Commit API Keys
+#### ⚠️ CRITICAL: Credential Security
+
+**Built-in Encryption (Default):**
+- Panoptes uses ASP.NET Core Data Protection to encrypt Demeter API keys at rest
+- Credentials are stored in SQLite (`panoptes.db`) with AES-256 encryption
+- Encryption keys are stored in the `keys/` directory (automatically gitignored)
+- **Never commit `panoptes.db` or `keys/` directory to version control**
 
 **Protected Files (Already Gitignored):**
-- `appsettings.Local.json` - Your local development secrets
-- `appsettings.Development.json` - Development environment secrets
-- `appsettings.*.json` (all variants except `appsettings.json`)
+- `panoptes.db` - SQLite database with encrypted credentials
+- `keys/` - Data Protection encryption keys
+- `appsettings.Local.json` - Optional fallback configuration
+- `appsettings.Development.json` - Development secrets
 - `.env` files
 
 **If You Accidentally Commit a Key:**
 
 1. **Revoke the key immediately** on Demeter.run
 2. **Generate a new API key**
-3. **Update your local config:**
-   ```bash
-   # Edit with new key
-   nano Panoptes.Api/appsettings.Local.json
-   ```
-4. **Remove from Git history:**
+3. **Update via Settings page** (recommended):
+   - Open http://localhost:5173/settings
+   - Enter new API key
+   - Click "Test Connection" then "Save & Apply"
+4. **Remove from Git history** (if committed):
    ```bash
    # Option 1: Use BFG Repo-Cleaner
    bfg --replace-text passwords.txt
    
    # Option 2: Manual filter-branch
    git filter-branch --force --index-filter \
-     "git rm --cached --ignore-unmatch Panoptes.Api/appsettings.Local.json" \
+     "git rm --cached --ignore-unmatch panoptes.db" \
      --prune-empty --tag-name-filter cat -- --all
    
    # Force push (use with caution)
@@ -55,28 +61,49 @@ We aim to respond within 48 hours and will work with you to address the issue pr
 
 ### Configuration Management
 
-#### Local Development
+#### Local Development (GUI - Recommended)
 ```bash
-# Step 1: Copy template
-cp Panoptes.Api/appsettings.json Panoptes.Api/appsettings.Local.json
+# Step 1: Start Panoptes
+dotnet run --project Panoptes.Api &
+cd Panoptes.Client && npm run dev
 
-# Step 2: Edit with your secrets
+# Step 2: Open browser
+# Visit http://localhost:5173
+
+# Step 3: Complete Setup Wizard
+# Enter Demeter credentials → Test → Save
+# Credentials are automatically encrypted!
+```
+
+#### Local Development (Manual - Advanced)
+```bash
+# Optional: Configure via appsettings.Local.json
+cp Panoptes.Api/appsettings.json Panoptes.Api/appsettings.Local.json
 nano Panoptes.Api/appsettings.Local.json
 
-# Step 3: Verify it's gitignored
+# Verify it's gitignored
 git status  # Should NOT show appsettings.Local.json
 ```
 
 #### Production Deployment
 
-**Option 1: Environment Variables** (Recommended)
+**Option 1: Database Configuration** (Recommended)
+- Deploy Panoptes with empty database
+- Access admin UI: `https://your-domain.com/settings`
+- Configure credentials through Settings page
+- Credentials are encrypted using ASP.NET Core Data Protection
+- **Important**: Backup `keys/` directory for disaster recovery
+
+**Option 2: Environment Variables** (Automated Deployments)
 ```bash
 export Argus__ApiKey="your-production-key"
+export Argus__GrpcEndpoint="https://cardano-mainnet.utxorpc-m1.demeter.run"
+export Argus__Network="Mainnet"
 export ApiKey="your-webhook-auth-key"
 dotnet run --project Panoptes.Api
 ```
 
-**Option 2: Azure Key Vault / AWS Secrets Manager**
+**Option 3: Azure Key Vault / AWS Secrets Manager**
 ```csharp
 // In Program.cs
 builder.Configuration.AddAzureKeyVault(
@@ -84,7 +111,7 @@ builder.Configuration.AddAzureKeyVault(
     new DefaultAzureCredential());
 ```
 
-**Option 3: Docker Secrets**
+**Option 4: Docker Secrets**
 ```yaml
 # docker-compose.yml
 services:
@@ -98,6 +125,16 @@ services:
 secrets:
   demeter_api_key:
     external: true
+```
+
+**Data Protection Key Persistence:**
+```csharp
+// For production, persist keys to shared storage
+builder.Services.AddDataProtection()
+    .PersistKeysToAzureBlobStorage(connectionString, containerName, blobName)
+    // Or for file-based persistence with backups
+    .PersistKeysToFileSystem(new DirectoryInfo("/var/keys/panoptes"))
+    .SetApplicationName("Panoptes");
 ```
 
 ---

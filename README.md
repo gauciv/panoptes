@@ -53,10 +53,6 @@
 git clone https://github.com/gauciv/panoptes.git
 cd panoptes
 
-# Set up your API key
-cp Panoptes.Api/appsettings.json Panoptes.Api/appsettings.Local.json
-# Edit appsettings.Local.json and add your Demeter API key
-
 # Build the backend
 dotnet build
 
@@ -67,7 +63,24 @@ npm install
 
 ### Configuration
 
-Edit `Panoptes.Api/appsettings.Local.json`:
+**GUI-Based Setup (Recommended)**
+
+Panoptes features a built-in setup wizard for easy configuration:
+
+1. Start the backend: `dotnet run --project Panoptes.Api`
+2. Start the frontend: `cd Panoptes.Client && npm run dev`
+3. Open http://localhost:5173 in your browser
+4. Complete the Setup Wizard with your Demeter credentials
+
+The wizard will:
+- ✅ Validate your API key by connecting to Demeter
+- 🔒 Encrypt credentials using ASP.NET Core Data Protection
+- 💾 Store configuration securely in SQLite database
+- 🚀 Auto-start the blockchain sync worker
+
+**Manual Configuration (Advanced)**
+
+For automated deployments, you can also configure via `appsettings.Local.json`:
 
 ```json
 {
@@ -79,7 +92,7 @@ Edit `Panoptes.Api/appsettings.Local.json`:
 }
 ```
 
-> ⚠️ **Security Note**: Never commit `appsettings.Local.json` or `appsettings.Development.json` to version control!
+> ⚠️ **Security Note**: GUI configuration is preferred as credentials are encrypted at rest. If using config files, never commit `appsettings.Local.json` to version control!
 
 ### Running the Application
 
@@ -95,6 +108,11 @@ cd Panoptes.Client
 npm run dev
 # Dashboard runs on http://localhost:5173
 ```
+
+**First Run:**
+- Open http://localhost:5173
+- Complete the Setup Wizard with your [Demeter.run](https://demeter.run) API key
+- ArgusWorker will start automatically once configured
 
 ---
 
@@ -298,13 +316,14 @@ This indicates a parsing issue with the CBOR structure. Report these logs for in
 
 ### API Key Management
 ✅ **DO:**
-- Store API keys in `appsettings.Local.json` (gitignored)
-- Use environment variables in production
-- Rotate keys regularly
+- Use the built-in Setup Wizard (credentials are encrypted at rest)
+- Update credentials via Settings page (automatic re-encryption)
+- Use environment variables for automated deployments
+- Rotate keys regularly through the Settings interface
 
 ❌ **DON'T:**
-- Commit API keys to Git
-- Share `appsettings.*.json` files
+- Commit `appsettings.Local.json` if it contains API keys
+- Share database files (`panoptes.db`) between environments
 - Use development keys in production
 
 ### Webhook Security
