@@ -61,6 +61,7 @@ export default {
       fontFamily: {
         sans: ['"Google Sans Display"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
         mono: ['"Space Mono"', 'monospace'],
+				michroma: ['"Michroma"', 'sans-serif'],
       },
       borderRadius: {
         lg: 'var(--radius)',
