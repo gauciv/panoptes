@@ -87,7 +87,6 @@ public class CatchUpModeTests
     public void CatchUpMode_ExitCondition_ShouldFlushRemainingBatches()
     {
         // Arrange - Simulating exit from catch-up mode
-        var isCatchingUp = true;
         var timeBetweenBlocks = 2.0; // Normal speed resumed
         var pendingWebhooksCount = 7; // Less than batch size but should be flushed
         

@@ -39,20 +39,20 @@ namespace Panoptes.Api.Workers
             // Startup validation
             if (string.IsNullOrWhiteSpace(_config.GrpcEndpoint))
             {
-                _logger.LogCritical("\n" +
+                _logger.LogCritical(
                     "═══════════════════════════════════════════════════════════════\n" +
                     "❌ CONFIGURATION ERROR: Missing GrpcEndpoint\n" +
                     "═══════════════════════════════════════════════════════════════\n" +
                     "The 'GrpcEndpoint' is not configured in appsettings.json\n" +
                     "\n" +
                     "Please add to appsettings.Local.json:\n" +
-                    "{\n" +
-                    "  \"Argus\": {\n" +
+                    "{{\n" +
+                    "  \"Argus\": {{\n" +
                     "    \"GrpcEndpoint\": \"https://cardano-preprod.utxorpc-m1.demeter.run\",\n" +
                     "    \"ApiKey\": \"YOUR_DEMETER_API_KEY\"\n" +
-                    "  }\n" +
-                    "}\n" +
-                    "═══════════════════════════════════════════════════════════════\n");
+                    "  }}\n" +
+                    "}}\n" +
+                    "═══════════════════════════════════════════════════════════════");
                 return;
             }
 
@@ -72,13 +72,13 @@ namespace Panoptes.Api.Workers
                 try
                 {
                     _logger.LogInformation("Connecting to Demeter Argus via UtxoRPC at {Url}", _config.GrpcEndpoint);
-                    _logger.LogInformation("API Key: {ApiKeyPrefix}... ({Length} characters)", 
-                        _config.ApiKey?.Length > 15 ? _config.ApiKey.Substring(0, 15) : "(not set)",
+                    _logger.LogInformation("API Key: {ApiKeyPrefix} - {Length} characters", 
+                        _config.ApiKey?.Length > 15 ? _config.ApiKey.Substring(0, 15) + "..." : "(not set)",
                         _config.ApiKey?.Length ?? 0);
 
                     var headers = new Dictionary<string, string>
                     {
-                        { "dmtr-api-key", _config.ApiKey }
+                        { "dmtr-api-key", _config.ApiKey ?? string.Empty }
                     };
                     
                     // Use our custom provider that handles UtxoRPC format correctly
