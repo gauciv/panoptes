@@ -316,7 +316,7 @@ jobs:
       uses: actions/dependency-review-action@v4
       with:
         fail-on-severity: high
-        allow-licenses: MIT, Apache-2.0, BSD-3-Clause, ISC, 0BSD
+        allow-licenses: MIT, Apache-2.0, BSD-3-Clause, ISC, 0BSD, CC0-1.0
 
   # Job 7: Build Summary
   build-summary:
