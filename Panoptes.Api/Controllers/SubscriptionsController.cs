@@ -17,12 +17,14 @@ namespace Panoptes.Api.Controllers
         private readonly IAppDbContext _dbContext;
         private readonly IWebhookDispatcher _dispatcher;
         private readonly PanoptesReducer _reducer;
+        private readonly ILogger<SubscriptionsController> _logger;
 
-        public SubscriptionsController(IAppDbContext dbContext, IWebhookDispatcher dispatcher, PanoptesReducer reducer)
+        public SubscriptionsController(IAppDbContext dbContext, IWebhookDispatcher dispatcher, PanoptesReducer reducer, ILogger<SubscriptionsController> logger)
         {
             _dbContext = dbContext;
             _dispatcher = dispatcher;
             _reducer = reducer;
+            _logger = logger;
         }
 
         /// <summary>
@@ -145,7 +147,8 @@ namespace Panoptes.Api.Controllers
             _dbContext.WebhookSubscriptions.Add(subscription);
             await _dbContext.SaveChangesAsync();
             
-            Console.WriteLine($"Created subscription: {subscription.Name}, IsActive: {subscription.IsActive}, EventType: {subscription.EventType}");
+            _logger.LogInformation("Created subscription: {Name}, IsActive: {IsActive}, EventType: {EventType}", 
+                subscription.Name, subscription.IsActive, subscription.EventType);
 
             return CreatedAtAction(nameof(GetSubscriptions), new { id = subscription.Id }, subscription);
         }
@@ -204,7 +207,7 @@ namespace Panoptes.Api.Controllers
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error getting subscriptions: {ex}");
+                _logger.LogError(ex, "Error getting subscriptions");
                 return StatusCode(500, ex.Message);
             }
         }
@@ -227,7 +230,7 @@ namespace Panoptes.Api.Controllers
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error getting logs: {ex}");
+                _logger.LogError(ex, "Error getting logs");
                 return StatusCode(500, ex.Message);
             }
         }
@@ -259,12 +262,12 @@ namespace Panoptes.Api.Controllers
                     .ToListAsync();
 
                 var result = new LogsResponse { Logs = logs, TotalCount = totalCount };
-                Console.WriteLine($"[GetSubscriptionLogs] Returning {logs.Count} logs out of {totalCount} total");
+                _logger.LogDebug("[GetSubscriptionLogs] Returning {Count} logs out of {Total} total", logs.Count, totalCount);
                 return Ok(result);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error getting subscription logs: {ex}");
+                _logger.LogError(ex, "Error getting subscription logs");
                 return StatusCode(500, ex.Message);
             }
         }
@@ -319,7 +322,7 @@ namespace Panoptes.Api.Controllers
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error getting subscription: {ex}");
+                _logger.LogError(ex, "Error getting subscription");
                 return StatusCode(500, ex.Message);
             }
         }

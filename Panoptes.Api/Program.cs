@@ -66,14 +66,6 @@ if (app.Environment.IsDevelopment())
 
 app.UseCors("AllowFrontend");
 app.UseAuthorization();
-
-app.UseCors(policy => policy
-    .AllowAnyHeader()
-    .AllowAnyMethod()
-    .SetIsOriginAllowed(origin => true)
-    .AllowCredentials());
-app.UseAuthorization();
-
 app.MapControllers();
 
 // Ensure database is created (optional but helpful for this context)
