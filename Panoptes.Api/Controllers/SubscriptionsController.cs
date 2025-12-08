@@ -489,17 +489,14 @@ namespace Panoptes.Api.Controllers
             
             if (sub.IsActive)
             {
-                // Resuming - check for pending events
-                var pendingEventCount = await _dbContext.DeliveryLogs
-                    .CountAsync(l => l.SubscriptionId == id && l.Status == DeliveryStatus.Paused);
+                // Resuming - fetch pending events
+                var pausedEvents = await _dbContext.DeliveryLogs
+                    .Where(l => l.SubscriptionId == id && l.Status == DeliveryStatus.Paused)
+                    .ToListAsync();
                 
                 // Mark all paused events as Retrying so they get picked up by the retry worker
-                if (pendingEventCount > 0)
+                if (pausedEvents.Count > 0)
                 {
-                    var pausedEvents = await _dbContext.DeliveryLogs
-                        .Where(l => l.SubscriptionId == id && l.Status == DeliveryStatus.Paused)
-                        .ToListAsync();
-                    
                     foreach (var log in pausedEvents)
                     {
                         log.Status = DeliveryStatus.Retrying;
@@ -509,7 +506,7 @@ namespace Panoptes.Api.Controllers
                 }
                 
                 _logger.LogInformation("▶️ Subscription {Name} (ID: {Id}) activated. {Count} pending events queued.", 
-                    sub.Name, sub.Id, pendingEventCount);
+                    sub.Name, sub.Id, pausedEvents.Count);
             }
             else
             {
