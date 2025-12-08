@@ -15,6 +15,9 @@ const CreateSubscriptionModal: React.FC<CreateSubscriptionModalProps> = ({
   const [targetUrl, setTargetUrl] = useState('');
   const [eventType, setEventType] = useState('Transaction');
   const [walletAddressesText, setWalletAddressesText] = useState('');
+  const [isValidatingUrl, setIsValidatingUrl] = useState(false);
+  const [showValidationWarning, setShowValidationWarning] = useState(false);
+  const [validationWarningMessage, setValidationWarningMessage] = useState('');
 
   const isValidUrl = (url: string): boolean => {
     return url.startsWith('http://') || url.startsWith('https://');
@@ -30,10 +33,50 @@ const CreateSubscriptionModal: React.FC<CreateSubscriptionModalProps> = ({
 
   const isFormValid = name.trim().length > 0 && isValidUrl(targetUrl);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isFormValid) return;
 
+    // Validate URL before creating subscription
+    setIsValidatingUrl(true);
+
+    try {
+      // Create AbortController for timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
+      const response = await fetch('/Subscriptions/validate-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(targetUrl),
+        signal: controller.signal
+      });
+
+      clearTimeout(timeoutId);
+      const result = await response.json();
+
+      if (!result.valid) {
+        // Show warning modal
+        setValidationWarningMessage(result.message || 'The webhook URL appears to be unreachable. Are you sure you want to create this subscription?');
+        setShowValidationWarning(true);
+        setIsValidatingUrl(false);
+        return;
+      }
+
+      // URL is valid, proceed with creation
+      setIsValidatingUrl(false);
+      createSubscription();
+    } catch (err) {
+      setIsValidatingUrl(false);
+      const errorMessage = err instanceof Error && err.name === 'AbortError'
+        ? 'Validation timed out after 10 seconds. The webhook URL may be slow or unreachable. Do you want to create this subscription anyway?'
+        : 'Failed to validate URL. Are you sure you want to create this subscription?';
+      setValidationWarningMessage(errorMessage);
+      setShowValidationWarning(true);
+    }
+  };
+
+  const createSubscription = () => {
     const walletAddresses = parseWalletAddresses(walletAddressesText);
 
     onCreate({
@@ -48,6 +91,8 @@ const CreateSubscriptionModal: React.FC<CreateSubscriptionModalProps> = ({
     setTargetUrl('');
     setEventType('Transaction');
     setWalletAddressesText('');
+    setIsValidatingUrl(false);
+    setShowValidationWarning(false);
   };
 
   const handleClose = () => {
@@ -55,6 +100,8 @@ const CreateSubscriptionModal: React.FC<CreateSubscriptionModalProps> = ({
     setTargetUrl('');
     setEventType('Transaction');
     setWalletAddressesText('');
+    setIsValidatingUrl(false);
+    setShowValidationWarning(false);
     onClose();
   };
 
@@ -118,7 +165,9 @@ const CreateSubscriptionModal: React.FC<CreateSubscriptionModalProps> = ({
                   type="text"
                   id="targetUrl"
                   value={targetUrl}
-                  onChange={(e) => setTargetUrl(e.target.value)}
+                  onChange={(e) => {
+                    setTargetUrl(e.target.value);
+                  }}
                   className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 ${
                     targetUrl && !isValidUrl(targetUrl) 
                       ? 'border-red-300 bg-red-50' 
@@ -194,19 +243,52 @@ const CreateSubscriptionModal: React.FC<CreateSubscriptionModalProps> = ({
               </button>
               <button
                 type="submit"
-                disabled={!isFormValid}
+                disabled={!isFormValid || isValidatingUrl}
                 className={`px-4 py-2 text-sm font-medium text-white rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 ${
-                  isFormValid
+                  isFormValid && !isValidatingUrl
                     ? 'bg-indigo-600 hover:bg-indigo-700'
                     : 'bg-indigo-300 cursor-not-allowed'
                 }`}
               >
-                Create
+                {isValidatingUrl ? 'Validating URL...' : 'Create'}
               </button>
             </div>
           </form>
         </div>
       </div>
+
+      {/* Warning Modal for Unreachable URL */}
+      {showValidationWarning && (
+        <div className="fixed inset-0 z-[60] overflow-y-auto">
+          <div className="fixed inset-0 bg-black bg-opacity-50" onClick={() => setShowValidationWarning(false)} />
+          <div className="flex min-h-full items-center justify-center p-4">
+            <div className="relative bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+              <div className="flex items-start mb-4">
+                <div className="flex-shrink-0">
+                  <svg className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div className="ml-3 flex-1">
+                  <h3 className="text-lg font-medium text-gray-900">Cannot Create Subscription</h3>
+                  <p className="mt-2 text-sm text-gray-600">{validationWarningMessage}</p>
+                  <p className="mt-2 text-sm text-gray-600">
+                    Please verify the webhook URL and try again.
+                  </p>
+                </div>
+              </div>
+              <div className="flex justify-end mt-6">
+                <button
+                  onClick={() => setShowValidationWarning(false)}
+                  className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

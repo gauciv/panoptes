@@ -38,6 +38,7 @@ namespace Panoptes.Infrastructure.Services
                 log.PayloadJson = payloadJson;
 
                 using var client = _httpClientFactory.CreateClient();
+                client.Timeout = TimeSpan.FromSeconds(30); // 30 second timeout for webhook delivery
                 using var request = new HttpRequestMessage(HttpMethod.Post, sub.TargetUrl);
                 
                 request.Content = new StringContent(payloadJson, Encoding.UTF8, "application/json");

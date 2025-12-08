@@ -361,6 +361,13 @@ namespace Panoptes.Infrastructure.Services
 
         private async Task DispatchWebhook(WebhookSubscription sub, object payload)
         {
+            // Skip if subscription is circuit broken
+            if (sub.IsCircuitBroken || !sub.IsActive)
+            {
+                _logger?.LogDebug("Skipping webhook dispatch for {Name} - subscription is inactive or circuit broken", sub.Name);
+                return;
+            }
+
             try
             {
                 var log = await _dispatcher.DispatchAsync(sub, payload);
@@ -407,8 +414,49 @@ namespace Panoptes.Infrastructure.Services
                         sub.FirstFailureInWindowAt = DateTime.UtcNow;
                     }
                     
-                    _logger?.LogWarning("Webhook failed (status {Status}) for {Name}, consecutive failures: {Count}", 
-                        log.ResponseStatusCode, sub.Name, sub.ConsecutiveFailures);
+                    // Check if URL has become consistently unresponsive
+                    // Status code 0 indicates network/timeout errors (URL unreachable)
+                    if (log.ResponseStatusCode == 0)
+                    {
+                        _logger?.LogWarning("Webhook URL unreachable for {Name}, consecutive failures: {Count}", 
+                            sub.Name, sub.ConsecutiveFailures);
+                        
+                        // Quick circuit breaker: Auto-pause after 5 consecutive network failures
+                        if (sub.ConsecutiveFailures >= 5)
+                        {
+                            sub.IsActive = false;
+                            sub.IsCircuitBroken = true;
+                            sub.CircuitBrokenReason = $"Webhook URL is unreachable - failed {sub.ConsecutiveFailures} consecutive times with network/timeout errors. Last error: {log.ResponseBody}";
+                            _logger?.LogError("⚠️ CIRCUIT BREAKER: Auto-paused subscription {Name} - URL unreachable after {Count} attempts", sub.Name, sub.ConsecutiveFailures);
+                        }
+                    }
+                    else
+                    {
+                        _logger?.LogWarning("Webhook failed (status {Status}) for {Name}, consecutive failures: {Count}", 
+                            log.ResponseStatusCode, sub.Name, sub.ConsecutiveFailures);
+                        
+                        // Auto-pause after 15 consecutive HTTP error responses
+                        if (sub.ConsecutiveFailures >= 15)
+                        {
+                            sub.IsActive = false;
+                            sub.IsCircuitBroken = true;
+                            sub.CircuitBrokenReason = $"Webhook has failed {sub.ConsecutiveFailures} consecutive times. Last status: {log.ResponseStatusCode}";
+                            _logger?.LogError("⚠️ CIRCUIT BREAKER: Auto-paused subscription {Name} after {Count} consecutive failures", sub.Name, sub.ConsecutiveFailures);
+                        }
+                    }
+                    
+                    // Time-based circuit breaker: Auto-pause if failing continuously for 12+ hours
+                    if (sub.FirstFailureInWindowAt.HasValue)
+                    {
+                        var failureDuration = DateTime.UtcNow - sub.FirstFailureInWindowAt.Value;
+                        if (failureDuration.TotalHours >= 12)
+                        {
+                            sub.IsActive = false;
+                            sub.IsCircuitBroken = true;
+                            sub.CircuitBrokenReason = $"Continuous failures for {failureDuration.TotalHours:F1}+ hours ({sub.ConsecutiveFailures} failures)";
+                            _logger?.LogError("⚠️ CIRCUIT BREAKER: Auto-paused subscription {Name} after {Hours:F1} hours of continuous failures", sub.Name, failureDuration.TotalHours);
+                        }
+                    }
                 }
                 
                 _dbContext.DeliveryLogs.Add(log);

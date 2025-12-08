@@ -22,6 +22,9 @@ const EditSubscriptionModal: React.FC<EditSubscriptionModalProps> = ({
     const [policyId, setPolicyId] = useState('');
     const [walletAddressesText, setWalletAddressesText] = useState('');
     const [urlError, setUrlError] = useState('');
+    const [isValidatingUrl, setIsValidatingUrl] = useState(false);
+    const [showValidationWarning, setShowValidationWarning] = useState(false);
+    const [validationWarningMessage, setValidationWarningMessage] = useState('');
 
     const parseWalletAddresses = (text: string): string[] => {
         if (!text.trim()) return [];
@@ -55,7 +58,9 @@ const EditSubscriptionModal: React.FC<EditSubscriptionModalProps> = ({
         }
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+
+
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
         if (!validateUrl(targetUrl)) {
@@ -63,6 +68,45 @@ const EditSubscriptionModal: React.FC<EditSubscriptionModalProps> = ({
             return;
         }
 
+        // Validate URL before saving
+        setIsValidatingUrl(true);
+        setUrlError('');
+
+        try {
+            // Create AbortController for timeout
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
+            const response = await fetch('/Subscriptions/validate-url', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(targetUrl),
+                signal: controller.signal
+            });
+
+            clearTimeout(timeoutId);
+            const result = await response.json();
+
+            if (!result.valid) {
+                setValidationWarningMessage(result.message || 'The webhook URL appears to be unreachable. Are you sure you want to save these changes?');
+                setShowValidationWarning(true);
+                setIsValidatingUrl(false);
+                return;
+            }
+
+            setIsValidatingUrl(false);
+            saveChanges();
+        } catch (err) {
+            setIsValidatingUrl(false);
+            const errorMessage = err instanceof Error && err.name === 'AbortError'
+                ? 'Validation timed out after 10 seconds. The webhook URL may be slow or unreachable. Do you want to save anyway?'
+                : 'Failed to validate URL. Are you sure you want to save these changes?';
+            setValidationWarningMessage(errorMessage);
+            setShowValidationWarning(true);
+        }
+    };
+
+    const saveChanges = () => {
         const walletAddresses = parseWalletAddresses(walletAddressesText);
 
         onSave({
@@ -75,6 +119,8 @@ const EditSubscriptionModal: React.FC<EditSubscriptionModalProps> = ({
             policyId: policyId || null,
             walletAddresses: walletAddresses.length > 0 ? walletAddresses : null,
         });
+
+        setShowValidationWarning(false);
     };
 
     return (
@@ -250,14 +296,52 @@ const EditSubscriptionModal: React.FC<EditSubscriptionModalProps> = ({
                             </button>
                             <button
                                 type="submit"
-                                className="flex-1 px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                                disabled={isValidatingUrl}
+                                className={`flex-1 px-4 py-2 text-sm font-medium text-white rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 ${
+                                    isValidatingUrl
+                                        ? 'bg-indigo-300 cursor-not-allowed'
+                                        : 'bg-indigo-600 hover:bg-indigo-700'
+                                }`}
                             >
-                                Save Changes
+                                {isValidatingUrl ? 'Validating URL...' : 'Save Changes'}
                             </button>
                         </div>
                     </form>
                 </div>
             </div>
+
+            {/* Warning Modal for Unreachable URL */}
+            {showValidationWarning && (
+                <div className="fixed inset-0 z-[60] overflow-y-auto">
+                    <div className="fixed inset-0 bg-black bg-opacity-50" onClick={() => setShowValidationWarning(false)} />
+                    <div className="flex min-h-full items-center justify-center p-4">
+                        <div className="relative bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+                            <div className="flex items-start mb-4">
+                                <div className="flex-shrink-0">
+                                    <svg className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                </div>
+                                <div className="ml-3 flex-1">
+                                    <h3 className="text-lg font-medium text-gray-900">Cannot Save Changes</h3>
+                                    <p className="mt-2 text-sm text-gray-600">{validationWarningMessage}</p>
+                                    <p className="mt-2 text-sm text-gray-600">
+                                        Please verify the webhook URL and try again.
+                                    </p>
+                                </div>
+                            </div>
+                            <div className="flex justify-end mt-6">
+                                <button
+                                    onClick={() => setShowValidationWarning(false)}
+                                    className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700"
+                                >
+                                    Close
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

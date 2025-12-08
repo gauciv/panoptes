@@ -194,33 +194,47 @@ namespace Panoptes.Api.Workers
                 subscription.FirstFailureInWindowAt = DateTime.UtcNow;
             }
 
-            // Circuit Breaker Rule 1: 10 consecutive failures
-            if (subscription.ConsecutiveFailures >= 10)
+            // Circuit Breaker Rule 1: Quick trigger for unreachable URLs (status 0 = network/timeout errors)
+            if (statusCode == 0 && subscription.ConsecutiveFailures >= 5)
             {
                 subscription.IsActive = false;
                 subscription.IsCircuitBroken = true;
-                subscription.CircuitBrokenReason = $"Circuit breaker triggered: 10 consecutive failures (last status: {statusCode})";
+                subscription.CircuitBrokenReason = $"Webhook URL is unreachable - failed {subscription.ConsecutiveFailures} consecutive times with network/timeout errors";
                 
                 _logger.LogWarning(
-                    "⚠️ CIRCUIT BREAKER: Subscription {SubId} ({Name}) auto-disabled after {Failures} consecutive failures",
+                    "⚠️ CIRCUIT BREAKER: Subscription {SubId} ({Name}) auto-paused - URL unreachable after {Failures} attempts",
                     subscription.Id, subscription.Name, subscription.ConsecutiveFailures);
                 
                 return;
             }
 
-            // Circuit Breaker Rule 2: Failures for 24 hours straight
+            // Circuit Breaker Rule 2: 15 consecutive failures for HTTP errors
+            if (subscription.ConsecutiveFailures >= 15)
+            {
+                subscription.IsActive = false;
+                subscription.IsCircuitBroken = true;
+                subscription.CircuitBrokenReason = $"Circuit breaker triggered: {subscription.ConsecutiveFailures} consecutive failures (last status: {statusCode})";
+                
+                _logger.LogWarning(
+                    "⚠️ CIRCUIT BREAKER: Subscription {SubId} ({Name}) auto-paused after {Failures} consecutive failures",
+                    subscription.Id, subscription.Name, subscription.ConsecutiveFailures);
+                
+                return;
+            }
+
+            // Circuit Breaker Rule 3: Failures for 12 hours straight
             if (subscription.FirstFailureInWindowAt.HasValue)
             {
                 var failureDuration = DateTime.UtcNow - subscription.FirstFailureInWindowAt.Value;
                 
-                if (failureDuration.TotalHours >= 24)
+                if (failureDuration.TotalHours >= 12)
                 {
                     subscription.IsActive = false;
                     subscription.IsCircuitBroken = true;
-                    subscription.CircuitBrokenReason = $"Circuit breaker triggered: Continuous failures for 24+ hours ({subscription.ConsecutiveFailures} failures)";
+                    subscription.CircuitBrokenReason = $"Circuit breaker triggered: Continuous failures for {failureDuration.TotalHours:F1}+ hours ({subscription.ConsecutiveFailures} failures)";
                     
                     _logger.LogWarning(
-                        "⚠️ CIRCUIT BREAKER: Subscription {SubId} ({Name}) auto-disabled after {Hours:F1} hours of failures",
+                        "⚠️ CIRCUIT BREAKER: Subscription {SubId} ({Name}) auto-paused after {Hours:F1} hours of continuous failures",
                         subscription.Id, subscription.Name, failureDuration.TotalHours);
                 }
             }
