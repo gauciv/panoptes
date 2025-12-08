@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
-import { getSubscriptions, getLogs, createSubscription, triggerTestEvent, updateSubscription, deleteSubscription } from '../services/api';
+import { getSubscriptions, getLogs, createSubscription, triggerTestEvent, updateSubscription, deleteSubscription, toggleSubscriptionActive, resetSubscription } from '../services/api';
 import { WebhookSubscription, DeliveryLog } from '../types';
 
 // --- COMPONENTS ---
@@ -438,6 +438,8 @@ const Dashboard: React.FC = () => {
                                 const sub = subscriptions.find(s => s.id === id);
                                 if (sub) handleDeleteClick(sub);
                             }}
+                            onToggleActive={handleToggleActive}
+                            onReset={handleReset}
                         />
                     </div>
 
@@ -459,40 +461,6 @@ const Dashboard: React.FC = () => {
                     </div>
                 </div>
             )}
-
-            <SubscriptionGrid
-              subscriptions={subscriptions}
-              onTest={handleTest}
-              onEdit={(id) => {
-                const sub = subscriptions.find(s => s.id === id);
-                if (sub) handleEdit(sub);
-              }}
-              onDelete={(id) => {
-                const sub = subscriptions.find(s => s.id === id);
-                if (sub) handleDeleteClick(sub);
-              }}
-              onToggleActive={handleToggleActive}
-              onReset={handleReset}
-            />
-          </div>
-
-          {/* Right Column: All Delivery Logs (1/3 width) */}
-          <div className="lg:col-span-1">
-            <div className="bg-white shadow rounded-lg">
-              <div className="px-6 py-5 border-b border-gray-200 flex justify-between items-center">
-                <h2 className="text-lg font-medium text-gray-900">Recent Logs</h2>
-                {totalLogs > 0 && (
-                  <span className="text-xs text-gray-500">
-                    Showing {Math.min(10, logs.length)} of {totalLogs}
-                  </span>
-                )}
-              </div>
-              <div className="px-6 py-5 max-h-[600px] overflow-y-auto">
-                <LogViewer logs={logs || []} subscriptions={subscriptions || []} />
-              </div>
-            </div>
-          </div>
-            </div>
           </>
         )}
       </main>
