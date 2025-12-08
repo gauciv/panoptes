@@ -15,7 +15,6 @@ import { useSubscriptionFilters } from '../hooks/useSubscriptionFilters';
 type DashboardView = 'overview' | 'analytics';
 
 import { SetupWizard } from '../components/SetupWizard';
-import { useSubscriptionFilters } from '../hooks/useSubscriptionFilters';
 
 interface SystemInfo {
   network: string;
