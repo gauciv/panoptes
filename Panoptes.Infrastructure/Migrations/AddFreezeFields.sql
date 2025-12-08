@@ -1,9 +1,16 @@
--- Migration: Add pause functionality to subscriptions
--- Purpose: Allow users to temporarily pause webhook deliveries without losing pending events
+-- Migration: Add freeze functionality to subscriptions  
+-- Purpose: Allow users to temporarily freeze webhook deliveries without losing pending events
 -- Date: 2024-12-08
-
--- Add IsPaused column with default value of false (0)
-ALTER TABLE WebhookSubscriptions ADD COLUMN IsPaused INTEGER NOT NULL DEFAULT 0;
-
--- Add PausedAt timestamp column to track when subscription was paused
-ALTER TABLE WebhookSubscriptions ADD COLUMN PausedAt TEXT NULL;
+--
+-- IMPLEMENTATION NOTE:
+-- This migration file documents that freeze/pause functionality has been implemented using the
+-- existing IsActive column on the WebhookSubscriptions table. No database schema changes
+-- are required because:
+--   - IsActive (boolean) already exists and serves as the freeze/pause state
+--   - When IsActive = false, the subscription is frozen/paused
+--   - When IsActive = true, the subscription is active
+--
+-- The ToggleSubscription endpoint (POST /subscriptions/{id}/toggle) manages the freeze/pause state
+-- by toggling IsActive and handling pending event delivery accordingly.
+--
+-- Note: This is a duplicate of AddPauseFields.sql - both files document the same functionality.
