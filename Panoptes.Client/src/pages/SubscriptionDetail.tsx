@@ -365,7 +365,7 @@ const SubscriptionDetail: React.FC = () => {
         </div>
 
         {/* Paused Banner */}
-        {subscription.isPaused && (
+        {subscription.isPaused && !subscription.isRateLimited && !subscription.isCircuitBroken && (
           <div className="mb-6 bg-amber-50 border border-amber-300 rounded-md p-4">
             <div className="flex items-start justify-between">
               <div className="flex items-start">

@@ -23,6 +23,8 @@ export interface WebhookSubscription {
     firstFailureInWindowAt?: string | null;
     isCircuitBroken?: boolean;
     circuitBrokenReason?: string | null;
+    isPaused?: boolean;
+    pausedAt?: string | null;
 }
 
 export interface DeliveryLog {
