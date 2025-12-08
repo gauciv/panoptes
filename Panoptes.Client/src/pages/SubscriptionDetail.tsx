@@ -161,6 +161,10 @@ const SubscriptionDetail: React.FC = () => {
     return Math.round(totalLatency / logs.length);
   };
 
+  const isSubscriptionPaused = () => {
+    return !subscription?.isActive && !subscription?.isCircuitBroken && !subscription?.isRateLimited;
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
@@ -365,7 +369,7 @@ const SubscriptionDetail: React.FC = () => {
         </div>
 
         {/* Paused Banner */}
-        {!subscription.isActive && !subscription.isCircuitBroken && !subscription.isRateLimited && (
+        {isSubscriptionPaused() && (
           <div className="mb-6 bg-amber-50 border border-amber-300 rounded-md p-4">
             <div className="flex items-start justify-between">
               <div className="flex items-start">
