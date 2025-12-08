@@ -4,6 +4,7 @@ import { WebhookSubscription } from '../types';
 
 interface SubscriptionCardProps {
   subscription: WebhookSubscription; // Now this refers to the imported type
+  onSelect: () => void;
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
   onTest: (id: string) => void;
@@ -13,6 +14,7 @@ interface SubscriptionCardProps {
 
 export const SubscriptionCard: React.FC<SubscriptionCardProps> = ({ 
   subscription, 
+  onSelect,
   onEdit, 
   onDelete, 
   onTest,
