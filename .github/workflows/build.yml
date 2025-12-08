@@ -14,7 +14,7 @@ on:
 
 env:
   DOTNET_VERSION: '9.0.x'
-  NODE_VERSION: '18.x'
+  NODE_VERSION: '22.x'
   DOTNET_NOLOGO: true
   DOTNET_CLI_TELEMETRY_OPTOUT: true
 
