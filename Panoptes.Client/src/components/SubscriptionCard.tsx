@@ -1,30 +1,62 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { WebhookSubscription } from '../types';
 
 
 interface SubscriptionCardProps {
   subscription: WebhookSubscription; // Now this refers to the imported type
+  onSelect: () => void;
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
   onTest: (id: string) => void;
-  onSelect: () => void;
+  onToggleActive: (id: string) => Promise<void>;
+  onReset?: (id: string) => Promise<void>;
 }
 
-export const SubscriptionCard: React.FC<SubscriptionCardProps> = ({
-  subscription,
-  onEdit,
-  onDelete,
+export const SubscriptionCard: React.FC<SubscriptionCardProps> = ({ 
+  subscription, 
+  onSelect,
+  onEdit, 
+  onDelete, 
   onTest,
-  onSelect
+  onToggleActive,
+  onReset
 }) => {
+  const [isToggling, setIsToggling] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
 
   // --- STATUS LOGIC ---
-  let currentStatus = 'inactive';
-  if (subscription.isRateLimited) {
-    currentStatus = 'rate_limited';
+  // Disabled = rate limited or circuit broken (auto-disabled, can't toggle)
+  // Paused = !isActive (manually paused, can toggle)
+  // Active = isActive (receiving webhooks, can toggle)
+  let currentStatus: 'active' | 'paused' | 'disabled' = 'paused';
+  let isDisabled = false;
+  
+  if (subscription.isRateLimited || subscription.isCircuitBroken) {
+    currentStatus = 'disabled';
+    isDisabled = true;
   } else if (subscription.isActive) {
     currentStatus = 'active';
   }
+
+  const handleToggle = async () => {
+    if (isDisabled || isToggling) return;
+    setIsToggling(true);
+    try {
+      await onToggleActive(subscription.id);
+    } finally {
+      setIsToggling(false);
+    }
+  };
+
+  const handleReset = async () => {
+    if (!onReset || isResetting) return;
+    setIsResetting(true);
+    try {
+      await onReset(subscription.id);
+    } finally {
+      setIsResetting(false);
+    }
+  };
 
   // --- DATA MAPPING ---
   const limits = {
@@ -41,11 +73,12 @@ export const SubscriptionCard: React.FC<SubscriptionCardProps> = ({
   };
 
   // --- STYLING HELPERS ---
-  const getStatusStyles = (status: string) => {
+  const getStatusStyles = (status: 'active' | 'paused' | 'disabled') => {
     switch (status) {
       case 'active':
         return {
           gradient: 'bg-gradient-to-r from-green-50 to-green-100 border-green-200',
+          buttonBg: 'bg-green-100 hover:bg-green-200',
           textColor: 'text-green-700',
           icon: (
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 text-green-600 animate-pulse">
@@ -53,23 +86,25 @@ export const SubscriptionCard: React.FC<SubscriptionCardProps> = ({
             </svg>
           )
         };
-      case 'rate_limited':
+      case 'paused':
         return {
-          gradient: 'bg-gradient-to-r from-red-50 to-red-100 border-red-200',
-          textColor: 'text-red-700',
+          gradient: 'bg-gradient-to-r from-amber-50 to-yellow-100 border-amber-300',
+          buttonBg: 'bg-amber-100 hover:bg-amber-200',
+          textColor: 'text-amber-700',
           icon: (
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 text-red-600">
-              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" />
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 text-amber-600">
+              <rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>
             </svg>
           )
         };
-      default: // inactive
+      case 'disabled':
         return {
-          gradient: 'bg-gradient-to-r from-gray-50 to-gray-100 border-gray-200',
-          textColor: 'text-gray-600',
+          gradient: 'bg-gradient-to-r from-red-50 to-red-100 border-red-200',
+          buttonBg: 'bg-red-100 cursor-not-allowed',
+          textColor: 'text-red-700',
           icon: (
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 text-gray-500">
-              <circle cx="12" cy="12" r="10" /><line x1="10" y1="15" x2="10" y2="9" /><line x1="14" y1="15" x2="14" y2="9" />
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 text-red-600">
+              <circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
             </svg>
           )
         };
@@ -109,13 +144,64 @@ export const SubscriptionCard: React.FC<SubscriptionCardProps> = ({
           </span>
         </div>
       </div>
-
-      {/* --- COL 2: STATUS --- */}
+      
+      {/* --- COL 2: STATUS TOGGLE BUTTON (Span 2 cols) --- */}
       <div className="col-span-6 md:col-span-2 flex items-center">
-        <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/60 ${styles.textColor} border border-white/50 shadow-sm`}>
-          {styles.icon}
-          <span className="text-[10px] font-bold uppercase tracking-wider">{currentStatus.replace('_', ' ')}</span>
-        </div>
+        {isDisabled ? (
+          // Disabled state - clicking will reset
+          <button
+            onClick={handleReset}
+            disabled={isResetting || !onReset}
+            className={`
+              flex items-center gap-1.5 px-2.5 py-1 rounded-full 
+              ${styles.buttonBg} ${styles.textColor} 
+              border border-white/50 shadow-sm
+              transition-all duration-200
+              ${onReset ? 'cursor-pointer hover:shadow-md' : 'cursor-not-allowed opacity-75'}
+              ${isResetting ? 'opacity-50' : ''}
+            `}
+            title={
+              subscription.isCircuitBroken 
+                ? 'Disabled: Circuit breaker triggered - Click to reset' 
+                : 'Disabled: Rate limited - Click to reset'
+            }
+          >
+            {isResetting ? (
+              <svg className="animate-spin w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+              </svg>
+            ) : (
+              styles.icon
+            )}
+            <span className="text-[10px] font-bold uppercase tracking-wider">{currentStatus}</span>
+          </button>
+        ) : (
+          // Active/Paused state - clicking will toggle
+          <button
+            onClick={handleToggle}
+            disabled={isToggling}
+            className={`
+              flex items-center gap-1.5 px-2.5 py-1 rounded-full 
+              ${styles.buttonBg} ${styles.textColor} 
+              border border-white/50 shadow-sm
+              transition-all duration-200
+              cursor-pointer hover:shadow-md
+              ${isToggling ? 'opacity-50' : ''}
+            `}
+            title={subscription.isActive ? 'Click to pause' : 'Click to activate'}
+          >
+            {isToggling ? (
+              <svg className="animate-spin w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+              </svg>
+            ) : (
+              styles.icon
+            )}
+            <span className="text-[10px] font-bold uppercase tracking-wider">{currentStatus}</span>
+          </button>
+        )}
       </div>
 
       {/* --- COL 3: USAGE --- */}
@@ -148,7 +234,7 @@ export const SubscriptionCard: React.FC<SubscriptionCardProps> = ({
         <button
           onClick={(e) => { e.stopPropagation(); onTest(subscription.id); }}
           className="p-2 bg-white/80 hover:bg-white text-indigo-600 rounded-lg shadow-sm hover:shadow transition-colors"
-          title="Test"
+          title="Test Webhook"
         >
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3" /></svg>
         </button>

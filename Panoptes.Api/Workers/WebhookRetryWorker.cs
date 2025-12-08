@@ -73,10 +73,17 @@ namespace Panoptes.Api.Workers
             {
                 if (stoppingToken.IsCancellationRequested) break;
                 
-                if (log.Subscription == null || !log.Subscription.IsActive)
+                if (log.Subscription == null)
                 {
                     log.Status = DeliveryStatus.Failed;
-                    log.ResponseBody = "Subscription no longer active";
+                    log.ResponseBody = "Subscription not found";
+                    continue;
+                }
+                
+                // Skip paused (inactive) subscriptions - their logs will be processed when activated
+                if (!log.Subscription.IsActive)
+                {
+                    _logger.LogDebug("Skipping retry for paused subscription {SubId}", log.SubscriptionId);
                     continue;
                 }
 

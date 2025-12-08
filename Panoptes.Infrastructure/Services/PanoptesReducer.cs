@@ -117,16 +117,16 @@ namespace Panoptes.Infrastructure.Services
                 _logger?.LogInformation("{Mode} Processing block at slot {Slot}, height {Height}", mode, slot, blockHeight);
             }
 
-            // Fetch all active subscriptions
+            // Fetch all subscriptions (both active and paused - paused ones still record events)
             var subscriptions = await _dbContext.WebhookSubscriptions
-                .Where(s => s.IsActive)
                 .AsNoTracking()
                 .ToListAsync();
 
             // Log subscription count periodically
             if (blockHeight % 100 == 0 && subscriptions.Any())
             {
-                _logger?.LogInformation("Found {Count} active subscriptions", subscriptions.Count);
+                var activeCount = subscriptions.Count(s => s.IsActive);
+                _logger?.LogInformation("Found {Count} subscriptions ({Active} active, {Paused} paused)", subscriptions.Count, activeCount, subscriptions.Count - activeCount);
             }
 
             if (subscriptions.Any())
@@ -309,6 +309,14 @@ namespace Panoptes.Infrastructure.Services
                         var payload = BuildEnhancedPayload(tx, txIndex, slot, blockHash, blockHeight, 
                             txHash, inputs, outputs, outputAddresses, policyIds, sub.EventType ?? "Unknown", matchReason);
                         
+                        // Handle paused (inactive) subscriptions: record the event but don't dispatch
+                        if (!sub.IsActive)
+                        {
+                            _logger?.LogInformation("⏸️ Subscription {Name} is paused - recording event without dispatching", sub.Name);
+                            await RecordPausedEvent(sub, payload);
+                            continue;
+                        }
+                        
                         // During catch-up, batch webhooks instead of dispatching immediately
                         if (_isCatchingUp)
                         {
@@ -469,6 +477,41 @@ namespace Panoptes.Infrastructure.Services
             catch (Exception ex)
             {
                 _logger?.LogError(ex, "Error dispatching webhook to {Name}", sub.Name);
+            }
+        }
+
+        /// <summary>
+        /// Record an event for a paused subscription without dispatching.
+        /// The event will be dispatched when the subscription is resumed.
+        /// </summary>
+        private async Task RecordPausedEvent(WebhookSubscription sub, object payload)
+        {
+            try
+            {
+                var payloadJson = System.Text.Json.JsonSerializer.Serialize(payload);
+                
+                var log = new DeliveryLog
+                {
+                    Id = Guid.NewGuid(),
+                    SubscriptionId = sub.Id,
+                    PayloadJson = payloadJson,
+                    AttemptedAt = DateTime.UtcNow,
+                    ResponseStatusCode = 0, // No attempt made
+                    ResponseBody = "Subscription paused - delivery pending",
+                    LatencyMs = 0,
+                    Status = DeliveryStatus.Paused,
+                    RetryCount = 0,
+                    MaxRetries = 3
+                };
+                
+                _dbContext.DeliveryLogs.Add(log);
+                await _dbContext.SaveChangesAsync();
+                
+                _logger?.LogDebug("Recorded paused event for {Name}, log ID: {LogId}", sub.Name, log.Id);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Error recording paused event for {Name}", sub.Name);
             }
         }
 

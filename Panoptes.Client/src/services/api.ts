@@ -55,4 +55,14 @@ export const deleteSubscription = async (id: string): Promise<void> => {
     await api.delete(`/Subscriptions/${id}`);
 };
 
+export const toggleSubscriptionActive = async (id: string): Promise<WebhookSubscription> => {
+    const response = await api.post<WebhookSubscription>(`/Subscriptions/${id}/toggle`);
+    return response.data;
+};
+
+export const resetSubscription = async (id: string): Promise<WebhookSubscription> => {
+    const response = await api.post<WebhookSubscription>(`/Subscriptions/${id}/reset`);
+    return response.data;
+};
+
 export default api;

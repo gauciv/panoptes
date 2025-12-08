@@ -12,7 +12,9 @@ namespace Panoptes.Core.Entities
         public string? PolicyId { get; set; }
         public string SecretKey { get; set; } = string.Empty;
         public bool IsActive { get; set; }
+        public bool IsPaused { get; set; }
         public DateTime CreatedAt { get; set; }
+        public DateTime? PausedAt { get; set; }
         
         // Address filtering: null = listen to all, empty = none, populated = filter by these addresses
         public List<string>? WalletAddresses { get; set; }

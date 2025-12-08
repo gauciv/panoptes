@@ -9,6 +9,8 @@ interface SubscriptionGridProps {
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
   onTest: (id: string) => void;
+  onToggleActive: (id: string) => Promise<void>;
+  onReset?: (id: string) => Promise<void>;
 }
 
 export const SubscriptionGrid: React.FC<SubscriptionGridProps> = ({ 
@@ -17,7 +19,9 @@ export const SubscriptionGrid: React.FC<SubscriptionGridProps> = ({
   onSelectSubscription,
   onEdit, 
   onDelete, 
-  onTest 
+  onTest,
+  onToggleActive,
+  onReset
 }) => {
   
   // --- LOADING STATE ---
@@ -56,6 +60,8 @@ export const SubscriptionGrid: React.FC<SubscriptionGridProps> = ({
           onEdit={onEdit}
           onDelete={onDelete}
           onTest={onTest}
+          onToggleActive={onToggleActive}
+          onReset={onReset}
         />
       ))}
     </div>

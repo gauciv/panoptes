@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { getSubscriptions, getLogs, createSubscription, triggerTestEvent, updateSubscription, deleteSubscription } from '../services/api';
+import { getSubscriptions, getLogs, createSubscription, triggerTestEvent, updateSubscription, deleteSubscription, toggleSubscriptionActive, resetSubscription } from '../services/api';
 import { WebhookSubscription, DeliveryLog } from '../types';
 
 // --- COMPONENTS ---
@@ -178,6 +178,7 @@ const Dashboard: React.FC = () => {
         secretKey: '', 
         eventType: data.eventType,
         isActive: true,
+        isPaused: false,
         targetAddress: null,
         policyId: null,
         maxWebhooksPerMinute: 60,
@@ -245,7 +246,30 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  // --- RENDER ---
+  const handleToggleActive = async (id: string) => {
+    try {
+      await toggleSubscriptionActive(id);
+      fetchSubscriptions();
+      setError(null);
+    } catch (error: any) {
+      console.error("Error toggling subscription:", error);
+      const errorMsg = error.response?.data || error.message || "Failed to toggle subscription.";
+      setError(`Toggle Failed: ${errorMsg}`);
+    }
+  };
+
+  const handleReset = async (id: string) => {
+    try {
+      await resetSubscription(id);
+      fetchSubscriptions();
+      setError(null);
+    } catch (error: any) {
+      console.error("Error resetting subscription:", error);
+      const errorMsg = error.response?.data || error.message || "Failed to reset subscription.";
+      setError(`Reset Failed: ${errorMsg}`);
+    }
+  };
+
   return (
     <div className="p-6 max-w-7xl mx-auto">
       {/* Header with System Info */}
@@ -322,80 +346,92 @@ const Dashboard: React.FC = () => {
                 onBack={() => setViewingSubscription(null)} 
               />
             ) : (
-              // 2. LIST VIEW (Grid + Logs)
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* Left Column: Subscriptions (2/3 width) */}
-                <div className="lg:col-span-2 space-y-6">
-                  <div className="flex justify-between items-center">
-                    <h2 className="text-lg font-medium text-foreground">Subscriptions</h2>
-                    <button
-                      onClick={() => setIsModalOpen(true)}
-                      disabled={!setupStatus?.isConfigured}
-                      className={`px-4 py-2 rounded-tech text-sm font-medium transition-colors ${
-                        setupStatus?.isConfigured
-                          ? 'bg-sentinel text-white hover:bg-sentinel-hover'
-                          : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                      }`}
-                      title={!setupStatus?.isConfigured ? 'Complete setup first' : ''}
-                    >
-                      New Subscription
-                    </button>
-                  </div>
+// 2. LIST VIEW (Grid + Logs)
+<div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
-                  <SubscriptionFilters
-                    searchQuery={searchQuery}
-                    statusFilter={statusFilter}
-                    eventTypeFilter={eventTypeFilter}
-                    sortBy={sortBy}
-                    activeFilterCount={activeFilterCount}
-                    availableEventTypes={availableEventTypes}
-                    onSearchChange={setSearchQuery}
-                    onStatusChange={setStatusFilter}
-                    onEventTypeChange={setEventTypeFilter}
-                    onSortChange={setSortBy}
-                    onClearFilters={clearFilters}
-                  />
+  {/* Left Column: Subscriptions (2/3 width) */}
+  <div className="lg:col-span-2 space-y-6">
 
-                  {subscriptions.length > 0 && (
-                    <div className="text-sm text-muted-foreground">
-                      Showing {filteredSubscriptions.length} of {subscriptions.length} subscription{subscriptions.length !== 1 ? 's' : ''}
-                      {activeFilterCount > 0 && ' (filtered)'}
-                    </div>
-                  )}
+    {/* Header */}
+    <div className="flex justify-between items-center">
+      <h2 className="text-lg font-medium text-gray-900 dark:text-white">
+        Subscriptions
+      </h2>
 
-                  <SubscriptionGrid
-                    subscriptions={filteredSubscriptions}
-                    loading={loading}
-                    onSelectSubscription={setViewingSubscription}
-                    onTest={handleTest}
-                    onEdit={(id) => {
-                      const sub = subscriptions.find(s => s.id === id);
-                      if (sub) handleEdit(sub);
-                    }}
-                    onDelete={(id) => {
-                      const sub = subscriptions.find(s => s.id === id);
-                      if (sub) handleDeleteClick(sub);
-                    }}
-                  />
-                </div>
+      <button
+        onClick={() => setIsModalOpen(true)}
+        disabled={!setupStatus?.isConfigured}
+        className={`px-4 py-2 rounded-tech text-sm font-medium transition-colors ${
+          setupStatus?.isConfigured
+            ? 'bg-sentinel text-white hover:bg-sentinel-hover'
+            : 'bg-gray-300 text-gray-500 cursor-not-allowed dark:bg-gray-700 dark:text-gray-400'
+        }`}
+        title={!setupStatus?.isConfigured ? 'Complete setup first' : ''}
+      >
+        New Subscription
+      </button>
+    </div>
 
-                {/* Right Column: Recent Logs (1/3 width) */}
-                <div className="lg:col-span-1">
-                  <div className="bg-card shadow rounded-lg">
-                    <div className="px-6 py-5 border-b border-border flex justify-between items-center">
-                      <h2 className="text-lg font-medium text-foreground">Recent Logs</h2>
-                      {totalLogs > 0 && (
-                        <span className="text-xs text-muted-foreground">
-                          Showing {Math.min(10, logs.length)} of {totalLogs}
-                        </span>
-                      )}
-                    </div>
-                    <div className="px-6 py-5 max-h-[600px] overflow-y-auto">
-                      <LogViewer logs={logs || []} subscriptions={subscriptions || []} />
-                    </div>
-                  </div>
-                </div>
-              </div>
+    {/* Filters */}
+    <SubscriptionFilters
+      searchQuery={searchQuery}
+      statusFilter={statusFilter}
+      eventTypeFilter={eventTypeFilter}
+      sortBy={sortBy}
+      activeFilterCount={activeFilterCount}
+      availableEventTypes={availableEventTypes}
+      onSearchChange={setSearchQuery}
+      onStatusChange={setStatusFilter}
+      onEventTypeChange={setEventTypeFilter}
+      onSortChange={setSortBy}
+      onClearFilters={clearFilters}
+    />
+
+    {/* Filter Counter */}
+    {subscriptions.length > 0 && (
+      <div className="text-sm text-gray-500 dark:text-gray-400">
+        Showing {filteredSubscriptions.length} of {subscriptions.length} subscription
+        {subscriptions.length !== 1 ? 's' : ''}
+        {activeFilterCount > 0 && ' (filtered)'}
+      </div>
+    )}
+
+    {/* Grid */}
+    <SubscriptionGrid
+      subscriptions={filteredSubscriptions}
+      loading={loading}
+      onSelectSubscription={setViewingSubscription}
+      onTest={handleTest}
+      onEdit={(id) => {
+        const sub = subscriptions.find(s => s.id === id);
+        if (sub) handleEdit(sub);
+      }}
+      onDelete={(id) => {
+        const sub = subscriptions.find(s => s.id === id);
+        if (sub) handleDeleteClick(sub);
+      }}
+      onToggleActive={handleToggleActive}
+      onReset={handleReset}
+    />
+  </div>
+
+  {/* Right Column: Recent Logs (1/3 width) */}
+  <div className="lg:col-span-1">
+    <div className="bg-card shadow rounded-lg">
+      <div className="px-6 py-5 border-b border-border flex justify-between items-center">
+        <h2 className="text-lg font-medium text-foreground">Recent Logs</h2>
+        {totalLogs > 0 && (
+          <span className="text-xs text-muted-foreground">
+            Showing {Math.min(10, logs.length)} of {totalLogs}
+          </span>
+        )}
+      </div>
+      <div className="px-6 py-5 max-h-[600px] overflow-y-auto">
+        <LogViewer logs={logs || []} subscriptions={subscriptions || []} />
+      </div>
+    </div>
+  </div>
+</div>
             )}
           </>
         )}

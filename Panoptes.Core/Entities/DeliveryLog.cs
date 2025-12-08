@@ -35,6 +35,7 @@ namespace Panoptes.Core.Entities
         Pending,
         Success,
         Failed,
-        Retrying
+        Retrying,
+        Paused // Event matched but subscription is paused - delivery pending resume
     }
 }
