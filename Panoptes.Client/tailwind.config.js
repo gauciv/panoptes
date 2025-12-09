@@ -56,13 +56,17 @@ export default {
   				'3': 'hsl(var(--chart-3))',
   				'4': 'hsl(var(--chart-4))',
   				'5': 'hsl(var(--chart-5))'
-  			}
+  			},
+        terminal: {
+          gradient: 'linear-gradient(135deg, #050505 0%, #003d1f 50%, #002d15 100%)',
+        },
       },
       fontFamily: {
-        sans: ['"Google Sans Display"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-        mono: ['"Space Mono"', 'monospace'],
-				michroma: ['"Michroma"', 'sans-serif'],
-      },
+		sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+		mono: ['"Space Mono"', 'monospace'],
+		michroma: ['"Michroma"', 'monospace'],
+		terminal: ['"Space Mono"', 'monospace'],
+		},
       borderRadius: {
         lg: 'var(--radius)',
         md: 'calc(var(--radius) - 2px)',

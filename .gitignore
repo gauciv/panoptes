@@ -16,6 +16,8 @@
 
 # Environment Variables (CRITICAL for security)
 .env
+.env.local
+.env.*.local
 appsettings.Development.json
 appsettings.Local.json
 **/appsettings.*.json
