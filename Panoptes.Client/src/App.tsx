@@ -5,11 +5,19 @@ import Dashboard from './pages/Dashboard';
 import SubscriptionDetail from './pages/SubscriptionDetail';
 import Settings from './pages/Settings';
 import { DashboardLayout } from './layouts/DashboardLayout';
+import Login from './pages/Login';
+
 
 export const ThemeContext = createContext<{
   isDark: boolean;
   setIsDark: (v: boolean) => void;
 }>({ isDark: false, setIsDark: () => {} });
+
+
+function RequireAuth({ children }: { children: JSX.Element }) {
+  // Stub: always allow access for now
+  return <>{children}</>;
+}
 
 function App() {
   const [isDark, setIsDark] = useState<boolean>(() => {
@@ -66,11 +74,12 @@ function App() {
       
       <Router>
         <Routes>
+          <Route path="/login" element={<Login />} />
           <Route element={<DashboardLayout />}>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/analytics" element={<Dashboard />} />
-            <Route path="/subscriptions/:id" element={<SubscriptionDetail />} />
-            <Route path="/settings" element={<Settings />} />
+            <Route path="/" element={<RequireAuth><Dashboard /></RequireAuth>} />
+            <Route path="/analytics" element={<RequireAuth><Dashboard /></RequireAuth>} />
+            <Route path="/subscriptions/:id" element={<RequireAuth><SubscriptionDetail /></RequireAuth>} />
+            <Route path="/settings" element={<RequireAuth><Settings /></RequireAuth>} />
           </Route>
         </Routes>
       </Router>

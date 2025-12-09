@@ -1,5 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Michroma&family=Space+Mono:ital,wght@0,400;1,400&display=swap');
-
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Michroma&family=Space+Mono:ital,wght@0,400;1,400&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -87,6 +86,12 @@
   }
   .bg-surface {
     background-color: rgba(248, 248, 255, 0.05);
+  }
+  .bg-terminal-gradient {
+    background: linear-gradient(135deg, #050505 0%, #003d1f 50%, #002d15 100%);
+  }
+  .font-terminal {
+    font-family: 'Space Mono', monospace;
   }
 }
 

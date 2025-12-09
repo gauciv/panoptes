@@ -38,7 +38,8 @@ export const SubscriptionCard: React.FC<SubscriptionCardProps> = ({
     currentStatus = 'active';
   }
 
-  const handleToggle = async () => {
+  const handleToggle = async (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent card navigation
     if (isDisabled || isToggling) return;
     setIsToggling(true);
     try {
@@ -48,7 +49,8 @@ export const SubscriptionCard: React.FC<SubscriptionCardProps> = ({
     }
   };
 
-  const handleReset = async () => {
+  const handleReset = async (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent card navigation
     if (!onReset || isResetting) return;
     setIsResetting(true);
     try {
@@ -236,7 +238,7 @@ export const SubscriptionCard: React.FC<SubscriptionCardProps> = ({
           className="p-2 bg-white/80 hover:bg-white text-indigo-600 rounded-lg shadow-sm hover:shadow transition-colors"
           title="Test Webhook"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3" /></svg>
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 2L11 13"/><path d="M22 2L15 22L11 13L2 9L22 2Z"/></svg>
         </button>
         <button
           onClick={(e) => { e.stopPropagation(); onEdit(subscription.id); }}
