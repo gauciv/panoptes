@@ -498,8 +498,10 @@ namespace Panoptes.Api.Controllers
         /// When deactivating (pausing), events are still recorded but not dispatched.
         /// When activating (resuming), pending events will be dispatched.
         /// </summary>
+        /// <param name="id">The subscription ID</param>
+        /// <param name="deliverLatestOnly">If true, only the latest halted event will be delivered on resume; others will be discarded</param>
         [HttpPost("{id}/toggle")]
-        public async Task<ActionResult<WebhookSubscription>> ToggleSubscription(Guid id)
+        public async Task<ActionResult<WebhookSubscription>> ToggleSubscription(Guid id, [FromQuery] bool deliverLatestOnly = false)
         {
             var sub = await _dbContext.WebhookSubscriptions.FindAsync(id);
             if (sub == null)
@@ -517,20 +519,43 @@ namespace Panoptes.Api.Controllers
                 // Resuming - clear the paused timestamp
                 sub.PausedAt = null;
                 
-                // Mark all paused events as Retrying so they get picked up by the retry worker
+                // Get all paused events
                 var pausedEvents = await _dbContext.DeliveryLogs
                     .Where(l => l.SubscriptionId == id && l.Status == DeliveryStatus.Paused)
+                    .OrderByDescending(l => l.AttemptedAt)
                     .ToListAsync();
                 
-                foreach (var log in pausedEvents)
+                if (deliverLatestOnly && pausedEvents.Count > 0)
                 {
-                    log.Status = DeliveryStatus.Retrying;
-                    log.NextRetryAt = DateTime.UtcNow;
-                    log.ResponseBody = "Subscription activated - queued for delivery";
+                    // Only deliver the latest event, discard the rest
+                    var latestEvent = pausedEvents.First();
+                    latestEvent.Status = DeliveryStatus.Retrying;
+                    latestEvent.NextRetryAt = DateTime.UtcNow;
+                    latestEvent.ResponseBody = "Subscription activated - queued for delivery (latest only)";
+                    
+                    // Mark the rest as discarded
+                    foreach (var log in pausedEvents.Skip(1))
+                    {
+                        log.Status = DeliveryStatus.Failed;
+                        log.ResponseBody = "Discarded - subscription resumed with 'deliver latest only' option";
+                    }
+                    
+                    _logger.LogInformation("▶️ Subscription {Name} (ID: {Id}) activated with 'deliver latest only'. 1 event queued, {DiscardedCount} discarded.", 
+                        sub.Name, sub.Id, pausedEvents.Count - 1);
                 }
-                
-                _logger.LogInformation("▶️ Subscription {Name} (ID: {Id}) activated. {Count} pending events queued.", 
-                    sub.Name, sub.Id, pausedEvents.Count);
+                else
+                {
+                    // Deliver all paused events
+                    foreach (var log in pausedEvents)
+                    {
+                        log.Status = DeliveryStatus.Retrying;
+                        log.NextRetryAt = DateTime.UtcNow;
+                        log.ResponseBody = "Subscription activated - queued for delivery";
+                    }
+                    
+                    _logger.LogInformation("▶️ Subscription {Name} (ID: {Id}) activated. {Count} pending events queued.", 
+                        sub.Name, sub.Id, pausedEvents.Count);
+                }
             }
             else
             {

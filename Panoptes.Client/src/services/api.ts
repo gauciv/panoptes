@@ -55,8 +55,8 @@ export const deleteSubscription = async (id: string): Promise<void> => {
     await api.delete(`/Subscriptions/${id}`);
 };
 
-export const toggleSubscriptionActive = async (id: string): Promise<WebhookSubscription> => {
-    const response = await api.post<WebhookSubscription>(`/Subscriptions/${id}/toggle`);
+export const toggleSubscriptionActive = async (id: string, deliverLatestOnly: boolean = false): Promise<WebhookSubscription> => {
+    const response = await api.post<WebhookSubscription>(`/Subscriptions/${id}/toggle?deliverLatestOnly=${deliverLatestOnly}`);
     return response.data;
 };
 

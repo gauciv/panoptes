@@ -7,7 +7,8 @@ import {
   updateSubscription, 
   deleteSubscription, 
   triggerTestEvent,
-  resetSubscription
+  resetSubscription,
+  toggleSubscriptionActive
 } from '../services/api';
 
 import { WebhookSubscription, DeliveryLog } from '../types';
@@ -55,9 +56,27 @@ const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: p
   // UI State for Logs Table
   const [expandedLogId, setExpandedLogId] = useState<string | null>(null);
 
+  // Delivery mode when resuming - if true, only deliver the latest halted event
+  // Persisted to localStorage per subscription
+  const [deliverLatestOnly, setDeliverLatestOnly] = useState(() => {
+    if (activeId) {
+      const stored = localStorage.getItem(`deliverLatestOnly_${activeId}`);
+      return stored === 'true';
+    }
+    return false;
+  });
+
+  // Persist deliverLatestOnly to localStorage when it changes
+  const handleDeliverLatestOnlyChange = (value: boolean) => {
+    setDeliverLatestOnly(value);
+    if (activeId) {
+      localStorage.setItem(`deliverLatestOnly_${activeId}`, String(value));
+    }
+  };
+
   // --- API CALLS ---
-  const fetchSubscription = async () => {
-    if (propSubscription) {
+  const fetchSubscription = async (forceRefresh: boolean = false) => {
+    if (propSubscription && !forceRefresh) {
         setSubscription(propSubscription);
         return;
     }
@@ -179,15 +198,19 @@ const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: p
   };
 
 
-  const handleResume = async () => {
+  const handleToggleActive = async () => {
     if(!activeId) return;
     try {
-        await fetch(`http://localhost:5186/subscriptions/${activeId}/resume`, { method: 'POST' });
-        if (!propSubscription) await fetchSubscription();
+        // Pass deliverLatestOnly when resuming a paused subscription
+        const isCurrentlyPaused = subscription && !subscription.isActive;
+        await toggleSubscriptionActive(activeId, isCurrentlyPaused ? deliverLatestOnly : false);
+        await fetchSubscription(true); // Force refresh to get updated state
+        setError(null);
     } catch (err: any) {
-        alert(`Failed to resume: ${err.message}`);
+        console.error("Error toggling subscription:", err);
+        setError(`Toggle Failed: ${err.message}`);
     }
-  }
+  };
 
   // --- HELPER: ROBUST PAYLOAD EXTRACTOR ---
   const getPayload = (log: any) => {
@@ -250,7 +273,7 @@ const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: p
     if (!activeId) return;
     try {
       await resetSubscription(activeId);
-      fetchSubscription();
+      await fetchSubscription(true); // Force refresh to get updated state
       setError(null);
     } catch (error: any) {
       console.error("Error resetting subscription:", error);
@@ -338,13 +361,17 @@ const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: p
               <div className="flex-1">
                 <span className="text-sm font-semibold text-amber-900">⏸️ Subscription Paused - Webhook Deliveries Halted</span>
                 <p className="text-sm text-amber-800 mt-2">
-                  This subscription is currently paused. Events are still being recorded, but webhooks are not being sent to your endpoint.
-                  When you resume this subscription, all pending events will be delivered.
+                  {deliverLatestOnly 
+                    ? "When you resume, only the most recent halted event will be delivered. All other queued events will be discarded."
+                    : "When you resume, all halted events will be delivered to your endpoint in order."}
+                </p>
+                <p className="text-xs text-amber-600 mt-1 italic">
+                  Use the "Latest Only" toggle above to change delivery behavior.
                 </p>
               </div>
             </div>
             <button
-              onClick={handleResume}
+              onClick={handleToggleActive}
               className="ml-4 px-4 py-2 bg-amber-600 text-white text-sm font-medium rounded-md hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 whitespace-nowrap"
             >
               Resume Subscription
@@ -364,12 +391,55 @@ const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: p
                     {subscription.isActive ? 'Active' : 'Inactive'}
                 </span>
              </div>
-             <div className="flex gap-2">
+             <div className="flex gap-2 items-center">
+                {/* Latest Only Toggle - Controls delivery behavior when resuming from paused state */}
+                {!subscription.isRateLimited && !subscription.isCircuitBroken && (
+                  <label className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 rounded-md cursor-pointer hover:bg-gray-200 transition-colors" title="When enabled, only the latest halted event will be delivered on resume">
+                    <span className="text-xs font-medium text-gray-600">Latest Only</span>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={deliverLatestOnly}
+                      onClick={() => handleDeliverLatestOnlyChange(!deliverLatestOnly)}
+                      className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 ${
+                        deliverLatestOnly ? 'bg-amber-500' : 'bg-gray-300'
+                      }`}
+                    >
+                      <span
+                        className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                          deliverLatestOnly ? 'translate-x-4' : 'translate-x-0'
+                        }`}
+                      />
+                    </button>
+                  </label>
+                )}
+
+                {/* Toggle Active/Paused Button */}
+                {subscription.isRateLimited || subscription.isCircuitBroken ? (
+                  <button onClick={handleReset} className="px-3 py-1.5 bg-red-100 text-red-700 rounded-md text-sm font-medium hover:bg-red-200 shadow-sm flex items-center gap-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+                    Reset
+                  </button>
+                ) : subscription.isActive ? (
+                  <button onClick={handleToggleActive} className="px-3 py-1.5 bg-green-100 text-green-700 rounded-md text-sm font-medium hover:bg-green-200 shadow-sm flex items-center gap-1">
+                    <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                    Active
+                  </button>
+                ) : (
+                  <button onClick={handleToggleActive} className="px-3 py-1.5 bg-amber-100 text-amber-700 rounded-md text-sm font-medium hover:bg-amber-200 shadow-sm flex items-center gap-1">
+                    <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+                    Paused
+                  </button>
+                )}
+
                 {/* NEW EXPORT BUTTON ADDED HERE */}
                 <ExportButton onExport={handleExportLogs} disabled={totalLogs === 0} />
 
-                <button onClick={handleTest} className="px-3 py-1.5 bg-indigo-600 text-white rounded-md text-sm font-medium hover:bg-indigo-700 shadow-sm">
-                    Test Webhook
+                <button onClick={handleTest} className="px-3 py-1.5 bg-indigo-600 text-white rounded-md text-sm font-medium hover:bg-indigo-700 shadow-sm flex items-center gap-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M22 2L11 13"/><path d="M22 2L15 22L11 13L2 9L22 2Z"/>
+                    </svg>
+                    Test
                 </button>
                 <button onClick={() => setIsEditModalOpen(true)} className="px-3 py-1.5 bg-white border border-gray-300 text-gray-700 rounded-md text-sm font-medium hover:bg-gray-50 shadow-sm">
                     Edit
