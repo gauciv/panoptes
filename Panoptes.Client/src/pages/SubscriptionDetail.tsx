@@ -6,10 +6,10 @@ import {
   getSubscriptionLogs, 
   updateSubscription, 
   deleteSubscription, 
-  triggerTestEvent 
+  triggerTestEvent,
+  toggleSubscriptionActive,
+  resetSubscription
 } from '../services/api';
-
-import { getSubscription, getSubscriptionLogs, updateSubscription, deleteSubscription, triggerTestEvent, toggleSubscriptionActive, resetSubscription } from '../services/api';
 
 import { WebhookSubscription, DeliveryLog } from '../types';
 import EditSubscriptionModal from '../components/EditSubscriptionModal';
@@ -245,11 +245,12 @@ const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: p
       } catch (e) { 
           return String(data); 
       }
+  };
 
   const handleToggleActive = async () => {
-    if (!id) return;
+    if (!activeId) return;
     try {
-      await toggleSubscriptionActive(id);
+      await toggleSubscriptionActive(activeId);
       fetchSubscription();
       setError(null);
     } catch (error: any) {
@@ -260,9 +261,9 @@ const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: p
   };
 
   const handleReset = async () => {
-    if (!id) return;
+    if (!activeId) return;
     try {
-      await resetSubscription(id);
+      await resetSubscription(activeId);
       fetchSubscription();
       setError(null);
     } catch (error: any) {
@@ -270,7 +271,6 @@ const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: p
       const errorMsg = error.response?.data || error.message || "Failed to reset subscription.";
       setError(`Reset Failed: ${errorMsg}`);
     }
-
   };
 
   const calculateSuccessRate = () => {
@@ -300,7 +300,6 @@ const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: p
   }
 
   return (
-
     <div className="flex flex-col gap-6 w-full animate-in fade-in duration-300 relative max-w-7xl mx-auto p-4 sm:px-6 lg:px-8">
       
       {/* 1. Header Navigation */}
@@ -314,227 +313,6 @@ const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: p
       {/* Warning Banners */}
       {subscription.isCircuitBroken && (
           <div className="bg-orange-50 border border-orange-300 rounded-md p-4 animate-in slide-in-from-top-2">
-
-    <div className="min-h-screen bg-gray-100">
-      <nav className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex items-center">
-              <button
-                onClick={() => navigate('/')}
-                className="mr-4 text-gray-600 hover:text-gray-900"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-              </button>
-              <h1 className="text-xl font-bold text-gray-900">{subscription.name}</h1>
-            </div>
-          </div>
-        </div>
-      </nav>
-
-      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        {/* Error Banner */}
-        {error && (
-          <div className="mb-6 bg-red-50 border border-red-200 rounded-md p-4">
-            <div className="flex">
-              <div className="flex-shrink-0">
-                <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                </svg>
-              </div>
-              <div className="ml-3 flex-1">
-                <p className="text-sm text-red-700">{error}</p>
-              </div>
-              <div className="ml-auto pl-3">
-                <button onClick={() => setError(null)} className="text-red-400 hover:text-red-600">
-                  <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Subscription Details Card */}
-        <div className="bg-white shadow rounded-lg mb-6">
-          <div className="px-6 py-5 border-b border-gray-200 flex justify-between items-center">
-            <h2 className="text-lg font-medium text-gray-900">Subscription Details</h2>
-            <div className="flex space-x-3">
-              {/* Toggle Active/Paused Button */}
-              {(() => {
-                const isDisabled = subscription.isRateLimited || subscription.isCircuitBroken;
-                if (isDisabled) {
-                  return (
-                    <button
-                      onClick={handleReset}
-                      className="px-4 py-2 bg-red-100 text-red-700 rounded-md text-sm font-medium hover:bg-red-200 flex items-center gap-2"
-                      title="Click to reset - clears rate limit and circuit breaker"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
-                      </svg>
-                      Disabled - Click to Reset
-                    </button>
-                  );
-                }
-                return subscription.isActive ? (
-                  <button
-                    onClick={handleToggleActive}
-                    className="px-4 py-2 bg-green-100 text-green-700 rounded-md text-sm font-medium hover:bg-green-200 flex items-center gap-2"
-                    title="Click to pause - webhooks will stop, events will be queued"
-                  >
-                    <span className="w-2 h-2 rounded-full bg-green-500"></span>
-                    Active
-                  </button>
-                ) : (
-                  <button
-                    onClick={handleToggleActive}
-                    className="px-4 py-2 bg-amber-100 text-amber-700 rounded-md text-sm font-medium hover:bg-amber-200 flex items-center gap-2"
-                    title="Click to resume - queued events will be delivered"
-                  >
-                    <span className="w-2 h-2 rounded-full bg-amber-500"></span>
-                    Paused
-                  </button>
-                );
-              })()}
-              <button
-                onClick={handleTest}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700"
-              >
-                Test Webhook
-              </button>
-              <button
-                onClick={() => setIsEditModalOpen(true)}
-                className="px-4 py-2 bg-indigo-600 text-white rounded-md text-sm font-medium hover:bg-indigo-700"
-              >
-                Edit
-              </button>
-              <button
-                onClick={() => setIsDeleteModalOpen(true)}
-                className="px-4 py-2 bg-red-600 text-white rounded-md text-sm font-medium hover:bg-red-700"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-          <div className="px-6 py-5">
-            <dl className="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Status</dt>
-                <dd className="mt-1 text-sm text-gray-900 flex items-center gap-2">
-                  {(() => {
-                    const isDisabled = subscription.isRateLimited || subscription.isCircuitBroken;
-                    if (isDisabled) {
-                      return <span className="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">🚫 Disabled</span>;
-                    }
-                    return subscription.isActive ? (
-                      <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">Active</span>
-                    ) : (
-                      <span className="px-2 py-1 text-xs font-semibold rounded-full bg-amber-100 text-amber-800">⏸️ Paused</span>
-                    );
-                  })()}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Event Type</dt>
-                <dd className="mt-1 text-sm text-gray-900">{subscription.eventType}</dd>
-              </div>
-              <div className="sm:col-span-2">
-                <dt className="text-sm font-medium text-gray-500">Target URL</dt>
-                <dd className="mt-1 text-sm text-gray-900 font-mono break-all">{subscription.targetUrl}</dd>
-              </div>
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Target Address</dt>
-                <dd className="mt-1 text-sm text-gray-900 font-mono">{subscription.targetAddress || '—'}</dd>
-              </div>
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Policy ID</dt>
-                <dd className="mt-1 text-sm text-gray-900 font-mono">{subscription.policyId || '—'}</dd>
-              </div>
-              <div className="sm:col-span-2">
-                <dt className="text-sm font-medium text-gray-500">Wallet Address Filter</dt>
-                <dd className="mt-1 text-sm text-gray-900">
-                  {subscription.walletAddresses && subscription.walletAddresses.length > 0 ? (
-                    <div className="space-y-1">
-                      <div className="text-xs text-gray-500 mb-1">
-                        Listening to {subscription.walletAddresses.length} address(es)
-                      </div>
-                      <div className="max-h-32 overflow-y-auto bg-gray-50 rounded p-2">
-                        {subscription.walletAddresses.map((addr, idx) => (
-                          <div key={idx} className="font-mono text-xs text-gray-700 break-all">
-                            {addr}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ) : (
-                    <span className="text-gray-500 italic">All addresses (no filter)</span>
-                  )}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Rate Limits</dt>
-                <dd className="mt-1 text-sm text-gray-900">
-                  <div className="space-y-2">
-                    <div>{subscription.maxWebhooksPerMinute}/min, {subscription.maxWebhooksPerHour}/hour</div>
-                    {subscription.isRateLimited && (
-                      <div className="flex items-center gap-2">
-                        <span className="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
-                          🚫 Rate Limited
-                        </span>
-                        <span className="text-xs text-red-600">Webhooks are being throttled</span>
-                      </div>
-                    )}
-                  </div>
-                </dd>
-              </div>
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Created</dt>
-                <dd className="mt-1 text-sm text-gray-900">
-                  {new Date(subscription.createdAt).toLocaleString()}
-                </dd>
-              </div>
-            </dl>
-          </div>
-        </div>
-
-        {/* Paused Banner */}
-        {subscription.isPaused && (
-          <div className="mb-6 bg-amber-50 border border-amber-300 rounded-md p-4">
-            <div className="flex items-start justify-between">
-              <div className="flex items-start">
-                <svg className="h-6 w-6 text-amber-600 mr-3 mt-0.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                  <rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>
-                </svg>
-                <div className="flex-1">
-                  <span className="text-sm font-semibold text-amber-900">⏸️ Subscription Paused - Webhook Deliveries Halted</span>
-                  <p className="text-sm text-amber-800 mt-2">
-                    This subscription is currently paused. Events are still being recorded, but webhooks are not being sent to your endpoint.
-                    When you resume this subscription, all pending events will be delivered.
-                  </p>
-                  {subscription.pausedAt && (
-                    <p className="text-xs text-amber-700 mt-2">
-                      <strong>Paused since:</strong> {new Date(subscription.pausedAt).toLocaleString()}
-                    </p>
-                  )}
-                </div>
-              </div>
-              <button
-                onClick={handleToggleActive}
-                className="ml-4 px-4 py-2 bg-amber-600 text-white text-sm font-medium rounded-md hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 whitespace-nowrap"
-              >
-                Resume Subscription
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Circuit Breaker Banner */}
-        {subscription.isCircuitBroken && (
-          <div className="mb-6 bg-orange-50 border border-orange-300 rounded-md p-4">
             <div className="flex items-start justify-between">
               <div className="flex items-start">
                 <span className="text-2xl mr-3">⚡</span>
@@ -543,12 +321,38 @@ const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: p
                   <p className="text-sm text-orange-800 mt-1">{subscription.circuitBrokenReason}</p>
                 </div>
               </div>
-              <button onClick={handleResume} className="ml-4 px-4 py-2 bg-orange-600 text-white text-sm font-medium rounded-md hover:bg-orange-700">
-                Resume
+              <button onClick={handleReset} className="ml-4 px-4 py-2 bg-orange-600 text-white text-sm font-medium rounded-md hover:bg-orange-700">
+                Reset
               </button>
             </div>
           </div>
         )}
+
+      {/* Paused Banner */}
+      {!subscription.isActive && !subscription.isCircuitBroken && !subscription.isRateLimited && (
+        <div className="bg-amber-50 border border-amber-300 rounded-md p-4 animate-in slide-in-from-top-2">
+          <div className="flex items-start justify-between">
+            <div className="flex items-start">
+              <svg className="h-6 w-6 text-amber-600 mr-3 mt-0.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                <rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>
+              </svg>
+              <div className="flex-1">
+                <span className="text-sm font-semibold text-amber-900">⏸️ Subscription Paused - Webhook Deliveries Halted</span>
+                <p className="text-sm text-amber-800 mt-2">
+                  This subscription is currently paused. Events are still being recorded, but webhooks are not being sent to your endpoint.
+                  When you resume this subscription, all pending events will be delivered.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={handleToggleActive}
+              className="ml-4 px-4 py-2 bg-amber-600 text-white text-sm font-medium rounded-md hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 whitespace-nowrap"
+            >
+              Resume Subscription
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* 2. Subscription Details Card */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
