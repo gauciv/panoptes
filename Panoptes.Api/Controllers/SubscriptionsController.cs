@@ -117,6 +117,15 @@ namespace Panoptes.Api.Controllers
                 }
             }
 
+            // Check for duplicate EventType and TargetUrl combination
+            var duplicateEventTypeAndUrl = await _dbContext.WebhookSubscriptions
+                .FirstOrDefaultAsync(s => s.EventType == subscription.EventType && s.TargetUrl == subscription.TargetUrl);
+            
+            if (duplicateEventTypeAndUrl != null)
+            {
+                return BadRequest($"A subscription with this event type and target URL already exists. Please use a different event type or target URL.");
+            }
+
             // Validate TargetUrl
             if (string.IsNullOrWhiteSpace(subscription.TargetUrl) ||
                 !Uri.TryCreate(subscription.TargetUrl, UriKind.Absolute, out var uri) ||
@@ -414,6 +423,18 @@ namespace Panoptes.Api.Controllers
             if (!string.IsNullOrWhiteSpace(subscription.EventType))
             {
                 existingSub.EventType = subscription.EventType;
+            }
+
+            // Check for duplicate EventType and TargetUrl combination after updates
+            var newEventType = !string.IsNullOrWhiteSpace(subscription.EventType) ? subscription.EventType : existingSub.EventType;
+            var newTargetUrl = !string.IsNullOrWhiteSpace(subscription.TargetUrl) ? subscription.TargetUrl : existingSub.TargetUrl;
+            
+            var duplicateEventTypeAndUrl = await _dbContext.WebhookSubscriptions
+                .FirstOrDefaultAsync(s => s.EventType == newEventType && s.TargetUrl == newTargetUrl && s.Id != id);
+            
+            if (duplicateEventTypeAndUrl != null)
+            {
+                return BadRequest($"A subscription with event type '{newEventType}' and target URL '{newTargetUrl}' already exists. Please use a different combination.");
             }
 
             existingSub.IsActive = subscription.IsActive;
