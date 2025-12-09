@@ -7,7 +7,6 @@ import {
   updateSubscription, 
   deleteSubscription, 
   triggerTestEvent,
-  toggleSubscriptionActive,
   resetSubscription
 } from '../services/api';
 
@@ -247,19 +246,6 @@ const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: p
       }
   };
 
-  const handleToggleActive = async () => {
-    if (!activeId) return;
-    try {
-      await toggleSubscriptionActive(activeId);
-      fetchSubscription();
-      setError(null);
-    } catch (error: any) {
-      console.error("Error toggling subscription:", error);
-      const errorMsg = error.response?.data || error.message || "Failed to toggle subscription.";
-      setError(`Toggle Failed: ${errorMsg}`);
-    }
-  };
-
   const handleReset = async () => {
     if (!activeId) return;
     try {
@@ -310,6 +296,19 @@ const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: p
         <h2 className="text-xl font-bold text-gray-900">{subscription.name}</h2>
       </div>
 
+      {/* Error Banner */}
+      {error && (
+        <div className="bg-red-50 border border-red-300 rounded-md p-4 animate-in slide-in-from-top-2">
+          <div className="flex items-start">
+            <span className="text-2xl mr-3">❌</span>
+            <div className="flex-1">
+              <span className="text-sm font-semibold text-red-900">Error</span>
+              <p className="text-sm text-red-800 mt-1">{error}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Warning Banners */}
       {subscription.isCircuitBroken && (
           <div className="bg-orange-50 border border-orange-300 rounded-md p-4 animate-in slide-in-from-top-2">
@@ -345,7 +344,7 @@ const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: p
               </div>
             </div>
             <button
-              onClick={handleToggleActive}
+              onClick={handleResume}
               className="ml-4 px-4 py-2 bg-amber-600 text-white text-sm font-medium rounded-md hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 whitespace-nowrap"
             >
               Resume Subscription
