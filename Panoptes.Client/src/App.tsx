@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { createContext, useEffect, useState } from 'react';
 import { Toaster } from 'react-hot-toast';
 import Dashboard from './pages/Dashboard';
@@ -6,27 +6,17 @@ import SubscriptionDetail from './pages/SubscriptionDetail';
 import Settings from './pages/Settings';
 import { DashboardLayout } from './layouts/DashboardLayout';
 import Login from './pages/Login';
-import { onAuthChange } from './services/auth';
+
 
 export const ThemeContext = createContext<{
   isDark: boolean;
   setIsDark: (v: boolean) => void;
 }>({ isDark: false, setIsDark: () => {} });
 
+
 function RequireAuth({ children }: { children: JSX.Element }) {
-  const [user, setUser] = useState<any>(null);
-  const location = useLocation();
-  useEffect(() => {
-    const unsubscribe = onAuthChange(setUser);
-    return () => {
-      if (unsubscribe) unsubscribe();
-    };
-  }, []);
-  if (user === null) {
-    // Not signed in
-    return <Navigate to="/login" state={{ from: location }} replace />;
-  }
-  return children;
+  // Stub: always allow access for now
+  return <>{children}</>;
 }
 
 function App() {

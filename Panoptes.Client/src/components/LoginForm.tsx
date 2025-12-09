@@ -22,14 +22,14 @@ export const LoginForm: React.FC<LoginFormProps> = ({ mode }) => {
   } = useForm<FormValues>();
 
   const onSubmit = (data: FormValues) => {
-    // TODO: Call auth service for sign in or sign up
-    console.log('Form submitted:', data);
+    // Stub: Show a message for now
+    alert(`Form submitted!\nMode: ${mode}\nEmail: ${data.email}`);
   };
 
   return (
     <form className="w-full flex flex-col gap-4" onSubmit={handleSubmit(onSubmit)}>
       <div>
-        <label className="block text-sm font-semibold text-ghost mb-2">Email</label>
+        <label className="block text-sm font-mono font-semibold text-ghost mb-2">Email</label>
         <Input
           type="email"
           {...register('email', {
@@ -46,7 +46,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ mode }) => {
       </div>
 
       <div>
-        <label className="block text-sm font-semibold text-ghost mb-2">Password</label>
+        <label className="block text-sm font-semibold font-mono text-ghost mb-2">Password</label>
         <Input
           type="password"
           {...register('password', {

@@ -12,7 +12,10 @@ export default function Login() {
     return () => {};
   }, []);
 
+  
+
   return (
+
     <div className="min-h-screen flex items-center justify-center bg-background dark:bg-void">
       <div className="w-full max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-0 rounded-lg overflow-hidden shadow-2xl">
         {/* Left Side - Login Form */}
@@ -21,16 +24,18 @@ export default function Login() {
           <div className="mb-8 lg:mb-12">
             <div className="flex items-center gap-2">
               <img src="/logo_panoptes.svg" alt="Panoptes Logo" className="h-8 w-8" />
-              <span className="font-michroma text-2xl font-bold text-foreground">PANOPTES</span>
+              <span className="font-michroma text-sm tracking-[0.18em] uppercase text-foreground truncate">
+                Panoptes
+            </span>
             </div>
           </div>
 
           {/* Welcome Heading */}
           <div className="mb-8">
-            <h1 className="text-4xl lg:text-5xl font-bold text-ghost mb-3">
-              {mode === 'signin' ? 'Welcome Back' : 'Create Account'}
+            <h1 className="text-4xl lg:text-2xl font-sans font-bold text-ghost mb-3">
+              {mode === 'signin' ? 'WELCOME BACK' : 'CREATE ACCOUNT'}
             </h1>
-            <p className="text-ghost/70 text-base">
+            <p className="text-ghost/70 text-base font-mono tracking-tighter">
               {mode === 'signin'
                 ? 'Enter your email and password to access your account.'
                 : 'Sign up to start managing your webhooks and operations.'}
@@ -51,7 +56,7 @@ export default function Login() {
           {/* Footer */}
           <div className="mt-8 pt-6 border-t border-ghost-dim">
             {mode === 'signin' ? (
-              <p className="text-ghost/70 text-sm">
+              <p className="text-ghost/70 text-sm font-mono">
                 Don't have an account?{' '}
                 <button
                   onClick={() => setMode('signup')}
@@ -82,8 +87,6 @@ export default function Login() {
 
           {/* Content */}
           <div className="relative z-10 text-center max-w-md">
-
-            {/* Dashboard Mockup Placeholder */}
             
           </div>
         </div>
