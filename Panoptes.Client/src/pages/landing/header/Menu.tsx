@@ -89,10 +89,6 @@ export function Menu({ closeMenu, onOpenLogin }: MenuProps) {
                  transition={{ delay: 0.6 }}
                  className="mt-12"
                >
-                   {/* 2. UPDATE BUTTON ACTION */}
-                   {/* We wrap it in a div to handle the click. 
-                       We removed 'to="/login"' so it doesn't navigate away. 
-                   */}
                    <div onClick={() => { closeMenu(); onOpenLogin(); }}>
                        <GlitchButton 
                          label="LOGIN / ACCESS" 

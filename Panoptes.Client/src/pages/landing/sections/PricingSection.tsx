@@ -117,7 +117,7 @@ function BillingToggle({ isAnnual, onToggle }: { isAnnual: boolean, onToggle: ()
     );
 }
 
-export function PricingSection({ comingSoon = true }: { comingSoon?: boolean }) {
+export function PricingSection({ comingSoon = false }: { comingSoon?: boolean }) {
   const [isAnnual, setIsAnnual] = useState(false);
 
   return (

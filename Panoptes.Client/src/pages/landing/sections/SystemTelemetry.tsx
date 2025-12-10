@@ -110,15 +110,7 @@ export function SystemTelemetry() {
             ))}
          </div>
 
-         {/* CTA - Interactive (Pointer Events Re-enabled) */}
-         <div className="pointer-events-auto">
-            <GlitchButton 
-               label="INITIALIZE_INSTANCE" 
-               to="/login" 
-               variant="primary" 
-               className="px-10 py-4"
-            />
-         </div>
+         
 
       </div>
 
