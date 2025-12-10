@@ -33,7 +33,7 @@ export function GlitchButton({
   maskDelay = 0,
 }: GlitchButtonProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   
   // State: Text to display
   const [displayText, setDisplayText] = useState(label);

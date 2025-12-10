@@ -7,7 +7,7 @@ type ScrambleTextProps = {
   className?: string;
   delay?: number;
   speed?: number;
-  margin?: string; // <--- ADD THIS PROP
+  margin?: string; 
 };
 
 const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%&?<>[]{}—=+';
@@ -17,14 +17,14 @@ export function ScrambleText({
   className,
   delay = 0,
   speed = 40,
-  margin = "-10%", // Default remains -10% for body content
+  margin = "-10%", 
 }: ScrambleTextProps) {
   const [displayText, setDisplayText] = useState(text);
   const [isScrambling, setIsScrambling] = useState(false);
   const containerRef = useRef<HTMLSpanElement>(null);
   
-  // Use the margin prop here
-  const isInView = useInView(containerRef, { once: true, margin: margin });
+  // FIX: Cast margin to 'any' to satisfy Framer Motion's strict typing
+  const isInView = useInView(containerRef, { once: true, margin: margin as any });
 
   useEffect(() => {
     if (isInView) {
@@ -40,7 +40,7 @@ export function ScrambleText({
 
     let iteration = 0;
     const interval = setInterval(() => {
-      setDisplayText((prev) =>
+      setDisplayText(() =>
         text
           .split('')
           .map((char, index) => {
@@ -66,7 +66,6 @@ export function ScrambleText({
       ref={containerRef}
       className={clsx('inline-block whitespace-pre-wrap', className)}
       initial={{ opacity: 0 }}
-      // Use the isInView boolean directly to control visibility
       animate={isInView ? { opacity: 1 } : { opacity: 0 }}
       transition={{ duration: 0.3, delay: delay }}
     >

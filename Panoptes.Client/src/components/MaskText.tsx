@@ -17,9 +17,6 @@ interface MaskTextProps extends HTMLMotionProps<'div'> {
   margin?: string;
 }
 
-// The "Industrial" ease we used in previous concepts (sharper, more mechanical)
-// const INDUSTRIAL_EASE = [0.76, 0, 0.24, 1]; 
-
 const DEFAULT_EASE = [0.25, 0.8, 0.4, 1];
 
 export function MaskText({
@@ -34,17 +31,14 @@ export function MaskText({
   margin = '-10% 0px -10% 0px',
   ...props
 }: MaskTextProps) {
-  // 1. Memoize splitting to avoid expensive operations on every render
   const lines = useMemo(() => {
     return Array.isArray(text) 
       ? text 
       : text.split('\n');
   }, [text]);
 
-  // 2. Accessibility: Reconstruct full string for screen readers
   const fullText = Array.isArray(text) ? text.join(' ') : text;
 
-  // 3. Dynamic Variants based on props
   const containerVariants: Variants = {
     hidden: {},
     show: {
@@ -64,8 +58,8 @@ export function MaskText({
     },
   };
 
-  // 4. Dynamic Motion Component
-  const MotionTag = motion[Tag] as any;
+  // FIX: Cast 'motion' to any BEFORE indexing it with 'Tag'
+  const MotionTag = (motion as any)[Tag];
 
   return (
     <MotionTag
@@ -74,20 +68,19 @@ export function MaskText({
       viewport={{ once, margin }}
       variants={containerVariants}
       className={clsx('inline-block', className)}
-      aria-label={fullText} // Screen reader reads this...
+      aria-label={fullText} 
       {...props}
     >
       {lines.map((line, index) => (
         <span 
           key={index} 
           className="block overflow-hidden" 
-          aria-hidden="true" // ...and ignores these fragments
+          aria-hidden="true"
         >
           <motion.span
             className="block will-change-transform"
             variants={lineVariants}
           >
-            {/* Handle empty lines so they maintain height */}
             {line === '' ? '\u00A0' : line} 
           </motion.span>
         </span>

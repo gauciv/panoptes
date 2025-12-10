@@ -1,6 +1,4 @@
-import { motion } from 'framer-motion';
 import { GlitchButton } from '@/components/GlitchButton';
-import { ScrambleText } from '@/components/ScrambleText';
 
 export function StickyFooter() {
   return (

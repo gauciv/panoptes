@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { motion, useAnimation } from 'framer-motion';
+import { motion} from 'framer-motion';
 import clsx from 'clsx';
 import { GlitchButton } from '@/components/GlitchButton';
 import { MaskText } from '@/components/MaskText';
