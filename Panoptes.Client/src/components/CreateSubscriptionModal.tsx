@@ -4,12 +4,18 @@ interface CreateSubscriptionModalProps {
   isOpen: boolean;
   onClose: () => void;
   onCreate: (data: { name: string; targetUrl: string; eventType: string; walletAddresses?: string[] }) => void;
+  initialValues?: {
+    name?: string;
+    eventType?: string;
+    description?: string;
+  };
 }
 
 const CreateSubscriptionModal: React.FC<CreateSubscriptionModalProps> = ({
   isOpen,
   onClose,
   onCreate,
+  initialValues,
 }) => {
   const [name, setName] = useState('');
   const [targetUrl, setTargetUrl] = useState('');
@@ -18,6 +24,16 @@ const CreateSubscriptionModal: React.FC<CreateSubscriptionModalProps> = ({
   const [isValidatingUrl, setIsValidatingUrl] = useState(false);
   const [showValidationWarning, setShowValidationWarning] = useState(false);
   const [validationWarningMessage, setValidationWarningMessage] = useState('');
+
+  useEffect(() => {
+    if (isOpen && initialValues) {
+      if (initialValues.name) setName(initialValues.name);
+      if (initialValues.eventType) setEventType(initialValues.eventType);
+    } else if (isOpen && !initialValues) {
+      // Reset if no initial values (optional, or keep previous state if desired, but usually reset on open)
+      // For now, I'll just handle setting initial values.
+    }
+  }, [isOpen, initialValues]);
 
   const isValidUrl = (url: string): boolean => {
     return url.startsWith('http://') || url.startsWith('https://');

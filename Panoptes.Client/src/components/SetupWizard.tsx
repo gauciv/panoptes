@@ -1,9 +1,7 @@
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2 } from 'lucide-react';
 
 interface SetupWizardProps {
@@ -153,47 +151,61 @@ export function SetupWizard({ onComplete }: SetupWizardProps) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-8 max-w-2xl w-full mx-4 relative max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-[rgba(5,5,5,0.85)] flex items-center justify-center z-[1100] p-4">
+      <div className="bg-[#050505] border border-[#006A33] text-[#F8F8FF] p-8 max-w-2xl w-full mx-4 relative max-h-[90vh] overflow-y-auto rounded-none shadow-[0_0_20px_rgba(0,106,51,0.3)] font-mono">
+        {/* Grid Background Effect */}
+        <div className="absolute inset-0 opacity-10 pointer-events-none" 
+             style={{ backgroundImage: 'radial-gradient(#006A33 1px, transparent 1px)', backgroundSize: '20px 20px' }}>
+        </div>
+        
         <button
           onClick={onComplete}
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+          className="absolute top-4 right-4 text-[#006A33] hover:text-white transition-colors p-1 z-10"
           aria-label="Close"
+          title="Skip Setup"
         >
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
-        <div className="mb-6">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-            Welcome to Panoptes
+        
+        {/* Header */}
+        <div className="flex justify-between items-center mb-4 border-b border-[#006A33]/30 pb-2 relative z-10">
+          <span className="text-[#006A33] text-xs tracking-widest uppercase font-bold">
+            SYSTEM_CONFIG // DEMETER_SETUP
+          </span>
+        </div>
+        
+        <div className="mb-6 relative z-10">
+          <h2 className="text-xl font-bold text-white mb-2 uppercase tracking-wide">
+            Initialize_Connection
           </h2>
-          <p className="text-gray-600 dark:text-gray-400">
-            Configure your Demeter credentials to start syncing blockchain data
+          <p className="text-gray-300 text-sm leading-relaxed">
+            Configure your Demeter credentials to establish blockchain data sync.
           </p>
         </div>
 
-        <div className="space-y-6">
+        <div className="space-y-6 relative z-10">
           {/* Network Selection */}
           <div>
-            <Label htmlFor="network" className="text-sm font-medium mb-2 block">
+            <Label htmlFor="network" className="text-xs font-bold mb-2 block text-[#006A33] uppercase tracking-wider">
               Network
             </Label>
             <Select value={network} onValueChange={handleNetworkChange}>
-              <SelectTrigger id="network">
+              <SelectTrigger id="network" className="bg-[#0a0a0a] border-[#006A33]/50 text-white font-mono text-sm hover:border-[#006A33] focus:border-[#006A33] focus:ring-[#006A33]/20">
                 <SelectValue placeholder="Select network" />
               </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Mainnet">🟢 Mainnet</SelectItem>
-                <SelectItem value="Preprod">🔵 Preprod</SelectItem>
-                <SelectItem value="Preview">🟣 Preview</SelectItem>
+              <SelectContent className="bg-[#0a0a0a] border-[#006A33]/50">
+                <SelectItem value="Mainnet" className="text-white hover:bg-[#006A33]/20 focus:bg-[#006A33]/20">🟢 Mainnet</SelectItem>
+                <SelectItem value="Preprod" className="text-white hover:bg-[#006A33]/20 focus:bg-[#006A33]/20">🔵 Preprod</SelectItem>
+                <SelectItem value="Preview" className="text-white hover:bg-[#006A33]/20 focus:bg-[#006A33]/20">🟣 Preview</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           {/* gRPC Endpoint */}
           <div>
-            <Label htmlFor="endpoint" className="text-sm font-medium mb-2 block">
+            <Label htmlFor="endpoint" className="text-xs font-bold mb-2 block text-[#006A33] uppercase tracking-wider">
               gRPC Endpoint
             </Label>
             <Input
@@ -202,13 +214,13 @@ export function SetupWizard({ onComplete }: SetupWizardProps) {
               value={grpcEndpoint}
               onChange={(e) => setGrpcEndpoint(e.target.value)}
               placeholder="https://cardano-preprod.utxorpc-m1.demeter.run"
-              className="font-mono text-sm"
+              className="bg-[#0a0a0a] border-[#006A33]/50 text-white font-mono text-sm placeholder:text-gray-500 hover:border-[#006A33] focus:border-[#006A33] focus:ring-[#006A33]/20"
             />
           </div>
 
           {/* API Key */}
           <div>
-            <Label htmlFor="apiKey" className="text-sm font-medium mb-2 block">
+            <Label htmlFor="apiKey" className="text-xs font-bold mb-2 block text-[#006A33] uppercase tracking-wider">
               Demeter API Key
             </Label>
             <Input
@@ -217,15 +229,15 @@ export function SetupWizard({ onComplete }: SetupWizardProps) {
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
               placeholder="dmtr_utxorpc1..."
-              className="font-mono text-sm"
+              className="bg-[#0a0a0a] border-[#006A33]/50 text-white font-mono text-sm placeholder:text-gray-500 hover:border-[#006A33] focus:border-[#006A33] focus:ring-[#006A33]/20"
             />
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            <p className="text-xs text-gray-400 mt-1">
               Get your API key from{' '}
               <a
                 href="https://demeter.run"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-blue-600 dark:text-blue-400 hover:underline"
+                className="text-[#006A33] hover:text-[#008040] hover:underline"
               >
                 demeter.run
               </a>
@@ -234,82 +246,80 @@ export function SetupWizard({ onComplete }: SetupWizardProps) {
 
           {/* Validation Result */}
           {validationResult && (
-            <Alert
-              variant={validationResult.isValid ? 'default' : 'destructive'}
-              className={
+            <div
+              className={`border p-4 ${
                 validationResult.isValid
-                  ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
-                  : ''
-              }
+                  ? 'bg-[#006A33]/10 border-[#006A33]/50'
+                  : 'bg-red-900/20 border-red-500/50'
+              }`}
             >
-              <AlertDescription>
+              <div className="text-sm">
                 {validationResult.isValid ? (
                   <div className="flex items-center gap-2">
-                    <span className="text-green-600 dark:text-green-400 font-medium">
-                      ✓ Connection successful!
+                    <span className="text-[#006A33] font-bold">
+                      ✓ CONNECTION_ESTABLISHED
                     </span>
                     {validationResult.chainTipSlot && (
-                      <span className="text-sm text-gray-600 dark:text-gray-400">
+                      <span className="text-sm text-gray-400">
                         Chain tip: {validationResult.chainTipSlot.toLocaleString()}
                       </span>
                     )}
                   </div>
                 ) : (
-                  <span className="text-red-600 dark:text-red-400">
+                  <span className="text-red-400">
                     ✗ {validationResult.error}
                   </span>
                 )}
-              </AlertDescription>
-            </Alert>
+              </div>
+            </div>
           )}
 
           {/* Error Alert */}
           {error && !validationResult && (
-            <Alert variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
+            <div className="border border-red-500/50 bg-red-900/20 p-4">
+              <p className="text-sm text-red-400">{error}</p>
+            </div>
           )}
 
           {/* Action Buttons */}
           <div className="flex gap-4 pt-4">
-            <Button
+            <button
               onClick={handleValidate}
               disabled={isValidating || !apiKey.trim()}
-              variant="outline"
-              className="flex-1"
+              className="flex-1 px-4 py-2 text-xs font-bold text-[#006A33] border border-[#006A33] hover:bg-[#006A33] hover:text-white transition-all uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
             >
               {isValidating ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Validating...
+                  VALIDATING...
                 </>
               ) : (
-                'Test Connection'
+                'TEST_CONNECTION'
               )}
-            </Button>
+            </button>
 
-            <Button
+            <button
               onClick={handleSave}
               disabled={!validationResult?.isValid || isSaving}
-              className="flex-1"
+              className="flex-1 px-6 py-2 text-xs font-bold bg-[#006A33] text-white hover:bg-[#008040] transition-all uppercase tracking-wider shadow-[0_0_10px_rgba(0,106,51,0.5)] disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none flex items-center justify-center"
             >
               {isSaving ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Saving...
+                  SAVING...
                 </>
               ) : (
-                'Save & Continue'
+                'SAVE_&_CONTINUE >'
               )}
-            </Button>
+            </button>
           </div>
 
           {/* Help Text */}
-          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md p-4">
-            <p className="text-sm text-blue-900 dark:text-blue-300">
-              <strong>First time setup:</strong>
+          <div className="bg-[#006A33]/10 border border-[#006A33]/30 p-4">
+            <p className="text-xs text-[#006A33] font-bold uppercase tracking-wider mb-2">
+              First Time Setup:
             </p>
-            <ol className="text-sm text-blue-800 dark:text-blue-400 mt-2 space-y-1 list-decimal list-inside">
+            <ol className="text-sm text-gray-300 mt-2 space-y-1 list-decimal list-inside">
               <li>Visit demeter.run and create an account</li>
               <li>Navigate to the UtxoRPC service</li>
               <li>Copy your API key (starts with 'dmtr_utxorpc1...')</li>

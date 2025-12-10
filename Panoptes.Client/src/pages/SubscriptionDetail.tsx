@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { Activity } from 'lucide-react';
 
 import { 
   getSubscription, 
@@ -19,6 +20,7 @@ import Pagination from '../components/Pagination';
 import ExportButton from '../components/ExportButton'; 
 import WebhookTester from '../components/WebhookTester'; // <--- NEW IMPORT
 import { convertToCSV, downloadFile, generateFilename } from '../utils/exportUtils'; 
+import { EmptyState } from '../components/EmptyState';
 
 // --- PROPS INTERFACE ---
 interface SubscriptionDetailProps {
@@ -540,7 +542,16 @@ const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: p
          {loading && logs.length === 0 ? (
              <div className="p-10 text-center text-gray-500">Loading logs...</div>
          ) : logs.length === 0 ? (
-             <div className="p-10 text-center text-gray-500 bg-gray-50">No logs found.</div>
+             <EmptyState
+               icon={Activity}
+               title="No Delivery Logs"
+               description="We haven't delivered any webhooks for this subscription yet. Trigger a test event to verify your integration."
+               action={{
+                 label: "Trigger Test Event",
+                 onClick: () => setShowTester(true)
+               }}
+               className="py-12"
+             />
          ) : (
              <div className="mt-4">
                 {/* Header */}
