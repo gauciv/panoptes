@@ -57,5 +57,4 @@ coverage/
 # Logs
 *.log
 
-dotnet-install.sh
 packages-microsoft-prod.deb
