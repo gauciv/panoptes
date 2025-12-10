@@ -60,8 +60,8 @@ const DeliveryLogsTable: React.FC<DeliveryLogsTableProps> = ({
   return (
     <div>
       {totalCount !== undefined && totalCount > 0 && (
-        <div className="mb-3 px-4 py-2 bg-gray-50 rounded-md border border-gray-200">
-          <span className="text-sm text-gray-600">
+        <div className="mb-3 px-4 py-2 bg-gray-50 dark:bg-gray-900 rounded-md border border-gray-200 dark:border-gray-700">
+          <span className="text-sm text-gray-600 dark:text-gray-300">
             Showing entries <span className="font-semibold">{((currentPage - 1) * pageSize) + 1}</span> to{' '}
             <span className="font-semibold">{Math.min(currentPage * pageSize, totalCount)}</span> of{' '}
             <span className="font-semibold">{totalCount}</span> total
@@ -70,28 +70,28 @@ const DeliveryLogsTable: React.FC<DeliveryLogsTableProps> = ({
       )}
       <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200">
-        <thead className="bg-gray-50">
+        <thead className="bg-gray-50 dark:bg-gray-900">
           <tr>
-            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
               Time
             </th>
             {showSubscriptionId && (
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 Subscription
               </th>
             )}
-            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
               Status
             </th>
-            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
               Latency
             </th>
-            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
               Response
             </th>
           </tr>
         </thead>
-        <tbody className="bg-white divide-y divide-gray-200">
+        <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200">
           {safeLogs.length === 0 ? (
             <tr>
               <td colSpan={showSubscriptionId ? 5 : 4} className="px-4 py-8 text-center text-sm text-gray-500">
@@ -103,36 +103,36 @@ const DeliveryLogsTable: React.FC<DeliveryLogsTableProps> = ({
               const isExpanded = expandedLogId === log.id;
               return (
                 <React.Fragment key={log.id}>
-                  <tr className="hover:bg-gray-50 cursor-pointer" onClick={() => toggleExpand(log.id)}>
-                    <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">
+                  <tr className="hover:bg-gray-50 dark:hover:bg-gray-900 cursor-pointer" onClick={() => toggleExpand(log.id)}>
+                    <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100 whitespace-nowrap">
                       <div className="flex items-center gap-2">
-                        <svg className={`w-4 h-4 text-gray-400 transition-transform ${isExpanded ? 'rotate-90' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className={`w-4 h-4 text-gray-400 dark:text-gray-400 transition-transform ${isExpanded ? 'rotate-90' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                         </svg>
                         {formatTimestamp(log.attemptedAt)}
                       </div>
                     </td>
                     {showSubscriptionId && (
-                      <td className="px-4 py-3 text-sm text-gray-500">
-                        <div className="font-mono text-xs text-gray-400">{truncateId(log.subscriptionId)}</div>
+                      <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-300">
+                        <div className="font-mono text-xs text-gray-400 dark:text-gray-300">{truncateId(log.subscriptionId)}</div>
                       </td>
                     )}
                     <td className="px-4 py-3 text-sm">
                       {getStatusBadge(log.responseStatusCode)}
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-900">
+                    <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100">
                       {log.latencyMs.toFixed(0)}ms
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-500 max-w-xs truncate">
+                    <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-300 max-w-xs truncate">
                       {log.responseBody || '—'}
                     </td>
                   </tr>
                   {isExpanded && (
                     <tr>
-                      <td colSpan={showSubscriptionId ? 5 : 4} className="px-4 py-4 bg-gray-50">
+                      <td colSpan={showSubscriptionId ? 5 : 4} className="px-4 py-4 bg-gray-50 dark:bg-gray-900">
                         <div className="space-y-3">
                           <div>
-                            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Payload</p>
+                            <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Payload</p>
                             <pre className="bg-gray-800 text-gray-100 p-3 rounded text-xs overflow-x-auto max-h-96">
                               {(() => {
                                 try {
@@ -144,8 +144,8 @@ const DeliveryLogsTable: React.FC<DeliveryLogsTableProps> = ({
                             </pre>
                           </div>
                           <div>
-                            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Response</p>
-                            <pre className="bg-gray-100 text-gray-700 p-3 rounded text-xs overflow-x-auto border border-gray-200 max-h-48">
+                            <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Response</p>
+                            <pre className="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 p-3 rounded text-xs overflow-x-auto border border-gray-200 dark:border-gray-700 max-h-48">
                               {log.responseBody || 'No response'}
                             </pre>
                           </div>

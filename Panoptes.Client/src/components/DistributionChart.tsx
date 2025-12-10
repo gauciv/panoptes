@@ -37,15 +37,15 @@ const DistributionChart: React.FC<DistributionChartProps> = ({
 }) => {
   if (isLoading) {
     return (
-      <div className="bg-white rounded-lg shadow border border-gray-200 p-6">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-lg border border-gray-200 dark:border-gray-700 p-6">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <div className="h-4 w-32 bg-gray-200 rounded animate-pulse mb-2" />
-            <div className="h-3 w-48 bg-gray-100 rounded animate-pulse" />
+            <div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-2" />
+            <div className="h-3 w-48 bg-gray-100 dark:bg-gray-700 rounded animate-pulse" />
           </div>
         </div>
         <div className="h-[300px] flex items-center justify-center">
-          <div className="w-48 h-48 rounded-full bg-gray-100 animate-pulse" />
+          <div className="w-48 h-48 rounded-full bg-gray-100 dark:bg-gray-700 animate-pulse" />
         </div>
       </div>
     );
@@ -54,21 +54,21 @@ const DistributionChart: React.FC<DistributionChartProps> = ({
   const chartConfig = generateChartConfig(data);
 
   return (
-    <div className="bg-white rounded-lg shadow border border-gray-200 p-6">
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-lg border border-gray-200 dark:border-gray-700 p-6">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h3 className="font-mono text-xs uppercase tracking-wider text-gray-500">
+          <h3 className="font-mono text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400">
             Event Distribution
           </h3>
-          <p className="text-sm text-gray-400 mt-1">
+          <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
             Webhooks by event type
           </p>
         </div>
         <div className="text-right">
-          <p className="text-2xl font-mono font-semibold text-gray-900">
+          <p className="text-2xl font-mono font-semibold text-gray-900 dark:text-gray-100">
             {data.length}
           </p>
-          <p className="text-xs text-gray-500">event types</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400">event types</p>
         </div>
       </div>
 

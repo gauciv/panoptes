@@ -3,9 +3,9 @@ import { Skeleton } from './ui/skeleton';
 
 const SubscriptionDetailSkeleton: React.FC = () => {
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-gray-100 dark:bg-background">
       {/* Nav */}
-      <nav className="bg-white shadow-sm">
+      <nav className="bg-white dark:bg-gray-800 shadow-sm dark:shadow-lg">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16 items-center">
             <div className="flex items-center gap-3">
@@ -18,8 +18,8 @@ const SubscriptionDetailSkeleton: React.FC = () => {
 
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         {/* Details Card */}
-        <div className="bg-white shadow rounded-lg mb-6">
-          <div className="px-6 py-5 border-b border-gray-200 flex justify-between items-center">
+        <div className="bg-white dark:bg-gray-800 shadow rounded-lg mb-6">
+          <div className="px-6 py-5 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
             <Skeleton className="h-5 w-40" aria-label="Loading section title" />
             <div className="flex gap-3">
               <Skeleton className="h-9 w-28 rounded-md" aria-label="Loading button" />
@@ -50,7 +50,7 @@ const SubscriptionDetailSkeleton: React.FC = () => {
         {/* Stats / Cards Placeholder */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
           {Array.from({ length: 3 }).map((_, idx) => (
-            <div key={idx} className="bg-white shadow rounded-lg p-5 space-y-3">
+            <div key={idx} className="bg-white dark:bg-gray-800 shadow rounded-lg p-5 space-y-3">
               <Skeleton className="h-4 w-24" aria-label="Loading stat label" />
               <Skeleton className="h-6 w-32" aria-label="Loading stat value" />
               <Skeleton className="h-4 w-20" aria-label="Loading stat subtext" />
@@ -59,24 +59,24 @@ const SubscriptionDetailSkeleton: React.FC = () => {
         </div>
 
         {/* Logs Table Skeleton */}
-        <div className="bg-white shadow rounded-lg">
-          <div className="px-6 py-5 border-b border-gray-200 flex justify-between items-center">
+        <div className="bg-white dark:bg-gray-800 shadow rounded-lg">
+          <div className="px-6 py-5 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
             <Skeleton className="h-5 w-32" aria-label="Loading logs title" />
             <Skeleton className="h-4 w-20" aria-label="Loading count" />
           </div>
           <div className="p-6">
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+                <thead className="bg-gray-50 dark:bg-gray-900">
                   <tr>
                     {['Time', 'Status', 'Latency', 'Response'].map((key) => (
-                      <th key={key} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th key={key} className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                         <Skeleton className="h-4 w-16" aria-label="Loading header" />
                       </th>
                     ))}
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200">
                   {Array.from({ length: 5 }).map((_, idx) => (
                     <tr key={idx}>
                       <td className="px-4 py-3">

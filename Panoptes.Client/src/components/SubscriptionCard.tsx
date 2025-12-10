@@ -136,12 +136,12 @@ export const SubscriptionCard: React.FC<SubscriptionCardProps> = ({
     >
       {/* --- COL 1: NAME, TYPE & URL --- */}
       <div className="col-span-12 md:col-span-4 flex flex-col min-w-0">
-        <h3 className="font-bold text-gray-800 truncate text-base mb-1">{subscription.name}</h3>
+        <h3 className="font-bold text-gray-800 dark:text-gray-100 truncate text-base mb-1">{subscription.name}</h3>
         <div className="flex items-center gap-2">
-          <span className="shrink-0 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-indigo-50 text-indigo-700 uppercase border border-indigo-100 tracking-wide">
+          <span className="shrink-0 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-indigo-50 text-indigo-700 dark:bg-indigo-900/20 dark:text-indigo-200 dark:border-indigo-800 uppercase border border-indigo-100 tracking-wide">
             {subscription.eventType}
           </span>
-          <span className="text-xs text-gray-500 truncate font-mono opacity-80" title={subscription.targetUrl}>
+          <span className="text-xs text-gray-500 dark:text-gray-300 truncate font-mono opacity-80" title={subscription.targetUrl}>
             {subscription.targetUrl}
           </span>
         </div>
@@ -209,25 +209,25 @@ export const SubscriptionCard: React.FC<SubscriptionCardProps> = ({
       {/* --- COL 3: USAGE --- */}
       <div className="col-span-6 md:col-span-4 flex flex-col gap-2">
         <div className="flex items-center gap-2">
-          <span className="text-[10px] uppercase text-gray-500 font-semibold w-8">Min</span>
-          <div className="flex-1 h-1.5 bg-white/50 rounded-full overflow-hidden">
+          <span className="text-[10px] uppercase text-gray-500 dark:text-gray-400 font-semibold w-8">Min</span>
+          <div className="flex-1 h-1.5 bg-white/50 dark:bg-white/10 rounded-full overflow-hidden">
             <div
               className={`h-full transition-all duration-500 ${getProgressColor(limits.minute, limits.minuteLimit)}`}
               style={{ width: `${Math.min(100, (limits.minute / limits.minuteLimit) * 100)}%` }}
             />
           </div>
-          <span className="text-[10px] text-gray-600 font-mono w-8 text-right">{formatPercentage(limits.minute, limits.minuteLimit)}</span>
+          <span className="text-[10px] text-gray-600 dark:text-gray-300 font-mono w-8 text-right">{formatPercentage(limits.minute, limits.minuteLimit)}</span>
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="text-[10px] uppercase text-gray-500 font-semibold w-8">Hour</span>
-          <div className="flex-1 h-1.5 bg-white/50 rounded-full overflow-hidden">
+          <span className="text-[10px] uppercase text-gray-500 dark:text-gray-400 font-semibold w-8">Hour</span>
+          <div className="flex-1 h-1.5 bg-white/50 dark:bg-white/10 rounded-full overflow-hidden">
             <div
               className={`h-full transition-all duration-500 ${getProgressColor(limits.hour, limits.hourLimit)}`}
               style={{ width: `${Math.min(100, (limits.hour / limits.hourLimit) * 100)}%` }}
             />
           </div>
-          <span className="text-[10px] text-gray-600 font-mono w-8 text-right">{formatPercentage(limits.hour, limits.hourLimit)}</span>
+          <span className="text-[10px] text-gray-600 dark:text-gray-300 font-mono w-8 text-right">{formatPercentage(limits.hour, limits.hourLimit)}</span>
         </div>
       </div>
 
@@ -235,21 +235,21 @@ export const SubscriptionCard: React.FC<SubscriptionCardProps> = ({
       <div className="col-span-12 md:col-span-2 flex justify-end gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-200">
         <button
           onClick={(e) => { e.stopPropagation(); onTest(subscription.id); }}
-          className="p-2 bg-white/80 hover:bg-white text-indigo-600 rounded-lg shadow-sm hover:shadow transition-colors"
+          className="p-2 bg-white/80 dark:bg-gray-900/60 hover:bg-white dark:hover:bg-gray-800 text-indigo-600 dark:text-indigo-300 rounded-lg shadow-sm hover:shadow transition-colors"
           title="Test Webhook"
         >
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 2L11 13"/><path d="M22 2L15 22L11 13L2 9L22 2Z"/></svg>
         </button>
         <button
           onClick={(e) => { e.stopPropagation(); onEdit(subscription.id); }}
-          className="p-2 bg-white/80 hover:bg-white text-gray-700 rounded-lg shadow-sm hover:shadow transition-colors"
+          className="p-2 bg-white/80 dark:bg-gray-900/60 hover:bg-white dark:hover:bg-gray-800 text-gray-700 dark:text-gray-200 rounded-lg shadow-sm hover:shadow transition-colors"
           title="Edit"
         >
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" /></svg>
         </button>
         <button
           onClick={(e) => { e.stopPropagation(); onDelete(subscription.id); }}
-          className="p-2 bg-white/80 hover:bg-red-50 text-red-500 rounded-lg shadow-sm hover:shadow transition-colors"
+          className="p-2 bg-white/80 dark:bg-gray-900/60 hover:bg-red-50 dark:hover:bg-red-800 text-red-500 dark:text-red-300 rounded-lg shadow-sm hover:shadow transition-colors"
           title="Delete"
         >
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /><line x1="10" y1="11" x2="10" y2="17" /><line x1="14" y1="11" x2="14" y2="17" /></svg>

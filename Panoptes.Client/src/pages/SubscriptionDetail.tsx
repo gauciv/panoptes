@@ -391,9 +391,11 @@ const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: p
              <div className="flex items-center gap-3">
                 <h3 className="text-lg font-bold text-gray-900">Subscription Details</h3>
                 <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${
-                    subscription.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
+                  subscription.isActive
+                    ? 'bg-green-100 text-green-700 dark:bg-green-600 dark:text-white'
+                    : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'
                 }`}>
-                    {subscription.isActive ? 'Active' : 'Inactive'}
+                  {subscription.isActive ? 'Active' : 'Inactive'}
                 </span>
              </div>
              <div className="flex gap-2 items-center">
@@ -426,8 +428,8 @@ const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: p
                     Reset
                   </button>
                 ) : subscription.isActive ? (
-                  <button onClick={handleToggleActive} className="px-3 py-1.5 bg-green-100 text-green-700 rounded-md text-sm font-medium hover:bg-green-200 shadow-sm flex items-center gap-1">
-                    <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                  <button onClick={handleToggleActive} className="px-3 py-1.5 bg-green-100 text-green-700 dark:bg-green-600 dark:text-white rounded-md text-sm font-medium hover:bg-green-200 dark:hover:bg-green-700 shadow-sm flex items-center gap-1">
+                    <span className="w-2 h-2 rounded-full bg-green-500 dark:bg-green-300"></span>
                     Active
                   </button>
                 ) : (

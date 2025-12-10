@@ -363,9 +363,10 @@ const Dashboard: React.FC = () => {
         disabled={!setupStatus?.isConfigured}
         className={`px-4 py-2 rounded-tech text-sm font-medium transition-colors ${
           setupStatus?.isConfigured
-            ? 'bg-sentinel text-white hover:bg-sentinel-hover'
-            : 'bg-gray-300 text-gray-500 cursor-not-allowed dark:bg-gray-700 dark:text-gray-400'
-        }`}
+            ? 'bg-sentinel hover:bg-sentinel-hover'
+            : 'bg-gray-300 cursor-not-allowed dark:bg-gray-700'
+        } text-white`}
+        style={{ color: '#ffffff' }}
         title={!setupStatus?.isConfigured ? 'Complete setup first' : ''}
       >
         New Subscription

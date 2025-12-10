@@ -30,13 +30,13 @@ const Health: React.FC = () => {
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
       case 'healthy':
-        return 'text-green-600 bg-green-100';
+        return 'text-green-600 bg-green-100 dark:bg-green-600 dark:text-white';
       case 'degraded':
-        return 'text-yellow-600 bg-yellow-100';
+        return 'text-yellow-600 bg-yellow-100 dark:bg-yellow-600 dark:text-black/80';
       case 'unhealthy':
-        return 'text-red-600 bg-red-100';
+        return 'text-red-600 bg-red-100 dark:bg-red-700 dark:text-white';
       default:
-        return 'text-gray-600 bg-gray-100';
+        return 'text-gray-600 bg-gray-100 dark:bg-gray-700 dark:text-gray-300';
     }
   };
 

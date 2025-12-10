@@ -39,11 +39,11 @@ const SubscriptionFilters: React.FC<SubscriptionFiltersProps> = ({
   onClearFilters,
 }) => {
   return (
-    <div className="bg-white shadow rounded-lg p-4 mb-4">
+    <div className="bg-white dark:bg-gray-800 shadow dark:shadow-lg rounded-lg p-4 mb-4">
       {/* Filter Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <span className="font-mono text-xs uppercase text-gray-500 tracking-wider">
+          <span className="font-mono text-xs uppercase text-gray-500 dark:text-gray-400 tracking-wider">
             Filters
           </span>
           {activeFilterCount > 0 && (
@@ -81,12 +81,12 @@ const SubscriptionFilters: React.FC<SubscriptionFiltersProps> = ({
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Search Input */}
         <div className="lg:col-span-1">
-          <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5">
+          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">
             Search
           </label>
           <div className="relative">
             <svg
-              className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400"
+              className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -110,7 +110,7 @@ const SubscriptionFilters: React.FC<SubscriptionFiltersProps> = ({
 
         {/* Status Filter */}
         <div>
-          <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5">
+          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">
             Status
           </label>
           <Select value={statusFilter} onValueChange={(v) => onStatusChange(v as StatusFilter)}>
@@ -137,7 +137,7 @@ const SubscriptionFilters: React.FC<SubscriptionFiltersProps> = ({
 
         {/* Event Type Filter */}
         <div>
-          <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5">
+          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">
             Event Type
           </label>
           <Select value={eventTypeFilter} onValueChange={onEventTypeChange}>
@@ -157,7 +157,7 @@ const SubscriptionFilters: React.FC<SubscriptionFiltersProps> = ({
 
         {/* Sort */}
         <div>
-          <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5">
+          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">
             Sort By
           </label>
           <Select value={sortBy} onValueChange={(v) => onSortChange(v as SortOption)}>

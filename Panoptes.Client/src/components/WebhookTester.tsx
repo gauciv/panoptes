@@ -100,20 +100,20 @@ const WebhookTester: React.FC<WebhookTesterProps> = ({
   };
 
   const getStatusColor = (status: number) => {
-    if (status === 0) return 'text-red-600 bg-red-50 border-red-200';
-    if (status >= 200 && status < 300) return 'text-green-600 bg-green-50 border-green-200';
-    return 'text-amber-600 bg-amber-50 border-amber-200';
+    if (status === 0) return 'text-red-600 bg-red-50 border-red-200 dark:bg-red-900/40 dark:text-red-300 dark:border-red-700';
+    if (status >= 200 && status < 300) return 'text-green-600 bg-green-50 border-green-200 dark:bg-green-900/30 dark:text-green-200 dark:border-green-700';
+    return 'text-amber-600 bg-amber-50 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-700';
   };
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden mt-6">
+    <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm dark:shadow-lg overflow-hidden mt-6">
       
       {/* 1. Header with Target URL and Send Button */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-gray-50/50">
+      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/40">
         <div>
-          <h3 className="text-lg font-medium text-gray-900">Webhook Tester</h3>
-          <p className="text-sm text-gray-500">
-            Send a test payload to <span className="font-mono text-xs bg-gray-200 px-1 py-0.5 rounded">{targetUrl}</span>
+          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Webhook Tester</h3>
+          <p className="text-sm text-gray-500 dark:text-gray-300">
+            Send a test payload to <span className="font-mono text-xs bg-gray-200 dark:bg-gray-800 text-gray-800 dark:text-gray-100 px-1 py-0.5 rounded">{targetUrl}</span>
           </p>
         </div>
         <button
@@ -131,13 +131,13 @@ const WebhookTester: React.FC<WebhookTesterProps> = ({
       </div>
 
       {/* 2. Tab Navigation */}
-      <div className="flex border-b border-gray-200">
+      <div className="flex border-b border-gray-200 dark:border-gray-700">
         <button
           onClick={() => setActiveTab('request')}
           className={`flex-1 py-3 text-sm font-medium text-center transition-colors border-b-2 ${
             activeTab === 'request'
-              ? 'border-indigo-600 text-indigo-600 bg-indigo-50/50'
-              : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+              ? 'border-indigo-600 text-indigo-600 bg-indigo-50/50 dark:bg-indigo-900/20'
+              : 'border-transparent text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-900'
           }`}
         >
           Request Payload
@@ -146,8 +146,8 @@ const WebhookTester: React.FC<WebhookTesterProps> = ({
           onClick={() => setActiveTab('response')}
           className={`flex-1 py-3 text-sm font-medium text-center transition-colors border-b-2 flex items-center justify-center gap-2 ${
             activeTab === 'response'
-              ? 'border-indigo-600 text-indigo-600 bg-indigo-50/50'
-              : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+              ? 'border-indigo-600 text-indigo-600 bg-indigo-50/50 dark:bg-indigo-900/20'
+              : 'border-transparent text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-900'
           }`}
         >
           Response
@@ -159,7 +159,7 @@ const WebhookTester: React.FC<WebhookTesterProps> = ({
       </div>
 
       {/* 3. Content Area */}
-      <div className="min-h-[300px] bg-white">
+      <div className="min-h-[300px] bg-white dark:bg-gray-800">
         
         {/* --- REQUEST TAB --- */}
         {activeTab === 'request' && (
@@ -178,8 +178,8 @@ const WebhookTester: React.FC<WebhookTesterProps> = ({
                 )}
               </button>
             </div>
-            <div className="bg-slate-50 rounded-md border border-slate-200 overflow-hidden">
-              <pre className="p-4 text-xs font-mono text-slate-700 overflow-auto max-h-[400px]">
+            <div className="bg-slate-50 dark:bg-gray-900 rounded-md border border-slate-200 dark:border-gray-700 overflow-hidden">
+              <pre className="p-4 text-xs font-mono text-slate-700 dark:text-gray-100 overflow-auto max-h-[400px]">
                 {JSON.stringify(samplePayload, null, 2)}
               </pre>
             </div>
@@ -192,8 +192,8 @@ const WebhookTester: React.FC<WebhookTesterProps> = ({
             
             {/* Empty State */}
             {!result && !isLoading && (
-              <div className="h-full flex flex-col items-center justify-center text-gray-400 py-12">
-                <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-3">
+              <div className="h-full flex flex-col items-center justify-center text-gray-400 dark:text-gray-300 py-12">
+                <div className="w-12 h-12 bg-gray-100 dark:bg-gray-900 rounded-full flex items-center justify-center mb-3">
                   <Icons.Play className="w-5 h-5 ml-1 opacity-50" />
                 </div>
                 <p className="text-sm">Click "Send Test Webhook" to trigger a request.</p>
@@ -202,7 +202,7 @@ const WebhookTester: React.FC<WebhookTesterProps> = ({
 
             {/* Loading State */}
             {isLoading && (
-              <div className="h-full flex flex-col items-center justify-center text-gray-400 py-12">
+              <div className="h-full flex flex-col items-center justify-center text-gray-400 dark:text-gray-300 py-12">
                 <Icons.Spinner className="w-8 h-8 animate-spin text-indigo-500 mb-3" />
                 <p className="text-sm">Waiting for response...</p>
               </div>
@@ -226,23 +226,23 @@ const WebhookTester: React.FC<WebhookTesterProps> = ({
                     </div>
                   </div>
                   
-                  <div className="flex flex-col p-3 rounded-md border border-gray-200 bg-white shadow-sm">
-                    <span className="text-xs font-medium text-gray-500 uppercase">Latency</span>
-                    <div className="flex items-center gap-2 mt-1 text-gray-700">
+                  <div className="flex flex-col p-3 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-sm dark:shadow-lg">
+                    <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Latency</span>
+                    <div className="flex items-center gap-2 mt-1 text-gray-700 dark:text-gray-200">
                       <Icons.Clock className="w-5 h-5 text-indigo-500" />
                       <span className="text-xl font-bold">{result.durationMs}</span>
-                      <span className="text-sm text-gray-500">ms</span>
+                      <span className="text-sm text-gray-500 dark:text-gray-300">ms</span>
                     </div>
                   </div>
                 </div>
 
                 {/* Signature Header */}
                 {result.signature && (
-                  <div className="bg-white p-3 rounded border border-gray-200 shadow-sm flex items-center gap-3">
+                  <div className="bg-white dark:bg-gray-900 p-3 rounded border border-gray-200 dark:border-gray-700 shadow-sm dark:shadow-lg flex items-center gap-3">
                     <Icons.ShieldCheck className="w-5 h-5 text-emerald-500 flex-shrink-0" />
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs text-gray-500 uppercase">HMAC Signature</p>
-                      <p className="text-xs font-mono text-gray-700 truncate" title={result.signature}>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 uppercase">HMAC Signature</p>
+                      <p className="text-xs font-mono text-gray-700 dark:text-gray-200 truncate" title={result.signature}>
                         {result.signature}
                       </p>
                     </div>

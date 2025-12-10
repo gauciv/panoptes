@@ -16,9 +16,10 @@ const MOON_ICON = (
 type Props = {
   isDark?: boolean;
   toggle?: () => void;
+  compact?: boolean;
 };
 
-export default function ThemeToggle({ isDark: isDarkProp, toggle }: Props): JSX.Element {
+export default function ThemeToggle({ isDark: isDarkProp, toggle, compact }: Props): JSX.Element {
   const [isDarkLocal, setIsDarkLocal] = useState<boolean>(() => {
     try {
       const stored = localStorage.getItem('theme');
@@ -69,7 +70,17 @@ export default function ThemeToggle({ isDark: isDarkProp, toggle }: Props): JSX.
     return;
   }, [usePortal]);
  
-   const toggleButton = (
+   const toggleButton = compact ? (
+    <button
+      aria-pressed={isDark}
+      aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+      title={isDark ? 'Light mode' : 'Dark mode'}
+      onClick={handleClick}
+      className="inline-flex items-center justify-center p-2 rounded-tech border border-border bg-transparent hover:bg-accent transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2"
+    >
+      <span className={isDark ? 'text-white' : 'text-yellow-400'}>{isDark ? MOON_ICON : SUN_ICON}</span>
+    </button>
+   ) : (
      <button
        role="switch"
        aria-checked={isDark}
