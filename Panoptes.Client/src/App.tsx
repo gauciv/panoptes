@@ -6,6 +6,7 @@ import SubscriptionDetail from './pages/SubscriptionDetail';
 import Settings from './pages/Settings';
 import { DashboardLayout } from './layouts/DashboardLayout';
 import Login from './pages/Login';
+import Landing from './pages/Landing';
 
 
 export const ThemeContext = createContext<{
@@ -74,6 +75,7 @@ function App() {
       
       <Router>
         <Routes>
+          <Route path="/landing" element={<Landing />} />
           <Route path="/login" element={<Login />} />
           <Route element={<DashboardLayout />}>
             <Route path="/" element={<RequireAuth><Dashboard /></RequireAuth>} />
