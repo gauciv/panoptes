@@ -6,6 +6,7 @@ import { Loader2 } from 'lucide-react';
 
 interface SetupWizardProps {
   onComplete: () => void;
+  onClose?: () => void;
 }
 
 interface ValidationResult {
@@ -20,7 +21,7 @@ const NETWORK_ENDPOINTS: Record<string, string> = {
   Preview: 'https://cardano-preview.utxorpc-m1.demeter.run',
 };
 
-export function SetupWizard({ onComplete }: SetupWizardProps) {
+export function SetupWizard({ onComplete, onClose }: SetupWizardProps) {
   const [network, setNetwork] = useState<string>('Preprod');
   const [grpcEndpoint, setGrpcEndpoint] = useState<string>(NETWORK_ENDPOINTS.Preprod);
   const [apiKey, setApiKey] = useState<string>('');
@@ -159,7 +160,7 @@ export function SetupWizard({ onComplete }: SetupWizardProps) {
         </div>
         
         <button
-          onClick={onComplete}
+          onClick={onClose || onComplete}
           className="absolute top-4 right-4 text-[#006A33] hover:text-white transition-colors p-1 z-10"
           aria-label="Close"
           title="Skip Setup"
