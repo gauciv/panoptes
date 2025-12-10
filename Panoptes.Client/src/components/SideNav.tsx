@@ -103,7 +103,7 @@ export function SideNav() {
             {!isCollapsed && (
               <span className="text-sm font-mono text-muted-foreground">Theme</span>
             )}
-            <ThemeToggle isDark={isDark} toggle={() => setIsDark(!isDark)} />
+            <ThemeToggle isDark={isDark} toggle={() => setIsDark(!isDark)} compact={isCollapsed} />
           </div>
         </div>
       </div>

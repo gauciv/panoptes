@@ -16,7 +16,8 @@ import EditSubscriptionModal from '../components/EditSubscriptionModal';
 import ConfirmationModal from '../components/ConfirmationModal';
 import SubscriptionDetailSkeleton from '../components/SubscriptionDetailSkeleton';
 import Pagination from '../components/Pagination';
-import ExportButton from '../components/ExportButton.tsx'; 
+import ExportButton from '../components/ExportButton'; 
+import WebhookTester from '../components/WebhookTester'; // <--- NEW IMPORT
 import { convertToCSV, downloadFile, generateFilename } from '../utils/exportUtils'; 
 
 // --- PROPS INTERFACE ---
@@ -49,6 +50,9 @@ const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: p
   const [loading, setLoading] = useState(!propSubscription); 
   const [error, setError] = useState<string | null>(null);
   
+  // New State for Webhook Tester Visibility
+  const [showTester, setShowTester] = useState(false); // <--- NEW STATE
+
   // Modal States
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -163,6 +167,7 @@ const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: p
       else navigate('/');
   };
 
+  // NOTE: Kept original logic, but button now toggles UI instead
   const handleTest = async () => {
     if (!activeId) return;
     try {
@@ -386,9 +391,11 @@ const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: p
              <div className="flex items-center gap-3">
                 <h3 className="text-lg font-bold text-gray-900">Subscription Details</h3>
                 <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${
-                    subscription.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
+                  subscription.isActive
+                    ? 'bg-green-100 text-green-700 dark:bg-green-600 dark:text-white'
+                    : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'
                 }`}>
-                    {subscription.isActive ? 'Active' : 'Inactive'}
+                  {subscription.isActive ? 'Active' : 'Inactive'}
                 </span>
              </div>
              <div className="flex gap-2 items-center">
@@ -421,8 +428,8 @@ const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: p
                     Reset
                   </button>
                 ) : subscription.isActive ? (
-                  <button onClick={handleToggleActive} className="px-3 py-1.5 bg-green-100 text-green-700 rounded-md text-sm font-medium hover:bg-green-200 shadow-sm flex items-center gap-1">
-                    <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                  <button onClick={handleToggleActive} className="px-3 py-1.5 bg-green-100 text-green-700 dark:bg-green-600 dark:text-white rounded-md text-sm font-medium hover:bg-green-200 dark:hover:bg-green-700 shadow-sm flex items-center gap-1">
+                    <span className="w-2 h-2 rounded-full bg-green-500 dark:bg-green-300"></span>
                     Active
                   </button>
                 ) : (
@@ -435,12 +442,25 @@ const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: p
                 {/* NEW EXPORT BUTTON ADDED HERE */}
                 <ExportButton onExport={handleExportLogs} disabled={totalLogs === 0} />
 
+
+                {/* MODIFIED TEST BUTTON */}
+                <button 
+                    onClick={() => setShowTester(!showTester)} 
+                    className={`px-3 py-1.5 rounded-md text-sm font-medium shadow-sm transition-colors ${
+                        showTester 
+                        ? 'bg-gray-100 text-gray-800 hover:bg-gray-200' 
+                        : 'bg-indigo-600 text-white hover:bg-indigo-700'
+                    }`}
+                >
+                    {showTester ? 'Hide Tester' : 'Test Webhook'}
+                </button>
                 <button onClick={handleTest} className="px-3 py-1.5 bg-indigo-600 text-white rounded-md text-sm font-medium hover:bg-indigo-700 shadow-sm flex items-center gap-1">
                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M22 2L11 13"/><path d="M22 2L15 22L11 13L2 9L22 2Z"/>
                     </svg>
                     Test
                 </button>
+
                 <button onClick={() => setIsEditModalOpen(true)} className="px-3 py-1.5 bg-white border border-gray-300 text-gray-700 rounded-md text-sm font-medium hover:bg-gray-50 shadow-sm">
                     Edit
                 </button>
@@ -475,6 +495,25 @@ const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: p
             </div>
         </div>
       </div>
+
+      {/* --- NEW: WEBHOOK TESTER SECTION --- */}
+      {showTester && activeId && (
+        <div className="animate-in fade-in slide-in-from-top-4 duration-300">
+             <WebhookTester 
+                subscriptionId={activeId}
+                targetUrl={subscription.targetUrl}
+                samplePayload={{
+                    event: "test_event",
+                    timestamp: new Date().toISOString(),
+                    subscriptionId: activeId,
+                    data: {
+                        message: "This is a manual test from the dashboard.",
+                        user: "admin"
+                    }
+                }}
+             />
+        </div>
+      )}
 
       {/* 3. Stats Row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

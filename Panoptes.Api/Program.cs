@@ -5,11 +5,10 @@ using Panoptes.Infrastructure.Services;
 using Panoptes.Infrastructure.Configurations;
 using Panoptes.Api.Workers;
 using System;
-using System.IO;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add appsettings.Local.json explicitly (for local secrets)
+// Add appsettings.Local.json explicitly
 builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: true);
 
 // Add services to the container.
@@ -17,7 +16,6 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        // Get allowed origins from configuration for production
         var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>() 
             ?? new[] { "http://localhost:3000", "https://localhost:3000" };
         
@@ -35,21 +33,20 @@ builder.Services.AddSwaggerGen();
 // Register Configuration
 builder.Services.Configure<PanoptesConfig>(builder.Configuration.GetSection("Argus"));
 
-// Register Data Protection for encrypting sensitive data (API keys)
+// Register Data Protection
 builder.Services.AddDataProtection();
-// Keys are automatically persisted to ~/.aspnet/DataProtection-Keys/ by default
 
-// Register Persistence
-var dbPath = Path.Combine(Directory.GetCurrentDirectory(), "panoptes.db");
+// CHANGED: Register Persistence (PostgreSQL)
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlite($"Data Source={dbPath}"));
+    options.UseNpgsql(connectionString));
 
 builder.Services.AddScoped<IAppDbContext>(provider => provider.GetRequiredService<AppDbContext>());
 
 // Register Services
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<IWebhookDispatcher, WebhookDispatcher>();
-builder.Services.AddScoped<PanoptesReducer>(); // Scoped to allow access to scoped services
+builder.Services.AddScoped<PanoptesReducer>();
 
 // Register Workers
 builder.Services.AddHostedService<ArgusWorker>();
@@ -68,43 +65,31 @@ app.UseCors("AllowFrontend");
 app.UseAuthorization();
 app.MapControllers();
 
-// Ensure database is created (optional but helpful for this context)
+// CHANGED: Simplified DB Initialization for Postgres
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
     try
     {
         var db = services.GetRequiredService<AppDbContext>();
-        Console.WriteLine($"Using database at: {dbPath}");
+        Console.WriteLine($"Connecting to PostgreSQL...");
         
-        // For development: Delete and recreate if schema changes detected
-        // In production, you'd use proper migrations
-        if (File.Exists(dbPath))
+        // EnsureCreated() will create the DB and Tables if they don't exist.
+        // It's robust enough for a dev migration.
+        var created = db.Database.EnsureCreated();
+        
+        if (created)
         {
-            try
-            {
-                // Test if schema is valid by querying
-                _ = db.WebhookSubscriptions.FirstOrDefault();
-                Console.WriteLine("Database schema is valid.");
-            }
-            catch (Exception schemaEx)
-            {
-                Console.WriteLine($"Schema mismatch detected: {schemaEx.Message}");
-                Console.WriteLine("Deleting old database and recreating with new schema...");
-                db.Database.EnsureDeleted();
-                db.Database.EnsureCreated();
-                Console.WriteLine("Database recreated successfully with new schema.");
-            }
+            Console.WriteLine("PostgreSQL database created successfully.");
         }
         else
         {
-            db.Database.EnsureCreated();
-            Console.WriteLine("Database created successfully.");
+            Console.WriteLine("PostgreSQL database already exists.");
         }
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"An error occurred with the DB: {ex.Message}");
+        Console.WriteLine($"CRITICAL: Could not connect to PostgreSQL: {ex.Message}");
     }
 }
 

@@ -7,6 +7,7 @@ using Panoptes.Infrastructure.Services;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Net.Http; // Ensure this is included
 
 namespace Panoptes.Api.Controllers
 {
@@ -348,6 +349,10 @@ namespace Panoptes.Api.Controllers
             }
         }
 
+        /// <summary>
+        /// Existing endpoint that generates a backend-defined test event.
+        /// Route: POST /Subscriptions/test/{id}
+        /// </summary>
         [HttpPost("test/{id}")]
         public async Task<ActionResult<DeliveryLog>> TestSubscription(Guid id)
         {
@@ -383,6 +388,55 @@ namespace Panoptes.Api.Controllers
             await _dbContext.SaveChangesAsync();
 
             return Ok(log);
+        }
+
+        /// <summary>
+        /// NEW ENDPOINT: Passthrough test that sends the Frontend-provided JSON payload.
+        /// Route: POST /Subscriptions/{id}/test
+        /// Matches the route used by the new WebhookTester UI component.
+        /// </summary>
+        [HttpPost("{id}/test")]
+        public async Task<IActionResult> TestWebhookDirect(Guid id, [FromBody] object payload)
+        {
+            var subscription = await _dbContext.WebhookSubscriptions.FindAsync(id);
+            if (subscription == null) return NotFound($"Subscription with ID {id} not found.");
+
+            if (!Uri.TryCreate(subscription.TargetUrl, UriKind.Absolute, out var uri))
+            {
+                return BadRequest("Subscription has an invalid Target URL.");
+            }
+
+            try 
+            {
+                using var client = new HttpClient();
+                client.Timeout = TimeSpan.FromSeconds(10); // 10s timeout for testing
+
+                var json = System.Text.Json.JsonSerializer.Serialize(payload);
+                var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+
+                // Note: If you have a SecretKey logic, you can add the X-Signature header here.
+
+                var response = await client.PostAsync(subscription.TargetUrl, content);
+                
+                var responseBody = await response.Content.ReadAsStringAsync();
+                
+                // Try to parse the response as JSON, otherwise return as string
+                object parsedBody;
+                try 
+                { 
+                    parsedBody = System.Text.Json.JsonSerializer.Deserialize<object>(responseBody); 
+                } 
+                catch 
+                { 
+                    parsedBody = responseBody; 
+                }
+
+                return StatusCode((int)response.StatusCode, parsedBody);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = "Failed to connect to target URL", details = ex.Message });
+            }
         }
 
         [HttpPut("{id}")]

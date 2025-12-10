@@ -1,0 +1,15 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: panoptes_db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: panoptes_password
+      POSTGRES_DB: panoptes_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:

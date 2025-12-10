@@ -1,4 +1,4 @@
-import { Home, BarChart3, Settings, LucideIcon } from 'lucide-react';
+import { Home, BarChart3, Settings, Activity, LucideIcon } from 'lucide-react';
 
 export interface NavItem {
   label: string;
@@ -21,6 +21,12 @@ export const NAV_ITEMS: NavItem[] = [
     label: 'Analytics',
     path: '/analytics',
     icon: BarChart3,
+    group: 'primary',
+  },
+  {
+    label: 'Health',
+    path: '/health',
+    icon: Activity,
     group: 'primary',
   },
   

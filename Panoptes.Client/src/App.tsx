@@ -4,6 +4,7 @@ import { Toaster } from 'react-hot-toast';
 import Dashboard from './pages/Dashboard';
 import SubscriptionDetail from './pages/SubscriptionDetail';
 import Settings from './pages/Settings';
+import Health from './pages/Health';
 import { DashboardLayout } from './layouts/DashboardLayout';
 import Login from './pages/Login';
 import Landing from './pages/Landing';
@@ -80,6 +81,7 @@ function App() {
           <Route element={<DashboardLayout />}>
             <Route path="/" element={<RequireAuth><Dashboard /></RequireAuth>} />
             <Route path="/analytics" element={<RequireAuth><Dashboard /></RequireAuth>} />
+            <Route path="/health" element={<RequireAuth><Health /></RequireAuth>} />
             <Route path="/subscriptions/:id" element={<RequireAuth><SubscriptionDetail /></RequireAuth>} />
             <Route path="/settings" element={<RequireAuth><Settings /></RequireAuth>} />
           </Route>

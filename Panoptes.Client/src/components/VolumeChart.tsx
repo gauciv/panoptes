@@ -129,14 +129,14 @@ const VolumeChart: React.FC<VolumeChartProps> = ({
 
   if (isLoading) {
     return (
-      <div className="bg-white rounded-lg shadow border border-gray-200 p-6">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-lg border border-gray-200 dark:border-gray-700 p-6">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <div className="h-4 w-32 bg-gray-200 rounded animate-pulse mb-2" />
-            <div className="h-3 w-48 bg-gray-100 rounded animate-pulse" />
+            <div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-2" />
+            <div className="h-3 w-48 bg-gray-100 dark:bg-gray-700 rounded animate-pulse" />
           </div>
         </div>
-        <div className="h-[300px] bg-gray-50 rounded animate-pulse" />
+        <div className="h-[300px] bg-gray-50 dark:bg-gray-700 rounded animate-pulse" />
       </div>
     );
   }
@@ -145,24 +145,24 @@ const VolumeChart: React.FC<VolumeChartProps> = ({
   const yAxisMax = Math.ceil(maxCount * 1.1); // Add 10% padding
 
   return (
-    <div className="bg-white rounded-lg shadow border border-gray-200 p-6">
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-lg border border-gray-200 dark:border-gray-700 p-6">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h3 className="font-mono text-xs uppercase tracking-wider text-gray-500">
+          <h3 className="font-mono text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400">
             Webhook Volume
           </h3>
-          <p className="text-sm text-gray-400 mt-1">
+          <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
             {getBucketDescription(timeRange)} webhook activity
             {chartMetrics.scrollNeeded && (
-              <span className="ml-2 text-xs text-gray-300">(scroll to see more)</span>
+              <span className="ml-2 text-xs text-gray-300 dark:text-gray-400">(scroll to see more)</span>
             )}
           </p>
         </div>
         <div className="text-right">
-          <p className="text-2xl font-mono font-semibold text-gray-900">
+          <p className="text-2xl font-mono font-semibold text-gray-900 dark:text-gray-100">
             {data.reduce((sum, d) => sum + d.count, 0).toLocaleString()}
           </p>
-          <p className="text-xs text-gray-500">total webhooks</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400">total webhooks</p>
         </div>
       </div>
 

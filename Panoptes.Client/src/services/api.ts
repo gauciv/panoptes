@@ -41,8 +41,16 @@ export const getSubscription = async (id: string): Promise<WebhookSubscription> 
     return response.data;
 };
 
+// Existing test function (Backend generated payload)
 export const triggerTestEvent = async (id: string): Promise<DeliveryLog> => {
     const response = await api.post<DeliveryLog>(`/Subscriptions/test/${id}`);
+    return response.data;
+};
+
+// NEW: Direct test function (Frontend provided payload)
+export const triggerDirectWebhookTest = async (id: string, payload: any): Promise<any> => {
+    // Matches the C# route: [HttpPost("{id}/test")] inside SubscriptionsController
+    const response = await api.post<any>(`/Subscriptions/${id}/test`, payload);
     return response.data;
 };
 
@@ -62,6 +70,48 @@ export const toggleSubscriptionActive = async (id: string, deliverLatestOnly: bo
 
 export const resetSubscription = async (id: string): Promise<WebhookSubscription> => {
     const response = await api.post<WebhookSubscription>(`/Subscriptions/${id}/reset`);
+    return response.data;
+};
+
+export interface HealthResponse {
+    status: string;
+    timestamp: string;
+    version: string;
+    uptime: string;
+    checks: {
+        database: {
+            status: string;
+            responseTimeMs: number;
+            message: string;
+            error?: string;
+        };
+        utxoRpc: {
+            status: string;
+            latencyMs: number;
+            message: string;
+            error?: string;
+        };
+    };
+    metrics: {
+        activeSubscriptions: number;
+        totalSubscriptions: number;
+        lastBlockSynced?: number;
+        deliveriesLast24h: number;
+        successfulDeliveries: number;
+        failedDeliveries: number;
+        error?: string;
+    };
+    system: {
+        memoryUsageMb: number;
+        gcMemoryMb: number;
+        threadCount: number;
+        processStartTime: string;
+        error?: string;
+    };
+}
+
+export const getHealth = async (): Promise<HealthResponse> => {
+    const response = await api.get<HealthResponse>('/health');
     return response.data;
 };
 

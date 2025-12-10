@@ -34,7 +34,7 @@
   }
 
   .dark {
-    /* Panoptes Design System - Dark theme */
+    /* Panoptes Design System - Dark mode ver */
     --background: 0 0% 2%;          /* Void Black #050505 */
     --foreground: 240 100% 99%;     /* Ghost White #F8F8FF */
     --card: 0 0% 2%;
@@ -95,24 +95,23 @@
   }
 }
 
-/* Utility overrides to ensure common Tailwind classes follow theme variables
-  This helps switch colors globally without editing every component. */
+/* ensure common Tailwind classes follow theme variables
+  helps switch colors globally without editing every component */
 .bg-white { background-color: hsl(var(--card)) !important; }
 .bg-gray-100 { background-color: hsl(var(--background)) !important; }
 .bg-gray-900 { background-color: hsl(var(--background)) !important; }
 .bg-gray-800 { background-color: hsl(var(--card)) !important; }
 .text-gray-900 { color: hsl(var(--foreground)) !important; }
 .text-gray-100 { color: hsl(var(--foreground)) !important; }
-.text-white { color: hsl(var(--foreground)) !important; }
+.text-white { color: hsl(0 0% 100%) !important; }
 .border-gray-200 { border-color: hsl(var(--border)) !important; }
 .border-gray-900 { border-color: hsl(var(--border)) !important; }
 .shadow { box-shadow: 0 4px 6px -1px rgba(0,0,0,0.08) !important; }
 
-/* Make sure body uses the variable-driven background and text color */
+/* body uses the variable-driven background and text color */
 body { background-color: hsl(var(--background)); color: hsl(var(--foreground)); }
 
 /* Dark-mode fixes for specific components that use utility classes directly */
-/* Subscription empty state: Tailwind emits classes like bg-gray-50/50 and border-dashed border-gray-300 */
 .dark .bg-gray-50\/50 {
   background-color: hsl(var(--card)) !important;
 }
@@ -129,9 +128,9 @@ body { background-color: hsl(var(--background)); color: hsl(var(--foreground)); 
   color: hsl(var(--card-foreground)) !important;
 }
 
-/* Ensure panels using bg-white become dark cards in dark mode and their text updates */
+/* panels using bg-white become dark cards in dark mode and their text updates */
 .dark .bg-white {
-  /* Make white panels fully black in dark mode for stronger contrast (settings area) */
+  /* make white panels fully black in dark mode for stronger contrast */
   background-color: #000000 !important;
   color: #ffffff !important;
 }
@@ -144,7 +143,6 @@ body { background-color: hsl(var(--background)); color: hsl(var(--foreground)); 
   color: #ffffff !important;
 }
 
-/* Dark-mode badge tweaks: make the light blue "Preprod" pill darker and its text readable */
 .dark .bg-blue-100 {
   background-color: #083358 !important; /* deep blue */
   color: #e6f4ff !important;
@@ -153,11 +151,10 @@ body { background-color: hsl(var(--background)); color: hsl(var(--foreground)); 
   color: #e6f4ff !important;
 }
 
-/* Ensure common page background utility follows theme variables */
+/* common page background utility follows theme variables */
 .bg-gray-50 { background-color: hsl(var(--background)) !important; }
 .dark .bg-gray-50 { background-color: hsl(var(--background)) !important; color: hsl(var(--foreground)) !important; }
 
-/* Dark-mode shadow overrides so panels/cards have visible black shadows */
 .dark .shadow {
   box-shadow: 0 6px 18px rgba(0,0,0,0.6) !important;
 }
@@ -242,4 +239,402 @@ body { background-color: hsl(var(--background)); color: hsl(var(--foreground)); 
 
 .react-datepicker__triangle {
   display: none;
+}
+
+
+/* Tables and Table Headers */
+.dark thead.bg-gray-50 {
+  background-color: #0f0f0f !important;
+}
+
+.dark tbody.bg-white {
+  background-color: #1a1a1a !important;
+}
+
+.dark .bg-white.divide-y.divide-gray-200 {
+  background-color: #1a1a1a !important;
+  border-color: rgba(248, 248, 255, 0.1) !important;
+}
+
+.dark .divide-y.divide-gray-200 {
+  border-color: rgba(248, 248, 255, 0.1) !important;
+}
+
+/* Table Headers Text */
+.dark thead .text-gray-500 {
+  color: rgba(248, 248, 255, 0.6) !important;
+}
+
+.dark thead .text-xs.font-medium.uppercase {
+  color: rgba(248, 248, 255, 0.6) !important;
+}
+
+/* Table Body Text */
+.dark tbody .text-gray-600,
+.dark tbody .text-gray-700,
+.dark tbody .text-gray-500 {
+  color: rgba(248, 248, 255, 0.8) !important;
+}
+
+/* Cards and Containers with gray backgrounds */
+.dark .bg-gray-100 {
+  background-color: #1a1a1a !important;
+  color: #ffffff !important;
+}
+
+.dark .bg-gray-200 {
+  background-color: #2a2a2a !important;
+}
+
+/* Filter Container */
+.dark .bg-white.shadow.rounded-lg {
+  background-color: #1a1a1a !important;
+  color: #ffffff !important;
+}
+
+.dark .bg-white.shadow.rounded-lg.p-4 {
+  background-color: #1a1a1a !important;
+}
+
+/* Chart Containers */
+.dark .bg-white.rounded-lg.shadow.border.border-gray-200 {
+  background-color: #1a1a1a !important;
+  border-color: rgba(248, 248, 255, 0.15) !important;
+}
+
+.dark .bg-white.rounded-lg.shadow.border.border-gray-200 .text-gray-500,
+.dark .bg-white.rounded-lg.shadow.border.border-gray-200 .text-gray-400,
+.dark .bg-white.rounded-lg.shadow.border.border-gray-200 .text-gray-900 {
+  color: rgba(248, 248, 255, 0.8) !important;
+}
+
+.dark .h-\[300px\].bg-gray-50.rounded.animate-pulse {
+  background-color: #0f0f0f !important;
+}
+
+/* All generic gray text to light text */
+.dark .text-gray-900 {
+  color: #ffffff !important;
+}
+
+.dark .text-gray-800 {
+  color: #f0f0f0 !important;
+}
+
+.dark .text-gray-700 {
+  color: #e0e0e0 !important;
+}
+
+.dark .text-gray-600 {
+  color: rgba(248, 248, 255, 0.85) !important;
+}
+
+.dark .text-gray-500 {
+  color: rgba(248, 248, 255, 0.6) !important;
+}
+
+.dark .text-gray-400 {
+  color: rgba(248, 248, 255, 0.5) !important;
+}
+
+/* Badge Styles for Status Indicators */
+.dark .bg-green-100.text-green-800,
+.dark .bg-green-50.text-green-700 {
+  background-color: rgba(34, 80, 34, 0.6) !important;
+  color: #86efac !important;
+}
+
+.dark .bg-yellow-100.text-yellow-800,
+.dark .bg-amber-100.text-yellow-800 {
+  background-color: rgba(80, 70, 34, 0.6) !important;
+  color: #fcd34d !important;
+}
+
+.dark .bg-red-100.text-red-800,
+.dark .bg-red-50.text-red-600 {
+  background-color: rgba(80, 34, 34, 0.6) !important;
+  color: #fca5a5 !important;
+}
+
+/* Button Dropdown Menu */
+.dark .origin-top-right.absolute.right-0.mt-2.w-36.rounded-md.shadow-lg.bg-white {
+  background-color: #0f0f0f !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(248, 248, 255, 0.15) !important;
+}
+
+.dark .block.w-full.text-left.px-4.py-2.text-sm.text-gray-700 {
+  color: #e0e0e0 !important;
+}
+
+.dark .block.w-full.text-left.px-4.py-2.text-sm.text-gray-700:hover {
+  background-color: #1a1a1a !important;
+  color: #ffffff !important;
+}
+
+/* Button Styles */
+.dark .bg-white.border.border-gray-300.text-gray-700 {
+  background-color: #0f0f0f !important;
+  border-color: rgba(248, 248, 255, 0.2) !important;
+  color: #e0e0e0 !important;
+}
+
+.dark .bg-white.border.border-gray-300:hover {
+  background-color: #1a1a1a !important;
+}
+
+.dark .hover\:bg-gray-50 {
+  background-color: #1a1a1a !important;
+}
+
+.dark .hover\:bg-gray-100 {
+  background-color: #2a2a2a !important;
+}
+
+/* Pagination Info Box */
+.dark .mb-3.px-4.py-2.bg-gray-50.rounded-md.border.border-gray-200 {
+  background-color: #0f0f0f !important;
+  border-color: rgba(248, 248, 255, 0.15) !important;
+}
+
+.dark .text-sm.text-gray-600 {
+  color: rgba(248, 248, 255, 0.7) !important;
+}
+
+/* Detail Cards */
+.dark .bg-white.rounded-xl.shadow-sm.border.border-gray-200 {
+  background-color: #1a1a1a !important;
+  border-color: rgba(248, 248, 255, 0.15) !important;
+}
+
+.dark .border-b.border-gray-200 {
+  border-color: rgba(248, 248, 255, 0.1) !important;
+}
+
+/* Skeleton Loading Placeholders */
+.dark .min-h-screen.bg-gray-100 {
+  background-color: hsl(var(--background)) !important;
+}
+
+.dark .bg-gray-50.p-2.rounded {
+  background-color: #0f0f0f !important;
+  border-color: rgba(248, 248, 255, 0.15) !important;
+}
+
+/* Font mono (terminal style) text in dark mode */
+.dark .font-mono.text-gray-900,
+.dark .font-mono.text-gray-400 {
+  color: rgba(248, 248, 255, 0.8) !important;
+}
+
+/* Hover states for gray backgrounds */
+.dark .hover\:bg-gray-200 {
+  background-color: #2a2a2a !important;
+}
+
+/* Loading skeleton elements */
+.dark .bg-gray-200.rounded.animate-pulse,
+.dark .h-4.w-32.bg-gray-200 {
+  background-color: #2a2a2a !important;
+}
+
+.dark .bg-gray-100.rounded.animate-pulse,
+.dark .h-3.w-48.bg-gray-100 {
+  background-color: #1a1a1a !important;
+}
+
+/* Border colors for input focus */
+.dark .focus\:border-indigo-500 {
+  border-color: hsl(var(--primary)) !important;
+}
+
+/* WebhookTester Result Box */
+.dark .rounded-lg.border.border-gray-200.p-6 {
+  background-color: #1a1a1a !important;
+  border-color: rgba(248, 248, 255, 0.15) !important;
+}
+
+/* Tab Navigation */
+.dark .border-transparent.text-gray-500 {
+  color: rgba(248, 248, 255, 0.6) !important;
+}
+
+.dark .border-transparent.text-gray-500.hover\:text-gray-700,
+.dark .border-transparent.text-gray-500.hover\:bg-gray-50 {
+  color: rgba(248, 248, 255, 0.8) !important;
+  background-color: transparent !important;
+}
+
+.dark .border-transparent.text-gray-500.hover\:bg-gray-50:hover {
+  background-color: rgba(248, 248, 255, 0.05) !important;
+}
+
+/* Paragraph and General Text */
+.dark p.text-gray-500,
+.dark p.text-gray-600,
+.dark p.text-gray-400 {
+  color: rgba(248, 248, 255, 0.6) !important;
+}
+
+/* Ensure info boxes are dark */
+.dark .bg-blue-50.border.border-blue-200 {
+  background-color: #0d1f33 !important;
+  border-color: rgba(96, 165, 250, 0.3) !important;
+}
+
+.dark .text-blue-700 {
+  color: #60a5fa !important;
+}
+
+/* Mark empty state text readable */
+.dark .text-center.text-sm.text-gray-400,
+.dark .text-center.text-sm.text-gray-500 {
+  color: rgba(248, 248, 255, 0.6) !important;
+}
+
+/* Dark mode styles for modal and subscription cards */
+.dark .relative.bg-white.rounded-lg {
+  background-color: #1a1a1a !important;
+  color: #ffffff !important;
+}
+
+.dark .fixed.inset-0.bg-gray-500 {
+  background-color: rgba(0, 0, 0, 0.7) !important;
+}
+
+/* Modal header and border in dark mode */
+.dark div[class*="border-b border-gray-200"] {
+  border-color: rgba(248, 248, 255, 0.15) !important;
+}
+
+.dark .px-6.py-4.border-b.border-gray-200 {
+  border-color: rgba(248, 248, 255, 0.15) !important;
+}
+
+.dark .px-6.py-4.border-b.border-gray-200 h3 {
+  color: #ffffff !important;
+}
+
+/* Dark mode text in modals */
+.dark .px-6.py-4 .text-gray-700,
+.dark .px-6.py-4 .text-gray-900,
+.dark .px-6.py-4 label {
+  color: #f0f0f0 !important;
+}
+
+/* Dark mode for input fields */
+.dark .border-gray-300 {
+  border-color: rgba(248, 248, 255, 0.2) !important;
+}
+
+.dark input[class*="border-gray-300"],
+.dark textarea[class*="border-gray-300"],
+.dark select[class*="border-gray-300"] {
+  background-color: #0f0f0f !important;
+  color: #ffffff !important;
+  border-color: rgba(248, 248, 255, 0.2) !important;
+}
+
+.dark input[class*="border-gray-300"]::placeholder,
+.dark textarea[class*="border-gray-300"]::placeholder {
+  color: rgba(248, 248, 255, 0.4) !important;
+}
+
+.dark .bg-white select,
+.dark .bg-white input[type="text"],
+.dark .bg-white textarea {
+  background-color: #0f0f0f !important;
+  color: #ffffff !important;
+  border-color: rgba(248, 248, 255, 0.2) !important;
+}
+
+.dark .bg-white select option {
+  background-color: #1a1a1a;
+  color: #ffffff;
+}
+
+/* Modal footer button styles in dark mode */
+.dark .px-6.py-4.border-t.border-gray-200 {
+  border-color: rgba(248, 248, 255, 0.15) !important;
+}
+
+.dark .text-gray-700.bg-white.border.border-gray-300 {
+  background-color: #0f0f0f !important;
+  color: #ffffff !important;
+  border-color: rgba(248, 248, 255, 0.2) !important;
+}
+
+.dark .text-gray-700.bg-white.border.border-gray-300:hover {
+  background-color: #1a1a1a !important;
+}
+
+/* Info box styling in dark mode */
+.dark .bg-blue-50.border.border-blue-200 {
+  background-color: #0d1f33 !important;
+  border-color: rgba(96, 165, 250, 0.3) !important;
+}
+
+.dark .text-blue-700 {
+  color: #60a5fa !important;
+}
+
+.dark .text-blue-400 {
+  color: #60a5fa !important;
+}
+
+/* Error message styling */
+.dark .border-red-300.bg-red-50 {
+  background-color: #1a0a0a !important;
+  border-color: rgba(248, 113, 113, 0.3) !important;
+}
+
+.dark .text-red-600 {
+  color: #ff8080 !important;
+}
+
+/* Subscription card styles for dark mode */
+.dark .rounded-xl.border.p-4.group.relative {
+  background-color: #1a1a1a !important;
+  border-color: rgba(248, 248, 255, 0.15) !important;
+  color: #ffffff !important;
+}
+
+.dark .bg-gradient-to-r.from-green-50.to-green-100,
+.dark .bg-gradient-to-r.from-amber-50.to-yellow-100,
+.dark .bg-gradient-to-r.from-red-50.to-red-100 {
+  background: linear-gradient(to right, rgba(5, 15, 5, 0.8), rgba(10, 20, 10, 0.8)) !important;
+  border-color: rgba(248, 248, 255, 0.15) !important;
+}
+
+/* Subscription card text colors */
+.dark .text-gray-800 {
+  color: #ffffff !important;
+}
+
+.dark .text-gray-500 {
+  color: rgba(248, 248, 255, 0.6) !important;
+}
+
+/* Subscription card status badges */
+.dark .bg-indigo-50.text-indigo-700 {
+  background-color: #0d1f33 !important;
+  color: #93c5fd !important;
+  border-color: rgba(96, 165, 250, 0.3) !important;
+}
+
+/* Subscription card buttons */
+.dark .bg-green-100.hover\:bg-green-200,
+.dark .bg-amber-100.hover\:bg-amber-200,
+.dark .bg-red-100.hover\:bg-red-200 {
+  background-color: rgba(34, 65, 34, 0.6) !important;
+}
+
+.dark .bg-green-100.hover\:bg-green-200:hover,
+.dark .bg-amber-100.hover\:bg-amber-200:hover {
+  background-color: rgba(50, 90, 50, 0.8) !important;
+}
+
+/* New Subscription button text in dark mode */
+.dark .text-gray-900 {
+  color: #ffffff !important;
 }

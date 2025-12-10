@@ -21,21 +21,15 @@ namespace Panoptes.Infrastructure.Persistence
 
             modelBuilder.Entity<WebhookSubscription>(entity =>
             {
-                entity.Property(e => e.SecretKey)
-                    .IsRequired();
-
-                entity.Property(e => e.TargetUrl)
-                    .IsRequired();
+                entity.Property(e => e.SecretKey).IsRequired();
+                entity.Property(e => e.TargetUrl).IsRequired();
                 
-                // Store wallet addresses as JSON array
+                // CHANGED: Use Native Postgres JSONB
+                // This removes the manual conversion and lets Npgsql handle it efficiently.
                 entity.Property(e => e.WalletAddresses)
-                    .HasConversion(
-                        v => v == null ? null : System.Text.Json.JsonSerializer.Serialize(v, (System.Text.Json.JsonSerializerOptions?)null),
-                        v => v == null ? null : System.Text.Json.JsonSerializer.Deserialize<List<string>>(v, (System.Text.Json.JsonSerializerOptions?)null)
-                    );
+                    .HasColumnType("jsonb");
             });
             
-            // Configure cascade delete: when a subscription is deleted, delete all its logs
             modelBuilder.Entity<DeliveryLog>(entity =>
             {
                 entity.HasOne(d => d.Subscription)
@@ -46,34 +40,20 @@ namespace Panoptes.Infrastructure.Persistence
                 entity.Property(e => e.Status)
                     .HasConversion<string>();
                 
-                // Performance indexes for rate limit queries
-                entity.HasIndex(e => e.SubscriptionId)
-                    .HasDatabaseName("IX_DeliveryLogs_SubscriptionId");
-                
-                entity.HasIndex(e => e.AttemptedAt)
-                    .HasDatabaseName("IX_DeliveryLogs_AttemptedAt");
-                
-                // Composite index for optimized rate limit calculations
+                // Indexes remain the same, they work great in Postgres
+                entity.HasIndex(e => e.SubscriptionId).HasDatabaseName("IX_DeliveryLogs_SubscriptionId");
+                entity.HasIndex(e => e.AttemptedAt).HasDatabaseName("IX_DeliveryLogs_AttemptedAt");
                 entity.HasIndex(e => new { e.SubscriptionId, e.AttemptedAt })
                     .HasDatabaseName("IX_DeliveryLogs_SubscriptionId_AttemptedAt");
             });
             
-            // Configure DemeterConfig - only one active config allowed
             modelBuilder.Entity<DemeterConfig>(entity =>
             {
-                entity.Property(e => e.GrpcEndpoint)
-                    .IsRequired();
+                entity.Property(e => e.GrpcEndpoint).IsRequired();
+                entity.Property(e => e.ApiKeyEncrypted).IsRequired();
+                entity.Property(e => e.Network).IsRequired().HasDefaultValue("Preprod");
                 
-                entity.Property(e => e.ApiKeyEncrypted)
-                    .IsRequired();
-                
-                entity.Property(e => e.Network)
-                    .IsRequired()
-                    .HasDefaultValue("Preprod");
-                
-                // Index to quickly find active config
-                entity.HasIndex(e => e.IsActive)
-                    .HasDatabaseName("IX_DemeterConfigs_IsActive");
+                entity.HasIndex(e => e.IsActive).HasDatabaseName("IX_DemeterConfigs_IsActive");
             });
         }
     }

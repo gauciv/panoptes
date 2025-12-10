@@ -5,6 +5,7 @@ using Panoptes.Core.Entities;
 using Panoptes.Core.Interfaces;
 using Panoptes.Infrastructure.Configurations;
 using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -16,11 +17,17 @@ namespace Panoptes.Api.Controllers
     {
         private readonly IAppDbContext _dbContext;
         private readonly PanoptesConfig _config;
+        private readonly IHttpClientFactory _httpClientFactory;
+        private static readonly DateTime _startTime = DateTime.UtcNow;
 
-        public HealthController(IAppDbContext dbContext, IOptions<PanoptesConfig> config)
+        public HealthController(
+            IAppDbContext dbContext, 
+            IOptions<PanoptesConfig> config,
+            IHttpClientFactory httpClientFactory)
         {
             _dbContext = dbContext;
             _config = config.Value;
+            _httpClientFactory = httpClientFactory;
         }
 
         [HttpGet]
@@ -28,60 +35,211 @@ namespace Panoptes.Api.Controllers
         {
             var response = new HealthResponse
             {
-                Status = "healthy",
-                Timestamp = DateTime.UtcNow
+                Status = "Healthy",
+                Timestamp = DateTime.UtcNow,
+                Version = "1.0.0",
+                Uptime = DateTime.UtcNow - _startTime
             };
 
-            try
+            var checks = new HealthChecks();
+            
+            // Database check
+            checks.Database = await CheckDatabaseHealthAsync();
+            
+            // UtxoRPC service check
+            checks.UtxoRpc = await CheckUtxoRpcHealthAsync();
+            
+            // Get metrics
+            var metrics = await GetMetricsAsync();
+            
+            // Get system info
+            var systemInfo = GetSystemInfo();
+
+            response.Checks = checks;
+            response.Metrics = metrics;
+            response.System = systemInfo;
+
+            // Determine overall status
+            if (checks.Database.Status == "Unhealthy" || checks.UtxoRpc.Status == "Unhealthy")
             {
-                // Check database connectivity
-                var canConnect = await _dbContext.WebhookSubscriptions.AnyAsync() || true;
-                response.Database = "connected";
-
-                // Get sync status
-                var systemState = await _dbContext.SystemStates
-                    .FirstOrDefaultAsync(s => s.Key == "LastSyncedSlot");
-                
-                if (systemState != null && ulong.TryParse(systemState.Value, out var slot))
-                {
-                    response.LastSyncedSlot = slot;
-                }
-
-                var hashState = await _dbContext.SystemStates
-                    .FirstOrDefaultAsync(s => s.Key == "LastSyncedHash");
-                if (hashState != null)
-                {
-                    response.LastSyncedHash = hashState.Value;
-                }
-
-                // Get subscription stats
-                response.ActiveSubscriptions = await _dbContext.WebhookSubscriptions
-                    .CountAsync(s => s.IsActive);
-                response.TotalSubscriptions = await _dbContext.WebhookSubscriptions.CountAsync();
-
-                // Get delivery stats
-                var last24Hours = DateTime.UtcNow.AddHours(-24);
-                var recentLogs = await _dbContext.DeliveryLogs
-                    .Where(l => l.AttemptedAt >= last24Hours)
-                    .ToListAsync();
-
-                response.DeliveriesLast24h = recentLogs.Count;
-                response.SuccessfulDeliveries = recentLogs.Count(l => l.Status == DeliveryStatus.Success);
-                response.FailedDeliveries = recentLogs.Count(l => l.Status == DeliveryStatus.Failed);
-                response.PendingRetries = await _dbContext.DeliveryLogs
-                    .CountAsync(l => l.Status == DeliveryStatus.Retrying);
+                response.Status = "Unhealthy";
+                return StatusCode(503, response);
             }
-            catch (Exception ex)
+            else if (checks.Database.Status == "Degraded" || checks.UtxoRpc.Status == "Degraded")
             {
-                response.Status = "unhealthy";
-                response.Database = $"error: {ex.Message}";
+                response.Status = "Degraded";
+                return StatusCode(200, response);
             }
 
             return Ok(response);
         }
 
+        private async Task<DatabaseHealth> CheckDatabaseHealthAsync()
+        {
+            var stopwatch = Stopwatch.StartNew();
+            try
+            {
+                // Execute a simple query to test connectivity
+                await _dbContext.WebhookSubscriptions.AnyAsync();
+                stopwatch.Stop();
+
+                return new DatabaseHealth
+                {
+                    Status = "Healthy",
+                    ResponseTimeMs = stopwatch.ElapsedMilliseconds,
+                    Message = "Database connection successful"
+                };
+            }
+            catch (Exception ex)
+            {
+                stopwatch.Stop();
+                return new DatabaseHealth
+                {
+                    Status = "Unhealthy",
+                    ResponseTimeMs = stopwatch.ElapsedMilliseconds,
+                    Message = "Database connection failed",
+                    Error = ex.Message
+                };
+            }
+        }
+
+        private async Task<ServiceHealth> CheckUtxoRpcHealthAsync()
+        {
+            var stopwatch = Stopwatch.StartNew();
+            
+            // First check if service is configured
+            var demeterConfig = await _dbContext.DemeterConfigs
+                .AsNoTracking()
+                .FirstOrDefaultAsync(c => c.IsActive);
+
+            var endpoint = demeterConfig?.GrpcEndpoint ?? _config.GrpcEndpoint;
+
+            if (string.IsNullOrWhiteSpace(endpoint))
+            {
+                stopwatch.Stop();
+                return new ServiceHealth
+                {
+                    Status = "Degraded",
+                    LatencyMs = 0,
+                    Message = "UtxoRPC service not configured"
+                };
+            }
+
+            try
+            {
+                // Try to ping the gRPC endpoint via HTTP
+                // Convert gRPC URL to HTTP for health check
+                var httpUrl = endpoint.Replace("grpc://", "http://").Replace("grpcs://", "https://");
+                
+                var client = _httpClientFactory.CreateClient();
+                client.Timeout = TimeSpan.FromSeconds(5);
+                
+                var response = await client.GetAsync($"{httpUrl}/health");
+                stopwatch.Stop();
+
+                if (response.IsSuccessStatusCode)
+                {
+                    return new ServiceHealth
+                    {
+                        Status = "Healthy",
+                        LatencyMs = stopwatch.ElapsedMilliseconds,
+                        Message = "UtxoRPC service reachable"
+                    };
+                }
+                else
+                {
+                    return new ServiceHealth
+                    {
+                        Status = "Degraded",
+                        LatencyMs = stopwatch.ElapsedMilliseconds,
+                        Message = $"UtxoRPC service returned status: {response.StatusCode}"
+                    };
+                }
+            }
+            catch (Exception ex)
+            {
+                stopwatch.Stop();
+                return new ServiceHealth
+                {
+                    Status = "Degraded",
+                    LatencyMs = stopwatch.ElapsedMilliseconds,
+                    Message = "UtxoRPC service health check unavailable",
+                    Error = ex.Message
+                };
+            }
+        }
+
+        private async Task<MetricsInfo> GetMetricsAsync()
+        {
+            try
+            {
+                var activeSubscriptions = await _dbContext.WebhookSubscriptions
+                    .CountAsync(s => s.IsActive);
+
+                var totalSubscriptions = await _dbContext.WebhookSubscriptions.CountAsync();
+
+                // Get last synced block
+                var lastSlotState = await _dbContext.SystemStates
+                    .FirstOrDefaultAsync(s => s.Key == "LastSyncedSlot");
+                
+                ulong? lastBlockHeight = null;
+                if (lastSlotState != null && ulong.TryParse(lastSlotState.Value, out var slot))
+                {
+                    lastBlockHeight = slot;
+                }
+
+                // Get delivery stats for last 24 hours
+                var last24Hours = DateTime.UtcNow.AddHours(-24);
+                var recentLogs = await _dbContext.DeliveryLogs
+                    .Where(l => l.AttemptedAt >= last24Hours)
+                    .ToListAsync();
+
+                return new MetricsInfo
+                {
+                    ActiveSubscriptions = activeSubscriptions,
+                    TotalSubscriptions = totalSubscriptions,
+                    LastBlockSynced = lastBlockHeight,
+                    DeliveriesLast24h = recentLogs.Count,
+                    SuccessfulDeliveries = recentLogs.Count(l => l.Status == DeliveryStatus.Success),
+                    FailedDeliveries = recentLogs.Count(l => l.Status == DeliveryStatus.Failed)
+                };
+            }
+            catch (Exception ex)
+            {
+                return new MetricsInfo
+                {
+                    Error = $"Failed to retrieve metrics: {ex.Message}"
+                };
+            }
+        }
+
+        private SystemHealthInfo GetSystemInfo()
+        {
+            try
+            {
+                var process = Process.GetCurrentProcess();
+                var gcMemoryMb = GC.GetTotalMemory(false) / 1024.0 / 1024.0;
+                var workingSetMb = process.WorkingSet64 / 1024.0 / 1024.0;
+
+                return new SystemHealthInfo
+                {
+                    MemoryUsageMb = Math.Round(workingSetMb, 2),
+                    GcMemoryMb = Math.Round(gcMemoryMb, 2),
+                    ThreadCount = process.Threads.Count,
+                    ProcessStartTime = _startTime
+                };
+            }
+            catch (Exception ex)
+            {
+                return new SystemHealthInfo
+                {
+                    Error = $"Failed to retrieve system info: {ex.Message}"
+                };
+            }
+        }
+
         [HttpGet("system-info")]
-        public async Task<ActionResult<SystemInfo>> GetSystemInfo()
+        public async Task<ActionResult<SystemInfo>> GetSystemConfiguration()
         {
             // Try to load from database first
             var dbConfig = await _dbContext.DemeterConfigs
@@ -142,14 +300,52 @@ namespace Panoptes.Api.Controllers
     {
         public string Status { get; set; } = "unknown";
         public DateTime Timestamp { get; set; }
-        public string Database { get; set; } = "unknown";
-        public ulong? LastSyncedSlot { get; set; }
-        public string? LastSyncedHash { get; set; }
+        public string Version { get; set; } = "1.0.0";
+        public TimeSpan Uptime { get; set; }
+        public HealthChecks Checks { get; set; } = new();
+        public MetricsInfo Metrics { get; set; } = new();
+        public SystemHealthInfo System { get; set; } = new();
+    }
+
+    public class HealthChecks
+    {
+        public DatabaseHealth Database { get; set; } = new();
+        public ServiceHealth UtxoRpc { get; set; } = new();
+    }
+
+    public class DatabaseHealth
+    {
+        public string Status { get; set; } = "Unknown";
+        public long ResponseTimeMs { get; set; }
+        public string Message { get; set; } = string.Empty;
+        public string? Error { get; set; }
+    }
+
+    public class ServiceHealth
+    {
+        public string Status { get; set; } = "Unknown";
+        public long LatencyMs { get; set; }
+        public string Message { get; set; } = string.Empty;
+        public string? Error { get; set; }
+    }
+
+    public class MetricsInfo
+    {
         public int ActiveSubscriptions { get; set; }
         public int TotalSubscriptions { get; set; }
+        public ulong? LastBlockSynced { get; set; }
         public int DeliveriesLast24h { get; set; }
         public int SuccessfulDeliveries { get; set; }
         public int FailedDeliveries { get; set; }
-        public int PendingRetries { get; set; }
+        public string? Error { get; set; }
+    }
+
+    public class SystemHealthInfo
+    {
+        public double MemoryUsageMb { get; set; }
+        public double GcMemoryMb { get; set; }
+        public int ThreadCount { get; set; }
+        public DateTime ProcessStartTime { get; set; }
+        public string? Error { get; set; }
     }
 }

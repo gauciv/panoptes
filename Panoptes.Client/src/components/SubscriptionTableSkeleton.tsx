@@ -16,10 +16,10 @@ const SubscriptionTableSkeleton: React.FC<SubscriptionTableSkeletonProps> = ({ r
   ];
 
   return (
-    <div className="bg-white shadow rounded-lg overflow-hidden">
+    <div className="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden">
       <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+          <thead className="bg-gray-50 dark:bg-gray-900">
             <tr>
               {headerCells.map((key) => (
                 <th
@@ -31,7 +31,7 @@ const SubscriptionTableSkeleton: React.FC<SubscriptionTableSkeletonProps> = ({ r
               ))}
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+          <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200">
             {Array.from({ length: rows }).map((_, idx) => (
               <tr key={idx}>
                 <td className="px-4 py-3 whitespace-nowrap">
