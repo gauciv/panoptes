@@ -7,9 +7,8 @@ on:
   # 2. Push Trigger (Runs on ANY push to main)
   push:
     branches: [ "main" ]
-    # We commented this out so it triggers even if you only change the README or this YAML file
-    # paths:
-    #   - 'Panoptes.Client/**'
+    paths:
+      - 'Panoptes.Client/**'
 
 jobs:
   deploy:
