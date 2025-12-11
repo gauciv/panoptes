@@ -142,12 +142,12 @@ export function SideNav() {
       </nav>
 
       {/* Desktop Sidebar */}
-      <div className="hidden lg:block relative z-30">
+      <div className="hidden lg:block relative z-30 h-screen sticky top-0">
         <nav
           role="navigation"
           aria-label="Main navigation"
           className={cn(
-            'flex flex-col bg-background border-r border-border h-screen sticky top-0 transition-all duration-300 overflow-hidden relative z-20',
+            'flex flex-col bg-background border-r border-border h-full transition-all duration-300 overflow-hidden relative z-20',
             isCollapsed ? 'w-16' : 'w-60'
           )}
         >
