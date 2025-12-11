@@ -78,12 +78,16 @@ resource "aws_cognito_user_pool_client" "panoptes_client" {
   # Note: The CloudFront URL is dynamic, so we reference the resource directly
   callback_urls = [
     "http://localhost:5173/", 
-    "https://dr9btopcgp9z.cloudfront.net"
+    "https://dr9btopcgp9z.cloudfront.net",
+    "https://panoptes.dev/",                                   # NEW
+    "https://www.panoptes.dev/"
   ]
   
   logout_urls = [
     "http://localhost:5173/", 
-    "https://dr9btopcgp9z.cloudfront.net"
+    "https://dr9btopcgp9z.cloudfront.net",
+    "https://panoptes.dev/",                                   # NEW
+    "https://www.panoptes.dev/"
   ]
 
   allowed_oauth_flows_user_pool_client = true

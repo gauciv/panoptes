@@ -56,6 +56,8 @@ resource "aws_s3_bucket_policy" "allow_cloudfront" {
 # CloudFront Distribution
 resource "aws_cloudfront_distribution" "cdn" {
   
+  aliases = ["panoptes.dev", "www.panoptes.dev"]
+
   # --- ORIGIN 1: S3 (Frontend) ---
   origin {
     domain_name              = aws_s3_bucket.frontend_bucket.bucket_regional_domain_name
@@ -65,7 +67,6 @@ resource "aws_cloudfront_distribution" "cdn" {
 
   # --- ORIGIN 2: Lightsail (Backend) ---
   origin {
-    # CHANGE THIS LINE: Wrap the IP in nip.io
     domain_name = "${aws_lightsail_static_ip.backend_ip.ip_address}.nip.io"
     
     origin_id   = "Lightsail-Backend"
@@ -83,7 +84,6 @@ resource "aws_cloudfront_distribution" "cdn" {
   default_root_object = "index.html"
 
   # --- BEHAVIOR 1: API Routes (Proxy to Backend) ---
-  # These match the paths your Vite proxy was handling locally
   
   # Route /setup -> Backend
   ordered_cache_behavior {
@@ -207,6 +207,8 @@ resource "aws_cloudfront_distribution" "cdn" {
   }
 
   viewer_certificate {
-    cloudfront_default_certificate = true
+    acm_certificate_arn      = aws_acm_certificate.cert.arn
+    ssl_support_method       = "sni-only"
+    minimum_protocol_version = "TLSv1.2_2021"
   }
 }
