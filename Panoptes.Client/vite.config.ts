@@ -7,7 +7,8 @@ export default defineConfig({
   plugins: [react()],
   publicDir: 'public',
   server: {
-    port: 3000,
+    port: 5173,      // CHANGED: From 3000 to 5173 to match Terraform
+    strictPort: true, // ADDED: Prevents auto-switching to 5174/3001 if port is busy
     proxy: {
       '/setup': {
         target: 'http://localhost:5033',
@@ -30,7 +31,7 @@ export default defineConfig({
         secure: false,
       },
       '/assets': {
-        target: 'http://localhost:3000',
+        target: 'http://localhost:5173', // CHANGED: Updated to match new frontend port
         configure: (proxy, options) => {
           proxy.on('proxyReq', (proxyReq, req, res) => {
             const assetsPath = path.resolve(__dirname, '../assets');

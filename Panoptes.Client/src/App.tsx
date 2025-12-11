@@ -6,37 +6,43 @@ import SubscriptionDetail from './pages/SubscriptionDetail';
 import Settings from './pages/Settings';
 import Health from './pages/Health';
 import { DashboardLayout } from './layouts/DashboardLayout';
-import Login from './pages/Login';
 import Landing from './pages/Landing';
-import { AuthProvider, useAuth } from './context/AuthContext'; // Import Auth
+import { AuthProvider, useAuth } from './context/AuthContext';
 
 export const ThemeContext = createContext<{
   isDark: boolean;
   setIsDark: (v: boolean) => void;
 }>({ isDark: false, setIsDark: () => {} });
 
-// Real Auth Guard
+// 1. Auth Guard: Protects the Dashboard
 function RequireAuth({ children }: { children: JSX.Element }) {
   const { user, loading } = useAuth();
   const location = useLocation();
 
   if (loading) {
-    // Simple loading state
-    return <div className="min-h-screen bg-black flex items-center justify-center text-sentinel font-mono">INITIALIZING_UPLINK...</div>;
+    // Silent loading state (or minimal spinner)
+    return <div className="min-h-screen bg-black" />;
   }
 
   if (!user) {
-    return <Navigate to="/landing" state={{ from: location }} replace />;
+    // If not logged in, kick them back to the Landing Page
+    return <Navigate to="/" state={{ from: location }} replace />;
   }
 
   return <>{children}</>;
 }
 
-// Redirects authenticated users away from Landing/Login
+// 2. Guest Guard: Protects the Landing Page
+// If they are already logged in, don't show them the landing page
 function RedirectIfAuthenticated({ children }: { children: JSX.Element }) {
     const { user, loading } = useAuth();
+    
     if (loading) return null;
-    if (user) return <Navigate to="/" replace />;
+    
+    if (user) {
+        return <Navigate to="/dashboard" replace />;
+    }
+    
     return <>{children}</>;
 }
 
@@ -73,18 +79,25 @@ function App() {
         
         <Router>
             <Routes>
-                {/* Public Routes (Redirect to Dashboard if logged in) */}
-                <Route path="/landing" element={<RedirectIfAuthenticated><Landing /></RedirectIfAuthenticated>} />
-                <Route path="/login" element={<RedirectIfAuthenticated><Login /></RedirectIfAuthenticated>} />
+                {/* ROOT: Landing Page (Only for guests) */}
+                <Route path="/" element={
+                    <RedirectIfAuthenticated>
+                        <Landing />
+                    </RedirectIfAuthenticated>
+                } />
                 
-                {/* Protected Routes */}
+                {/* APP: Protected Routes (Only for users) */}
                 <Route element={<DashboardLayout />}>
-                    <Route path="/" element={<RequireAuth><Dashboard /></RequireAuth>} />
+                    {/* Dashboard is now at /dashboard, not / */}
+                    <Route path="/dashboard" element={<RequireAuth><Dashboard /></RequireAuth>} />
                     <Route path="/analytics" element={<RequireAuth><Dashboard /></RequireAuth>} />
                     <Route path="/health" element={<RequireAuth><Health /></RequireAuth>} />
                     <Route path="/subscriptions/:id" element={<RequireAuth><SubscriptionDetail /></RequireAuth>} />
                     <Route path="/settings" element={<RequireAuth><Settings /></RequireAuth>} />
                 </Route>
+
+                {/* Catch-all: Send 404s back to root */}
+                <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
         </Router>
       </ThemeContext.Provider>
