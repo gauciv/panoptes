@@ -4,7 +4,6 @@ import {
   signOut, 
   signUp, 
   getCurrentUser, 
-  fetchUserAttributes,
   SignInInput,
   SignUpInput,
   AuthUser
