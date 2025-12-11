@@ -103,6 +103,35 @@
   }
 }
 
+/* Custom Scrollbar Styling - Cyberpunk Aesthetic */
+.nav-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.nav-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.nav-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(0, 106, 51, 0.3);
+  border-radius: 3px;
+  transition: background 150ms ease;
+}
+
+.nav-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 106, 51, 0.5);
+}
+
+.nav-scrollbar::-webkit-scrollbar-thumb:active {
+  background: rgba(0, 106, 51, 0.7);
+}
+
+/* Firefox scrollbar */
+.nav-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 106, 51, 0.3) transparent;
+}
+
 /* ensure common Tailwind classes follow theme variables
   helps switch colors globally without editing every component */
 .bg-white { background-color: hsl(var(--card)) !important; }

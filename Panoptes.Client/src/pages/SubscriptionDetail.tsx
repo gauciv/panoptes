@@ -16,10 +16,10 @@ import ConfirmationModal from '../components/ConfirmationModal';
 import SubscriptionDetailSkeleton from '../components/SubscriptionDetailSkeleton';
 import Pagination from '../components/Pagination';
 
-import ExportButton from '../components/ExportButton';
+import SubscriptionToolsModal from '../components/SubscriptionToolsModal';
+import AdvancedOptionsModal from '../components/AdvancedOptionsModal';
 import WebhookTester from '../components/WebhookTester';
 import DeliveryLogsTable from '../components/DeliveryLogsTable';
-import AdvancedOptionsModal from '../components/AdvancedOptionsModal';
 import { convertToCSV, downloadFile, generateFilename } from '../utils/exportUtils';
 
 
@@ -31,10 +31,10 @@ interface SubscriptionDetailProps {
 
 // --- HELPER COMPONENT FOR STATS ---
 const StatsCard = ({ label, value, subtext, alertColor }: { label: string, value: string, subtext?: string, alertColor?: string }) => (
-  <div className={`p-5 rounded-xl shadow-sm border border-gray-200 ${alertColor ? alertColor : 'bg-white'}`}>
-    <p className="text-gray-500 text-sm mb-1">{label}</p>
-    <p className={`text-2xl font-bold ${alertColor ? 'text-red-700' : 'text-gray-900'}`}>{value}</p>
-    {subtext && <p className="text-xs text-gray-500 mt-1">{subtext}</p>}
+  <div className={`p-5 rounded-xl shadow-sm border ${alertColor ? alertColor : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700'}`}>
+    <p className="text-gray-500 dark:text-gray-400 text-sm mb-1">{label}</p>
+    <p className={`text-2xl font-bold ${alertColor ? 'text-red-700 dark:text-red-400' : 'text-gray-900 dark:text-gray-100'}`}>{value}</p>
+    {subtext && <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{subtext}</p>}
   </div>
 );
 
@@ -59,6 +59,7 @@ const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: p
   // Modal States
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isOptionsModalOpen, setIsOptionsModalOpen] = useState(false);
   const [isAdvancedOptionsOpen, setIsAdvancedOptionsOpen] = useState(false);
 
   // Note: We removed expandedLogId state because DeliveryLogsTable now handles that internally
@@ -249,21 +250,28 @@ const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: p
     <div className="flex flex-col gap-6 w-full animate-in fade-in duration-300 relative max-w-7xl mx-auto p-4 sm:px-6 lg:px-8">
 
       {/* 1. Header Navigation */}
-      <div className="flex items-center gap-2">
-        <button onClick={handleBack} className="p-2 hover:bg-gray-200 rounded-full transition-colors text-gray-600 font-bold">
-          &larr;
+      <div className="flex items-center gap-3">
+        <button 
+          onClick={handleBack} 
+          className="px-3 py-2 border border-[#006A33] bg-[#006A33]/10 hover:bg-[#006A33] text-[#006A33] hover:text-white transition-all font-mono font-bold text-sm uppercase tracking-wider shadow-[0_0_10px_rgba(0,106,51,0.3)] hover:shadow-[0_0_15px_rgba(0,106,51,0.6)] flex items-center gap-1.5"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+          </svg>
+          Back
         </button>
-        <h2 className="text-xl font-bold text-gray-900">{subscription.name}</h2>
+        <div className="border-l border-[#006A33]/30 h-8"></div>
+        <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 font-mono uppercase tracking-wider">{subscription.name}</h2>
       </div>
 
       {/* Error Banner */}
       {error && (
-        <div className="bg-red-50 border border-red-300 rounded-md p-4 animate-in slide-in-from-top-2">
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-300 dark:border-red-800 rounded-md p-4 animate-in slide-in-from-top-2">
           <div className="flex items-start">
             <span className="text-2xl mr-3">❌</span>
             <div className="flex-1">
-              <span className="text-sm font-semibold text-red-900">Error</span>
-              <p className="text-sm text-red-800 mt-1">{error}</p>
+              <span className="text-sm font-semibold text-red-900 dark:text-red-400">Error</span>
+              <p className="text-sm text-red-800 dark:text-red-300 mt-1">{error}</p>
             </div>
           </div>
         </div>
@@ -271,16 +279,16 @@ const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: p
 
       {/* Warning Banners */}
       {subscription.isCircuitBroken && (
-        <div className="bg-orange-50 border border-orange-300 rounded-md p-4 animate-in slide-in-from-top-2">
+        <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-300 dark:border-orange-800 rounded-md p-4 animate-in slide-in-from-top-2">
           <div className="flex items-start justify-between">
             <div className="flex items-start">
               <span className="text-2xl mr-3">⚡</span>
               <div className="flex-1">
-                <span className="text-sm font-semibold text-orange-900">Circuit Breaker Triggered</span>
-                <p className="text-sm text-orange-800 mt-1">{subscription.circuitBrokenReason}</p>
+                <span className="text-sm font-semibold text-orange-900 dark:text-orange-400">Circuit Breaker Triggered</span>
+                <p className="text-sm text-orange-800 dark:text-orange-300 mt-1">{subscription.circuitBrokenReason}</p>
               </div>
             </div>
-            <button onClick={handleReset} className="ml-4 px-4 py-2 bg-orange-600 text-white text-sm font-medium rounded-md hover:bg-orange-700">
+            <button onClick={handleReset} className="ml-4 px-4 py-2 bg-orange-600 dark:bg-orange-500 text-white text-sm font-medium rounded-md hover:bg-orange-700 dark:hover:bg-orange-600">
               Reset
             </button>
           </div>
@@ -289,27 +297,27 @@ const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: p
 
       {/* Paused Banner */}
       {!subscription.isActive && !subscription.isCircuitBroken && !subscription.isRateLimited && (
-        <div className="bg-amber-50 border border-amber-300 rounded-md p-4 animate-in slide-in-from-top-2">
+        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-800 rounded-md p-4 animate-in slide-in-from-top-2">
           <div className="flex items-start justify-between">
             <div className="flex items-start">
-              <svg className="h-6 w-6 text-amber-600 mr-3 mt-0.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <svg className="h-6 w-6 text-amber-600 dark:text-amber-400 mr-3 mt-0.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                 <rect x="6" y="4" width="4" height="16" /><rect x="14" y="4" width="4" height="16" />
               </svg>
               <div className="flex-1">
-                <span className="text-sm font-semibold text-amber-900">⏸️ Subscription Paused - Webhook Deliveries Halted</span>
-                <p className="text-sm text-amber-800 mt-2">
+                <span className="text-sm font-semibold text-amber-900 dark:text-amber-400">⏸️ Subscription Paused - Webhook Deliveries Halted</span>
+                <p className="text-sm text-amber-800 dark:text-amber-300 mt-2">
                   {deliverLatestOnly
                     ? "When you resume, only the most recent halted event will be delivered. All other queued events will be discarded."
                     : "When you resume, all halted events will be delivered to your endpoint in order."}
                 </p>
-                <p className="text-xs text-amber-600 mt-1 italic">
-                  Use the "Latest Only" toggle above to change delivery behavior.
+                <p className="text-xs text-amber-600 dark:text-amber-400 mt-1 italic">
+                  Use the "Latest Only" toggle in Options to change delivery behavior.
                 </p>
               </div>
             </div>
             <button
               onClick={handleToggleActive}
-              className="ml-4 px-4 py-2 bg-amber-600 text-white text-sm font-medium rounded-md hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 whitespace-nowrap"
+              className="ml-4 px-4 py-2 bg-amber-600 dark:bg-amber-500 text-white text-sm font-medium rounded-md hover:bg-amber-700 dark:hover:bg-amber-600 focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-gray-800 focus:ring-amber-500 whitespace-nowrap"
             >
               Resume Subscription
             </button>
@@ -318,107 +326,70 @@ const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: p
       )}
 
       {/* 2. Subscription Details Card */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
         <div className="flex justify-between items-start mb-6">
           <div className="flex items-center gap-3">
-            <h3 className="text-lg font-bold text-gray-900">Subscription Details</h3>
-            {/* Status Button/Indicator - Same as collapsed card */}
-            {subscription.isRateLimited || subscription.isCircuitBroken ? (
-              // Disabled state - clicking will reset
-              <button
-                onClick={handleReset}
-                className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-red-100 hover:bg-red-200 text-red-700 border border-red-200 shadow-sm transition-all duration-200 cursor-pointer hover:shadow-md"
-                title={subscription.isCircuitBroken ? 'Disabled: Circuit breaker triggered - Click to reset' : 'Disabled: Rate limited - Click to reset'}
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 text-red-600">
-                  <circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
-                </svg>
-                <span className="text-xs font-bold uppercase tracking-wide">Disabled</span>
-              </button>
-            ) : subscription.isActive ? (
-              // Active state - clicking will pause
-              <button
-                onClick={handleToggleActive}
-                className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-green-100 hover:bg-green-200 text-green-700 border border-green-200 shadow-sm transition-all duration-200 cursor-pointer hover:shadow-md"
-                title="Click to pause"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 text-green-600 animate-pulse">
-                  <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
-                </svg>
-                <span className="text-xs font-bold uppercase tracking-wide">Active</span>
-              </button>
-            ) : (
-              // Paused state - clicking will activate
-              <button
-                onClick={handleToggleActive}
-                className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-100 hover:bg-amber-200 text-amber-700 border border-amber-200 shadow-sm transition-all duration-200 cursor-pointer hover:shadow-md"
-                title="Click to activate"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 text-amber-600">
-                  <rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>
-                </svg>
-                <span className="text-xs font-bold uppercase tracking-wide">Paused</span>
-              </button>
-            )}
+            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Subscription Details</h3>
+            <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${
+              subscription.isActive 
+                ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800' 
+                : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600'
+            }`}>
+              {subscription.isActive ? 'Active' : 'Inactive'}
+            </span>
           </div>
-          <div className="flex gap-2 items-center">
-
-            {/* --- ADVANCED OPTIONS BUTTON --- */}
+          <div className="flex gap-2">
+            <button
+              onClick={() => setIsOptionsModalOpen(true)}
+              className="px-4 py-2 bg-[#006A33] text-white font-mono text-xs font-bold uppercase tracking-wider hover:bg-[#008040] shadow-[0_0_10px_rgba(0,106,51,0.5)] transition-all flex items-center gap-2 border border-[#006A33]"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              Tools &gt;
+            </button>
             <button
               onClick={() => setIsAdvancedOptionsOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-300 text-gray-700 rounded-md text-sm font-medium hover:bg-gray-50 shadow-sm transition-colors"
-              title="Advanced Options"
+              className="px-4 py-2 bg-[#006A33] text-white font-mono text-xs font-bold uppercase tracking-wider hover:bg-[#008040] shadow-[0_0_10px_rgba(0,106,51,0.5)] transition-all flex items-center gap-2 border border-[#006A33]"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="3"/>
-                <path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
               </svg>
-              <span>Advanced</span>
+              Advanced &gt;
             </button>
-
-            {/* EXPORT BUTTON */}
-            <ExportButton onExport={handleExportLogs} disabled={totalLogs === 0} />
-
-            {/* WEBHOOK TESTER BUTTON */}
             <button
               onClick={() => setShowTester(!showTester)}
-              className={`px-3 py-1.5 rounded-md text-sm font-medium shadow-sm transition-colors ${showTester
-                  ? 'bg-gray-100 text-gray-800 hover:bg-gray-200'
-                  : 'bg-indigo-600 text-white hover:bg-indigo-700'
-                }`}
+              className="px-4 py-2 bg-[#006A33] border border-[#006A33] text-white hover:bg-[#008040] font-mono text-xs font-bold uppercase tracking-wider shadow-[0_0_10px_rgba(0,106,51,0.5)] transition-all flex items-center gap-2"
             >
-              {showTester ? 'Hide Tester' : 'Test Webhook'}
-            </button>
-
-            <button onClick={() => setIsEditModalOpen(true)} className="px-3 py-1.5 bg-white border border-gray-300 text-gray-700 rounded-md text-sm font-medium hover:bg-gray-50 shadow-sm">
-              Edit
-            </button>
-            <button onClick={() => setIsDeleteModalOpen(true)} className="px-3 py-1.5 bg-red-50 border border-red-200 text-red-600 rounded-md text-sm font-medium hover:bg-red-100 shadow-sm">
-              Delete
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+              Test_Webhook
             </button>
           </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-y-8 gap-x-12 text-sm">
           <div>
-            <p className="text-gray-500 mb-1 font-medium">Target URL</p>
-            <div className="font-mono text-gray-900 break-all bg-gray-50 p-2 rounded border border-gray-200 text-xs">
+            <p className="text-gray-500 dark:text-gray-400 mb-1 font-medium">Target URL</p>
+            <div className="font-mono text-gray-900 dark:text-gray-100 break-all bg-gray-50 dark:bg-gray-900 p-2 rounded border border-gray-200 dark:border-gray-600 text-xs">
               {subscription.targetUrl}
             </div>
           </div>
           <div>
-            <p className="text-gray-500 mb-1 font-medium">Event Type</p>
-            <p className="font-bold text-gray-900 text-base">{subscription.eventType}</p>
+            <p className="text-gray-500 dark:text-gray-400 mb-1 font-medium">Event Type</p>
+            <p className="font-bold text-gray-900 dark:text-gray-100 text-base">{subscription.eventType}</p>
           </div>
           {subscription.targetAddress && (
             <div>
-              <p className="text-gray-500 mb-1 font-medium">Target Address</p>
-              <p className="font-mono text-gray-900 text-xs break-all">{subscription.targetAddress}</p>
+              <p className="text-gray-500 dark:text-gray-400 mb-1 font-medium">Target Address</p>
+              <p className="font-mono text-gray-900 dark:text-gray-100 text-xs break-all">{subscription.targetAddress}</p>
             </div>
           )}
           <div>
-            <p className="text-gray-500 mb-1 font-medium">Rate Limits</p>
-            <p className="font-medium text-gray-900">
+            <p className="text-gray-500 dark:text-gray-400 mb-1 font-medium">Rate Limits</p>
+            <p className="font-medium text-gray-900 dark:text-gray-100">
               {subscription.maxWebhooksPerMinute}/min, {subscription.maxWebhooksPerHour}/hour
             </p>
           </div>
@@ -449,18 +420,18 @@ const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: p
         <StatsCard label="Total Deliveries" value={String(totalLogs)} />
         <StatsCard label="Success Rate" value={calculateSuccessRate()} />
         <StatsCard label="Avg Latency" value={calculateAvgLatency()} />
-        <div className="p-5 rounded-xl shadow-sm border border-gray-200 bg-white">
-          <p className="text-gray-500 text-sm mb-1">Rate Usage</p>
-          <div className="text-2xl font-bold text-green-600 flex items-baseline gap-1">
-            {subscription.webhooksInLastMinute || 0}<span className="text-gray-400 text-base font-normal">/{subscription.maxWebhooksPerMinute} min</span>
+        <div className="p-5 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+          <p className="text-gray-500 dark:text-gray-400 text-sm mb-1">Rate Usage</p>
+          <div className="text-2xl font-bold text-green-600 dark:text-green-400 flex items-baseline gap-1">
+            {subscription.webhooksInLastMinute || 0}<span className="text-gray-400 dark:text-gray-500 text-base font-normal">/{subscription.maxWebhooksPerMinute} min</span>
           </div>
         </div>
       </div>
 
       {/* 4. Delivery Logs (NOW USING THE COMPONENT) */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-10">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden mb-10">
         <div className="p-6 pb-2">
-          <h3 className="text-lg font-bold text-gray-900">Delivery Logs</h3>
+          <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Delivery Logs</h3>
         </div>
 
         {/* Replaced manual table with the component */}
@@ -473,7 +444,7 @@ const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: p
         />
 
         {/* Kept Pagination since DeliveryLogsTable doesn't handle page changing */}
-        <div className="p-4 border-t border-gray-200">
+        <div className="p-4 border-t border-gray-200 dark:border-gray-700">
           <Pagination
             currentPage={currentPage}
             totalItems={totalLogs}
@@ -486,6 +457,14 @@ const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: p
       {/* MODALS */}
       {subscription && (
         <>
+          <SubscriptionToolsModal
+            isOpen={isOptionsModalOpen}
+            onClose={() => setIsOptionsModalOpen(false)}
+            onExport={handleExportLogs}
+            onEdit={() => setIsEditModalOpen(true)}
+            onDelete={() => setIsDeleteModalOpen(true)}
+            hasLogs={totalLogs > 0}
+          />
           <EditSubscriptionModal
             isOpen={isEditModalOpen}
             subscription={subscription}

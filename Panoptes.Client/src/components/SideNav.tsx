@@ -64,7 +64,7 @@ export function SideNav() {
       </div>
 
       {/* Primary Navigation */}
-      <div className="flex-1 overflow-y-auto py-4 px-2">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden py-4 px-2 min-h-0 nav-scrollbar">
         <div className="space-y-1">
           {PRIMARY_NAV_ITEMS.map((item) => (
             <SideNavItem 
@@ -168,7 +168,7 @@ export function SideNav() {
         role="navigation"
         aria-label="Main navigation"
         className={cn(
-          'hidden lg:flex flex-col bg-background border-r border-border h-screen sticky top-0 transition-all duration-300',
+          'hidden lg:flex flex-col bg-background border-r border-border h-screen sticky top-0 transition-all duration-300 overflow-hidden',
           isCollapsed ? 'w-16' : 'w-60'
         )}
       >
