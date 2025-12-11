@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { X } from 'lucide-react'; // Import X icon
 import { LoginForm } from './LoginForm';
 import { OAuthButtons } from './OAuthButtons';
 import { ScrambleText } from './ScrambleText';
@@ -10,69 +11,39 @@ type LoginModalProps = {
   onClose: () => void;
 };
 
+// ... (Keep existing modalVariants) ...
 const modalVariants = {
-  closed: {
-    opacity: 0,
-    scaleX: 0.005,
-    scaleY: 0.005,
-    y: 0,
-    filter: "brightness(5) contrast(2)",
+  closed: { opacity: 0, scaleX: 0.005, scaleY: 0.005, y: 0, filter: "brightness(5) contrast(2)" },
+  open: { 
+    opacity: 1, scaleX: 1, scaleY: 1, filter: "brightness(1) contrast(1)",
+    transition: { duration: 0.5, scaleX: { duration: 0.2, ease: "easeOut" }, scaleY: { duration: 0.35, delay: 0.2, ease: "circOut" }, filter: { duration: 0.4, delay: 0.25 }, opacity: { duration: 0.1 } }
   },
-  open: {
-    opacity: 1,
-    scaleX: 1,
-    scaleY: 1,
-    filter: "brightness(1) contrast(1)",
-    transition: {
-      duration: 0.5,
-      scaleX: { duration: 0.2, ease: "easeOut" },
-      scaleY: { duration: 0.35, delay: 0.2, ease: "circOut" },
-      filter: { duration: 0.4, delay: 0.25 },
-      opacity: { duration: 0.1 }
-    }
-  },
-  exit: {
-    opacity: 0,
-    scaleY: 0.005,
-    scaleX: 0.005,
-    filter: "brightness(5)",
-    transition: {
-      duration: 0.4,
-      scaleY: { duration: 0.2, ease: "easeIn" },
-      scaleX: { duration: 0.2, delay: 0.2, ease: "circIn" },
-      filter: { duration: 0.1 },
-      opacity: { duration: 0.3, delay: 0.1 }
-    }
+  exit: { 
+    opacity: 0, scaleY: 0.005, scaleX: 0.005, filter: "brightness(5)",
+    transition: { duration: 0.4, scaleY: { duration: 0.2, ease: "easeIn" }, scaleX: { duration: 0.2, delay: 0.2, ease: "circIn" }, filter: { duration: 0.1 }, opacity: { duration: 0.3, delay: 0.1 } }
   }
 };
 
 export function LoginModal({ isOpen, onClose }: LoginModalProps) {
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
-  
-  // 2. Consume Global Audio State
   const { isPlaying } = useAudio(); 
 
-  // --- AUDIO & SCROLL LOCK ---
   useEffect(() => {
-    // Play OPEN sound only if global audio is ON
     if (isPlaying) {
-      const openSfx = new Audio('/sounds/menu_sound.mp3');
-      openSfx.volume = 0.3; // Keep UI sounds subtle
+      const openSfx = new Audio('sounds/menu_sound.mp3');
+      openSfx.volume = 0.3;
       openSfx.play().catch(() => {});
     }
 
     if (isOpen) {
       document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'unset';
     }
     return () => { document.body.style.overflow = 'unset'; };
-  }, [isOpen, isPlaying]); // Depend on isPlaying to know state at mount
+  }, [isOpen, isPlaying]);
 
-  // Wrapper to play CLOSE sound
   const handleClose = () => {
     if (isPlaying) {
-      const closeSfx = new Audio('/sounds/menu_sound.mp3');
+      const closeSfx = new Audio('sounds/menu_sound.mp3');
       closeSfx.volume = 0.3;
       closeSfx.play().catch(() => {});
     }
@@ -81,44 +52,54 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
 
   return (
     <div className="fixed inset-0 z-[999] flex items-center justify-center pointer-events-none">
-      {/* Backdrop with Blur */}
+      {/* Backdrop */}
       <motion.div
         initial={{ opacity: 0, backdropFilter: "blur(0px)" }}
         animate={{ opacity: 1, backdropFilter: "blur(8px)" }}
         exit={{ opacity: 0, backdropFilter: "blur(0px)" }}
-        onClick={handleClose} // Use handleClose instead of onClose
+        onClick={handleClose}
         className="absolute inset-0 bg-black/60 pointer-events-auto"
+        aria-hidden="true"
       />
 
-      {/* The "TV" Modal Container */}
+      {/* Modal Container */}
       <motion.div
         variants={modalVariants}
         initial="closed"
         animate="open"
         exit="exit"
         className="pointer-events-auto relative z-10 w-full max-w-[900px] mx-4 overflow-hidden rounded-sm border border-white/10 bg-[#050505] shadow-2xl"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="modal-title"
       >
-        {/* CRT Scanline Overlay inside modal */}
         <div className="pointer-events-none absolute inset-0 z-50 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.1)_50%),linear-gradient(90deg,rgba(255,0,0,0.03),rgba(0,255,0,0.01),rgba(0,0,255,0.03))] bg-[length:100%_4px,6px_100%] opacity-20" />
+
+        {/* Accessible Close Button (Top Right) */}
+        <button 
+            onClick={handleClose}
+            className="absolute top-4 right-4 z-[60] p-2 text-ghost/50 hover:text-white transition-colors focus:outline-none focus:ring-1 focus:ring-sentinel rounded"
+            aria-label="Close Modal"
+        >
+            <X size={20} />
+        </button>
 
         <div className="grid grid-cols-1 md:grid-cols-2 min-h-[550px]">
           
           {/* --- LEFT: FORM --- */}
           <div className="relative p-8 md:p-10 flex flex-col justify-center border-r border-white/5">
-            <button 
-                onClick={handleClose}
-                className="absolute top-4 left-4 p-2 text-ghost/30 hover:text-sentinel transition-colors font-mono text-[10px]"
-            >
-                [ ESC_TERMINAL ]
-            </button>
+            {/* "ESC" Hint (Visual Only) */}
+            <div className="absolute top-4 left-4 font-mono text-[10px] text-ghost/20 select-none">
+                [ ESC_TO_ABORT ]
+            </div>
 
-            <div className="mt-4 mb-8">
+            <div className="mt-8 mb-8">
                 <ScrambleText 
                     text={mode === 'signin' ? "SYSTEM_LOGIN" : "NEW_OPERATOR"} 
                     className="block font-michroma text-xl text-ghost" 
                     speed={50}
                 />
-                <p className="font-mono text-[10px] text-ghost/50 mt-2">
+                <p id="modal-title" className="font-mono text-[10px] text-ghost/50 mt-2">
                     {mode === 'signin' ? "> ENTER ACCESS CREDENTIALS" : "> INITIALIZE REGISTRATION SEQUENCE"}
                 </p>
             </div>
@@ -138,7 +119,7 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
             <div className="mt-8 pt-4 border-t border-white/5">
                 <button 
                     onClick={() => setMode(mode === 'signin' ? 'signup' : 'signin')}
-                    className="text-xs font-mono text-ghost/60 hover:text-sentinel transition-colors"
+                    className="text-xs font-mono text-ghost/60 hover:text-sentinel transition-colors focus:outline-none"
                 >
                     {mode === 'signin' 
                         ? "> NO_ID? REQUEST_ACCESS" 
@@ -147,9 +128,8 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
             </div>
           </div>
 
-          {/* --- RIGHT: VISUAL (Original) --- */}
+          {/* --- RIGHT: VISUAL --- */}
           <div className="relative hidden md:flex flex-col items-center justify-center bg-zinc-900/20">
-             {/* Animated Radar/Grid Graphic */}
              <div className="absolute inset-0 opacity-20" 
                   style={{ backgroundImage: 'radial-gradient(circle at center, #00FF94 1px, transparent 1px)', backgroundSize: '30px 30px' }} 
              />

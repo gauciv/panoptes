@@ -9,45 +9,48 @@ import { MaskText } from '../../../components/MaskText';
 const steps = [
   {
     id: '01',
-    title: 'INGESTION',
+    title: 'PROVISION_SOURCE',
     icon: Terminal,
-    desc: 'Connect to your local node or remote provider. Panoptes listens to the raw block stream in real-time.',
+    desc: 'Bypass local node synchronization. Connect Panoptes directly to Demeter\'s high-throughput Oura endpoint using your workspace API key.',
     code: `{
-  "NodeSettings": {
-    "Network": "Mainnet",
-    "Provider": "Oura",
-    "SocketPath": "/ipc/node.socket"
-  },
-  "IngestionStrategy": "LiveTip"
+  "Ingestion": {
+    "Type": "Demeter",
+    "Config": {
+      "Network": "mainnet",
+      "ApiKey": "\${DMTR_API_KEY}",
+      "Compression": "Zstd"
+    }
+  }
 }`
   },
   {
     id: '02',
-    title: 'REDUCTION',
+    title: 'REDUCE_IN_CLOUD',
     icon: Cpu,
-    desc: 'Define strict logic filters in C# or JSON. Ignore the noise and only capture events that match your dApp schemas.',
-    code: `public class WhaleWatcher : IReducer
+    desc: 'Deploy your C# logic directly into a Demeter Workspace container. Filter millions of blocks server-side without latency.',
+    code: `public class DemeterWatcher : IReducer
 {
     public void Reduce(Block block)
     {
-        if (block.Tx.Value > 50000.ADA) 
+        // Logic runs on Demeter infrastructure
+        if (block.Tx.HasMetadata(label: 674)) 
         {
-            Emit("LargeTransfer", block.Tx);
+            Emit("DemeterEvent", block.Tx);
         }
     }
 }`
   },
   {
     id: '03',
-    title: 'DISPATCH',
+    title: 'CLUSTER_DISPATCH',
     icon: Share2,
-    desc: 'Events are serialized and pushed to your backend via Webhooks with built-in retry policies.',
-    code: `// POST https://api.yoursite.com/events
+    desc: 'Route filtered events internally within your Demeter cluster or push to external Webhooks with enterprise-grade reliability.',
+    code: `// POST https://svc.demeter.run/events
 {
-  "event": "LargeTransfer",
-  "tx_hash": "82a...91c",
-  "amount": 140000000,
-  "timestamp": 170923012
+  "source": "demeter-workspace-01",
+  "event": "SmartContractTrigger",
+  "slot": 4928102,
+  "payload": { ... }
 }`
   }
 ];

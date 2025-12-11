@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { Eye, EyeOff } from 'lucide-react'; // Import icons
 import { Input } from './ui/input';
 import { Button } from './ui/button';
 
@@ -21,6 +22,10 @@ export const LoginForm: React.FC<LoginFormProps> = ({ mode }) => {
     watch,
   } = useForm<FormValues>();
 
+  // 1. Local state for visibility toggles
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
   const onSubmit = (data: FormValues) => {
     // Stub: Show a message for now
     alert(`Form submitted!\nMode: ${mode}\nEmail: ${data.email}`);
@@ -28,6 +33,8 @@ export const LoginForm: React.FC<LoginFormProps> = ({ mode }) => {
 
   return (
     <form className="w-full flex flex-col gap-4" onSubmit={handleSubmit(onSubmit)}>
+      
+      {/* --- Email --- */}
       <div>
         <label className="block text-sm font-mono font-semibold text-ghost mb-2">Email</label>
         <Input
@@ -45,41 +52,68 @@ export const LoginForm: React.FC<LoginFormProps> = ({ mode }) => {
         {errors.email && <span className="text-destructive text-xs mt-1">{errors.email.message}</span>}
       </div>
 
+      {/* --- Password --- */}
       <div>
         <label className="block text-sm font-semibold font-mono text-ghost mb-2">Password</label>
-        <Input
-          type="password"
-          {...register('password', {
-            required: 'Password is required',
-            minLength: {
-              value: 8,
-              message: 'Password must be at least 8 characters',
-            },
-          })}
-          className="w-full"
-          placeholder="••••••••"
-        />
+        <div className="relative">
+          <Input
+            // 2. Toggle type based on state
+            type={showPassword ? 'text' : 'password'}
+            {...register('password', {
+              required: 'Password is required',
+              minLength: {
+                value: 8,
+                message: 'Password must be at least 8 characters',
+              },
+            })}
+            className="w-full pr-10" 
+            placeholder="••••••••"
+          />
+          
+          {/* 3. Toggle Button */}
+          <button
+            type="button" 
+            onClick={() => setShowPassword(!showPassword)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-ghost/50 hover:text-sentinel transition-colors focus:outline-none"
+            aria-label={showPassword ? "Hide password" : "Show password"}
+          >
+            {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+          </button>
+        </div>
         {errors.password && <span className="text-destructive text-xs mt-1">{errors.password.message}</span>}
       </div>
 
+      {/* --- Confirm Password (Signup Only) --- */}
       {mode === 'signup' && (
         <div>
           <label className="block text-sm font-semibold text-ghost mb-2">Confirm Password</label>
-          <Input
-            type="password"
-            {...register('confirmPassword', {
-              required: 'Please confirm your password',
-              validate: (value) => value === watch('password') || 'Passwords do not match',
-            })}
-            className="w-full"
-            placeholder="••••••••"
-          />
+          <div className="relative">
+            <Input
+              type={showConfirmPassword ? 'text' : 'password'}
+              {...register('confirmPassword', {
+                required: 'Please confirm your password',
+                validate: (value) => value === watch('password') || 'Passwords do not match',
+              })}
+              className="w-full pr-10"
+              placeholder="••••••••"
+            />
+            
+            <button
+              type="button"
+              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-ghost/50 hover:text-sentinel transition-colors focus:outline-none"
+              aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+            >
+              {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+            </button>
+          </div>
           {errors.confirmPassword && (
             <span className="text-destructive text-xs mt-1">{errors.confirmPassword.message}</span>
           )}
         </div>
       )}
 
+      {/* --- Actions --- */}
       <div className="flex items-center justify-between mt-2">
         <label className="flex items-center gap-2 cursor-pointer">
           <input type="checkbox" className="w-4 h-4 rounded border-ghost-dim" />
