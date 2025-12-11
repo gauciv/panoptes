@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { Input } from './ui/input';
+import { Eye, EyeOff } from 'lucide-react';
 import { Button } from './ui/button';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
-import { confirmSignUp } from 'aws-amplify/auth'; // Import direct for the quick fix
+import { confirmSignUp } from 'aws-amplify/auth';
 
 interface LoginFormProps {
   mode: 'signin' | 'signup';
@@ -19,6 +19,10 @@ interface FormValues {
 export const LoginForm: React.FC<LoginFormProps> = ({ mode }) => {
   const { login, register: registerUser } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Local state for visibility toggles
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   
   const {
     register,
@@ -38,19 +42,16 @@ export const LoginForm: React.FC<LoginFormProps> = ({ mode }) => {
         
         if (result.isSignedIn) {
             toast.success("ACCESS GRANTED");
-            // App.tsx will handle redirect via context state change
         } else if (result.nextStep.signInStep === 'CONFIRM_SIGN_UP') {
-             // Handle case where user exists but isn't verified
              handleVerification(data.email);
         }
       } else {
-        // Sign Up Mode
         const { nextStep } = await registerUser({
             username: data.email,
             password: data.password,
             options: {
                 userAttributes: {
-                    email: data.email // Required for standard Cognito config
+                    email: data.email
                 }
             }
         });
@@ -70,7 +71,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({ mode }) => {
     }
   };
 
-  // Temporary helper to handle verification without a full UI page yet
   const handleVerification = async (email: string) => {
     const code = window.prompt(`Enter the verification code sent to ${email}:`);
     if (!code) return;
@@ -78,18 +78,23 @@ export const LoginForm: React.FC<LoginFormProps> = ({ mode }) => {
     try {
         await confirmSignUp({ username: email, confirmationCode: code });
         toast.success("Verified! Please sign in.");
-        // Optional: Switch mode to 'signin' via parent prop if we lifted state up
-        // For now, user just clicks "Have ID?"
     } catch (err: any) {
         toast.error(`Verification failed: ${err.message}`);
     }
   };
 
+  // Reusable style for all inputs to ensure visibility on dark backgrounds
+  const inputClasses = "w-full bg-transparent border-b border-white/20 py-2 text-sm text-white font-mono placeholder-white/20 focus:border-sentinel focus:outline-none transition-colors disabled:opacity-50 disabled:cursor-not-allowed";
+
   return (
-    <form className="w-full flex flex-col gap-4" onSubmit={handleSubmit(onSubmit)}>
-      <div>
-        <label className="block text-sm font-mono font-semibold text-ghost mb-2">Email</label>
-        <Input
+    <form className="w-full flex flex-col gap-6" onSubmit={handleSubmit(onSubmit)}>
+      
+      {/* --- Email Field --- */}
+      <div className="space-y-1">
+        <label className="block text-[10px] font-mono font-semibold text-ghost/60 uppercase tracking-wider">
+            ID_SEQUENCE (EMAIL)
+        </label>
+        <input
           type="email"
           {...register('email', {
             required: 'Email is required',
@@ -98,66 +103,105 @@ export const LoginForm: React.FC<LoginFormProps> = ({ mode }) => {
               message: 'Invalid email address',
             },
           })}
-          className="w-full"
-          placeholder="you@example.com"
+          className={inputClasses}
+          placeholder="user@panoptes.net"
           disabled={isLoading}
         />
-        {errors.email && <span className="text-destructive text-xs mt-1">{errors.email.message}</span>}
+        {errors.email && <span className="text-red-500 text-[10px] font-mono mt-1 block">{errors.email.message}</span>}
       </div>
 
-      <div>
-        <label className="block text-sm font-semibold font-mono text-ghost mb-2">Password</label>
-        <Input
-          type="password"
-          {...register('password', {
-            required: 'Password is required',
-            minLength: {
-              value: 8,
-              message: 'Password must be at least 8 characters',
-            },
-          })}
-          className="w-full"
-          placeholder="••••••••"
-          disabled={isLoading}
-        />
-        {errors.password && <span className="text-destructive text-xs mt-1">{errors.password.message}</span>}
+      {/* --- Password Field --- */}
+      <div className="space-y-1">
+        <label className="block text-[10px] font-mono font-semibold text-ghost/60 uppercase tracking-wider">
+            ACCESS_KEY
+        </label>
+        <div className="relative">
+            <input
+              type={showPassword ? 'text' : 'password'}
+              {...register('password', {
+                required: 'Password is required',
+                minLength: {
+                  value: 8,
+                  message: 'Password must be at least 8 characters',
+                },
+              })}
+              className={`${inputClasses} pr-10`}
+              placeholder="••••••••"
+              disabled={isLoading}
+            />
+            
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-0 top-1/2 -translate-y-1/2 p-2 text-ghost/40 hover:text-sentinel transition-colors focus:outline-none"
+              aria-label={showPassword ? "Hide password" : "Show password"}
+              disabled={isLoading}
+            >
+              {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+            </button>
+        </div>
+        {errors.password && <span className="text-red-500 text-[10px] font-mono mt-1 block">{errors.password.message}</span>}
       </div>
 
+      {/* --- Confirm Password (Signup Only) --- */}
       {mode === 'signup' && (
-        <div>
-          <label className="block text-sm font-semibold text-ghost mb-2">Confirm Password</label>
-          <Input
-            type="password"
-            {...register('confirmPassword', {
-              required: 'Please confirm your password',
-              validate: (value) => value === watch('password') || 'Passwords do not match',
-            })}
-            className="w-full"
-            placeholder="••••••••"
-            disabled={isLoading}
-          />
+        <div className="space-y-1">
+          <label className="block text-[10px] font-mono font-semibold text-ghost/60 uppercase tracking-wider">
+            CONFIRM_KEY
+          </label>
+          <div className="relative">
+            <input
+              type={showConfirmPassword ? 'text' : 'password'}
+              {...register('confirmPassword', {
+                required: 'Please confirm your password',
+                validate: (value) => value === watch('password') || 'Passwords do not match',
+              })}
+              className={`${inputClasses} pr-10`}
+              placeholder="••••••••"
+              disabled={isLoading}
+            />
+            
+            <button
+              type="button"
+              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              className="absolute right-0 top-1/2 -translate-y-1/2 p-2 text-ghost/40 hover:text-sentinel transition-colors focus:outline-none"
+              aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+              disabled={isLoading}
+            >
+              {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+            </button>
+          </div>
           {errors.confirmPassword && (
-            <span className="text-destructive text-xs mt-1">{errors.confirmPassword.message}</span>
+            <span className="text-red-500 text-[10px] font-mono mt-1 block">{errors.confirmPassword.message}</span>
           )}
         </div>
       )}
 
-      <div className="flex items-center justify-between mt-2">
-        <label className="flex items-center gap-2 cursor-pointer">
-          <input type="checkbox" className="w-4 h-4 rounded border-ghost-dim" />
-          <span className="text-sm text-ghost/70">Remember me</span>
+      {/* --- Footer Actions --- */}
+      <div className="flex items-center justify-between pt-2">
+        <label className="flex items-center gap-2 cursor-pointer group">
+          <div className="relative flex items-center">
+            <input type="checkbox" className="peer sr-only" disabled={isLoading} />
+            <div className="h-3 w-3 border border-ghost/40 rounded-sm bg-transparent peer-checked:bg-sentinel peer-checked:border-sentinel transition-all" />
+          </div>
+          <span className="text-[10px] font-mono text-ghost/60 group-hover:text-white transition-colors">REMEMBER_SESSION</span>
         </label>
+        
         {mode === 'signin' && (
-          <a href="#" className="text-sm text-sentinel hover:text-sentinel/80 font-semibold transition-colors">
-            Forgot password?
+          <a href="#" className="text-[10px] font-mono text-sentinel hover:text-white transition-colors">
+            LOST_KEY?
           </a>
         )}
       </div>
 
-      <Button type="submit" className="w-full mt-4 font-sans" disabled={isLoading}>
+      <Button 
+        type="submit" 
+        className="w-full mt-2 bg-sentinel hover:bg-sentinel/90 text-black font-mono tracking-widest text-xs py-6" 
+        disabled={isLoading}
+      >
         {isLoading 
             ? <span className="animate-pulse">PROCESSING...</span> 
-            : (mode === 'signin' ? 'SIGN IN' : 'CREATE ACCOUNT')
+            : (mode === 'signin' ? 'INITIATE_LINK' : 'REGISTER_UNIT')
         }
       </Button>
     </form>

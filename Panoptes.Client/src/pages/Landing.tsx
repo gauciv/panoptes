@@ -251,7 +251,7 @@ function Landing() {
             <PricingSection />
             <SystemTelemetry />
             
-            <div className="h-32 w-full bg-[#000000]" />
+            <div className="h-12 w-full bg-[#000000]" />
 
           </div>
         </div>
