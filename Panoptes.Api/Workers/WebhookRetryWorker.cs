@@ -35,6 +35,7 @@ namespace Panoptes.Api.Workers
                 try
                 {
                     await ProcessRetries(stoppingToken);
+                    await CheckRateLimitRecovery(stoppingToken);
                 }
                 catch (Exception ex)
                 {
@@ -44,6 +45,59 @@ namespace Panoptes.Api.Workers
                 await Task.Delay(_checkInterval, stoppingToken);
             }
         }
+        
+        /// <summary>
+        /// Check rate-limited subscriptions and auto-recover them when usage drops below threshold
+        /// </summary>
+        private async Task CheckRateLimitRecovery(CancellationToken stoppingToken)
+        {
+            using var scope = _serviceProvider.CreateScope();
+            var dbContext = scope.ServiceProvider.GetRequiredService<IAppDbContext>();
+            
+            // Find rate-limited subscriptions
+            var rateLimitedSubs = await dbContext.WebhookSubscriptions
+                .Where(s => s.IsRateLimited)
+                .ToListAsync(stoppingToken);
+            
+            if (!rateLimitedSubs.Any()) return;
+            
+            var now = DateTime.UtcNow;
+            var oneMinuteAgo = now.AddMinutes(-1);
+            var oneHourAgo = now.AddHours(-1);
+            
+            foreach (var sub in rateLimitedSubs)
+            {
+                if (stoppingToken.IsCancellationRequested) break;
+                
+                // Calculate current usage from delivery logs
+                var recentLogs = await dbContext.DeliveryLogs
+                    .Where(l => l.SubscriptionId == sub.Id && l.AttemptedAt >= oneHourAgo)
+                    .ToListAsync(stoppingToken);
+                
+                var webhooksInLastMinute = recentLogs.Count(l => l.AttemptedAt >= oneMinuteAgo);
+                var webhooksInLastHour = recentLogs.Count;
+                
+                // Check if usage has dropped below 80% of limits (with some buffer)
+                var minuteThreshold = sub.MaxWebhooksPerMinute > 0 ? sub.MaxWebhooksPerMinute * 0.8 : int.MaxValue;
+                var hourThreshold = sub.MaxWebhooksPerHour > 0 ? sub.MaxWebhooksPerHour * 0.8 : int.MaxValue;
+                
+                var isUnderMinuteLimit = webhooksInLastMinute < minuteThreshold;
+                var isUnderHourLimit = webhooksInLastHour < hourThreshold;
+                
+                if (isUnderMinuteLimit && isUnderHourLimit)
+                {
+                    // Auto-recover: clear rate limit flag
+                    sub.IsRateLimited = false;
+                    await dbContext.SaveChangesAsync(stoppingToken);
+                    
+                    _logger.LogInformation(
+                        "✅ Auto-recovered subscription {Name} (ID: {Id}) - Rate usage now at {MinPct}% per min, {HourPct}% per hour",
+                        sub.Name, sub.Id,
+                        sub.MaxWebhooksPerMinute > 0 ? (webhooksInLastMinute * 100 / sub.MaxWebhooksPerMinute) : 0,
+                        sub.MaxWebhooksPerHour > 0 ? (webhooksInLastHour * 100 / sub.MaxWebhooksPerHour) : 0);
+                }
+            }
+        }
 
         private async Task ProcessRetries(CancellationToken stoppingToken)
         {
@@ -51,15 +105,20 @@ namespace Panoptes.Api.Workers
             var dbContext = scope.ServiceProvider.GetRequiredService<IAppDbContext>();
             var dispatcher = scope.ServiceProvider.GetRequiredService<IWebhookDispatcher>();
 
-            // Find logs that need retry (ordered by NextRetryAt to process oldest first)
+            // Find logs that need retry, joining with subscriptions to filter properly
+            // IMPORTANT: Only process logs for active, non-disabled subscriptions
             var logsToRetry = await dbContext.DeliveryLogs
+                .Include(l => l.Subscription)
                 .Where(l => l.Status == DeliveryStatus.Retrying 
                          && l.NextRetryAt != null 
                          && l.NextRetryAt <= DateTime.UtcNow
-                         && l.RetryCount < l.MaxRetries)
+                         && l.RetryCount < l.MaxRetries
+                         && l.Subscription != null
+                         && l.Subscription.IsActive
+                         && !l.Subscription.IsRateLimited
+                         && !l.Subscription.IsCircuitBroken)
                 .OrderBy(l => l.NextRetryAt)
-                .Take(10) // Process in batches
-                .Include(l => l.Subscription)
+                .Take(10)
                 .ToListAsync(stoppingToken);
 
             if (!logsToRetry.Any())
@@ -84,6 +143,14 @@ namespace Panoptes.Api.Workers
                 if (!log.Subscription.IsActive)
                 {
                     _logger.LogDebug("Skipping retry for paused subscription {SubId}", log.SubscriptionId);
+                    continue;
+                }
+                
+                // Skip disabled subscriptions (rate limited or circuit broken)
+                if (log.Subscription.IsRateLimited || log.Subscription.IsCircuitBroken)
+                {
+                    _logger.LogDebug("Skipping retry for disabled subscription {SubId} (RateLimited={RL}, CircuitBroken={CB})", 
+                        log.SubscriptionId, log.Subscription.IsRateLimited, log.Subscription.IsCircuitBroken);
                     continue;
                 }
 

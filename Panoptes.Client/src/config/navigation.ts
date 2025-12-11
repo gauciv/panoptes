@@ -13,19 +13,19 @@ export const NAV_ITEMS: NavItem[] = [
   // Primary Navigation
   {
     label: 'Overview',
-    path: '/',
+    path: '/dashboard',
     icon: Home,
     group: 'primary',
   },
   {
     label: 'Analytics',
-    path: '/analytics',
+    path: '/dashboard/analytics',
     icon: BarChart3,
     group: 'primary',
   },
   {
     label: 'Health',
-    path: '/health',
+    path: '/dashboard/health',
     icon: Activity,
     group: 'primary',
   },
@@ -33,7 +33,7 @@ export const NAV_ITEMS: NavItem[] = [
   // Secondary/Utilities
   {
     label: 'Settings',
-    path: '/settings',
+    path: '/dashboard/settings',
     icon: Settings,
     group: 'secondary',
   },

@@ -128,7 +128,9 @@ export function PricingSection({ comingSoon = false }: { comingSoon?: boolean })
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-16 relative z-20">
             <div className='flex flex-col items-start'>
                 <MaskText text="PROVISIONING_MANIFEST" className="font-mono text-xs text-sentinel tracking-[0.2em] mb-4 block" />
-                <MaskText text="SELECT CLEARANCE LEVEL" className="font-michroma text-3xl md:text-5xl text-ghost"/>
+                <h2>
+                    <MaskText text="SELECT CLEARANCE LEVEL" className="font-michroma text-3xl md:text-5xl text-ghost"/>
+                </h2>
             </div>
             
             {!comingSoon && (
