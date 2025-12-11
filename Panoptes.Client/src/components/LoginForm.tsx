@@ -20,7 +20,7 @@ interface FormValues {
   code?: string;
 }
 
-export const LoginForm: React.FC<LoginFormProps> = ({ mode, setMode, onVerificationModeChange }) => {
+export const LoginForm: React.FC<LoginFormProps> = ({ mode, onVerificationModeChange }) => {
   const { login, register: registerUser } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   
