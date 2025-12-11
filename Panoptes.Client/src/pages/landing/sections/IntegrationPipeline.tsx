@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import clsx from 'clsx';
 import { Terminal, Cpu, Share2, ChevronRight } from 'lucide-react';
@@ -57,17 +57,26 @@ const steps = [
 
 export function IntegrationPipeline() {
   const [activeStep, setActiveStep] = useState(0);
+  const autoPlayRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Auto-cycle through steps if user is idle (optional)
+  // Auto-cycle through steps
   useEffect(() => {
+
     const timer = setInterval(() => {
       setActiveStep((prev) => (prev + 1) % steps.length);
     }, 5000); // Switch every 5 seconds
     return () => clearInterval(timer);
+
   }, []);
 
+  // Pause auto-play on user interaction
+  const handleStepClick = (index: number) => {
+    setActiveStep(index);
+    if (autoPlayRef.current) clearInterval(autoPlayRef.current);
+  };
+
   return (
-    <section className="relative w-full px-6 py-24" id="features">
+    <section className="relative w-full px-6 py-24" id="features" aria-label="Integration Process">
       <div className="mx-auto max-w-[1600px]">
         
         {/* Section Header */}
@@ -76,30 +85,41 @@ export function IntegrationPipeline() {
              text="INTEGRATION_PROTOCOL" 
              className="font-mono text-xs text-sentinel tracking-[0.2em] mb-4 block"
            />
-           <ScrambleText 
-             text="INFRASTRUCTURE AS CODE." 
-             className="font-michroma text-3xl md:text-5xl text-ghost" 
-             speed={30}
-           />
+           {/* SEO FIX: Use H2 for section titles, keep H1 for page hero */}
+           <h2>
+            <ScrambleText 
+              text="INFRASTRUCTURE AS CODE." 
+              className="font-michroma text-3xl md:text-5xl text-ghost" 
+              speed={30}
+            />
+           </h2>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-24 items-center">
           
-          {/* --- LEFT: STEPPER NAVIGATION --- */}
-          <div className="flex flex-col gap-2 relative">
+          {/* --- LEFT: STEPPER NAVIGATION (Tab List) --- */}
+          <div 
+            className="flex flex-col gap-2 relative" 
+            role="tablist" 
+            aria-orientation="vertical"
+          >
              {/* Connecting Line */}
-             <div className="absolute left-[27px] top-8 bottom-8 w-[1px] bg-white/10 hidden md:block" />
+             <div className="absolute left-[27px] top-8 bottom-8 w-[1px] bg-white/10 hidden md:block" aria-hidden="true" />
 
              {steps.map((step, index) => {
                const isActive = activeStep === index;
                const Icon = step.icon;
 
                return (
-                 <div 
+                 <button 
                    key={step.id}
-                   onClick={() => setActiveStep(index)}
+                   role="tab"
+                   aria-selected={isActive}
+                   aria-controls={`code-panel-${index}`}
+                   id={`step-tab-${index}`}
+                   onClick={() => handleStepClick(index)}
                    className={clsx(
-                     "group relative flex gap-6 p-6 rounded-sm border border-transparent transition-all duration-500 cursor-pointer",
+                     "group relative flex gap-6 p-6 rounded-sm border border-transparent transition-all duration-500 cursor-pointer text-left w-full outline-none focus-visible:border-sentinel/50",
                      isActive ? "bg-white/5 border-sentinel/20" : "hover:bg-white/5 hover:border-white/5"
                    )}
                  >
@@ -110,7 +130,7 @@ export function IntegrationPipeline() {
                         ? "bg-[#050505] border-sentinel text-sentinel shadow-[0_0_20px_rgba(0,255,148,0.2)]" 
                         : "bg-[#050505] border-white/10 text-ghost/40 group-hover:border-white/30"
                     )}>
-                       <Icon size={24} />
+                       <Icon size={24} aria-hidden="true" />
                     </div>
 
                     {/* Text Content */}
@@ -133,21 +153,27 @@ export function IntegrationPipeline() {
                       <motion.div 
                         layoutId="activeArrow" 
                         className="absolute right-4 top-1/2 -translate-y-1/2 text-sentinel hidden md:block"
+                        aria-hidden="true"
                       >
                         <ChevronRight size={20} />
                       </motion.div>
                     )}
-                 </div>
+                 </button>
                );
              })}
           </div>
 
-          {/* --- RIGHT: HOLOGRAPHIC CODE TERMINAL --- */}
+          {/* --- RIGHT: CODE TERMINAL (Tab Panel) --- */}
           <div className="relative">
-             {/* Glow Effect behind terminal */}
+             {/* Glow Effect */}
              <div className="absolute -inset-1 bg-gradient-to-r from-sentinel/20 to-blue-500/20 rounded-lg blur-2xl opacity-20" />
              
-             <div className="relative rounded-lg border border-white/10 bg-[#0A0A0A] overflow-hidden shadow-2xl">
+             <div 
+                className="relative rounded-lg border border-white/10 bg-[#0A0A0A] overflow-hidden shadow-2xl"
+                role="tabpanel"
+                id={`code-panel-${activeStep}`}
+                aria-labelledby={`step-tab-${activeStep}`}
+             >
                 {/* Terminal Header */}
                 <div className="flex items-center justify-between px-4 py-3 bg-white/5 border-b border-white/5">
                    <div className="flex gap-2">
@@ -171,21 +197,24 @@ export function IntegrationPipeline() {
                         transition={{ duration: 0.2 }}
                         className="font-mono text-sm text-ghost/80 leading-relaxed"
                       >
-                         <code>
+                          <code>
                             {steps[activeStep].code.split('\n').map((line, i) => (
                                <div key={i} className="table-row">
                                   <span className="table-cell select-none text-ghost/20 text-right pr-4 w-8">{i + 1}</span>
                                   <span className="table-cell">{line}</span>
                                </div>
                             ))}
-                         </code>
+                          </code>
                       </motion.pre>
                    </AnimatePresence>
                 </div>
 
                 {/* Status Bar */}
                 <div className="flex items-center gap-4 px-4 py-2 bg-sentinel/5 border-t border-sentinel/10 font-mono text-[10px]">
-                   <span className="text-sentinel">● CONNECTED</span>
+                   <span className="text-sentinel flex items-center gap-1">
+                     <span className="inline-block w-2 h-2 rounded-full bg-sentinel animate-pulse"></span>
+                     CONNECTED
+                   </span>
                    <span className="text-ghost/40">UTF-8</span>
                    <span className="text-ghost/40 ml-auto">Ln {steps[activeStep].code.split('\n').length}, Col 1</span>
                 </div>

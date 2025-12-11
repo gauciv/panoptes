@@ -162,10 +162,12 @@ export function DeploymentModules() {
                 text="OPERATIONAL_CAPABILITIES" 
                 className="font-mono text-xs text-sentinel tracking-[0.2em] mb-4 block"
               />
-              <MaskText 
-                text="DEPLOYMENT SCENARIOS" 
-                className="font-michroma text-3xl md:text-5xl text-ghost" 
-              />
+              <h2>
+               <MaskText 
+                  text="DEPLOYMENT SCENARIOS" 
+                  className="font-michroma text-3xl md:text-5xl text-ghost" 
+               />
+              </h2>
            </div>
            <p className="max-w-sm font-sans text-sm text-ghost/50 text-right hidden md:block">
               Select a pre-configured architecture pattern to accelerate your integration timeline.

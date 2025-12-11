@@ -17,7 +17,7 @@ export const OAuthButtons: React.FC = () => {
   // const handleGitHub = () => {
   //   // Redirect to GitHub OAuth
   //   window.location.href = import.meta.env.VITE_GITHUB_OAUTH_URL || '';
-  // };
+  // }; 
 
   return (
     <div className="w-full flex flex-col gap-3">

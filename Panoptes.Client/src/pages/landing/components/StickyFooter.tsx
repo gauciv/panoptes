@@ -25,7 +25,7 @@ export function StickyFooter() {
 
               {/* LINKS COL 1 */}
               <div className="flex flex-col gap-4">
-                 <h4 className="font-mono text-[10px] text-sentinel tracking-widest">PRODUCT</h4>
+                 <h2 className="font-mono text-[10px] text-sentinel tracking-widest">PRODUCT</h2>
                  <a href="#" className="font-sans text-sm text-ghost/60 hover:text-white transition-colors">Features</a>
                  <a href="#" className="font-sans text-sm text-ghost/60 hover:text-white transition-colors">Integrations</a>
                  <a href="#" className="font-sans text-sm text-ghost/60 hover:text-white transition-colors">Enterprise</a>
@@ -34,7 +34,7 @@ export function StickyFooter() {
 
               {/* LINKS COL 2 */}
               <div className="flex flex-col gap-4">
-                 <h4 className="font-mono text-[10px] text-sentinel tracking-widest">RESOURCES</h4>
+                 <h2 className="font-mono text-[10px] text-sentinel tracking-widest">RESOURCES</h2>
                  <a href="#" className="font-sans text-sm text-ghost/60 hover:text-white transition-colors">Documentation</a>
                  <a href="#" className="font-sans text-sm text-ghost/60 hover:text-white transition-colors">API Reference</a>
                  <a href="#" className="font-sans text-sm text-ghost/60 hover:text-white transition-colors">Community</a>
@@ -43,7 +43,7 @@ export function StickyFooter() {
 
               {/* LINKS COL 3 */}
               <div className="flex flex-col gap-4">
-                 <h4 className="font-mono text-[10px] text-sentinel tracking-widest">LEGAL</h4>
+                 <h2 className="font-mono text-[10px] text-sentinel tracking-widest">LEGAL</h2>
                  <a href="#" className="font-sans text-sm text-ghost/60 hover:text-white transition-colors">Privacy Policy</a>
                  <a href="#" className="font-sans text-sm text-ghost/60 hover:text-white transition-colors">Terms of Service</a>
                  <a href="#" className="font-sans text-sm text-ghost/60 hover:text-white transition-colors">Cookie Settings</a>
@@ -63,9 +63,9 @@ export function StickyFooter() {
               </div>
               
               {/* Giant Text - Scaled with viewport width (vw) so it fits any screen */}
-              <h1 className="font-michroma text-[12vw] leading-[0.8] text-white/5 select-none pointer-events-none order-1 md:order-2">
+              <h3 className="font-michroma text-[12vw] leading-[0.8] text-white/5 select-none pointer-events-none order-1 md:order-2">
                  PANOPTES
-              </h1>
+              </h3>
            </div>
            
         </div>
