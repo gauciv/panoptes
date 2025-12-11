@@ -173,20 +173,7 @@ const VolumeChart: React.FC<VolumeChartProps> = ({
       ) : (
         <div 
           className={`relative ${chartMetrics.scrollNeeded ? 'overflow-x-auto' : ''}`}
-          style={{ 
-            // Add scrollbar styling
-            scrollbarWidth: 'thin',
-            scrollbarColor: '#d1d5db #f3f4f6'
-          }}
         >
-          {/* Scroll fade indicator for left side */}
-          {chartMetrics.scrollNeeded && (
-            <div 
-              className="absolute left-0 top-0 bottom-4 w-8 bg-gradient-to-r from-white to-transparent z-10 pointer-events-none"
-              style={{ opacity: 0.8 }}
-            />
-          )}
-          
           <ChartContainer 
             config={chartConfig} 
             className="h-[300px]"
@@ -245,14 +232,6 @@ const VolumeChart: React.FC<VolumeChartProps> = ({
               />
             </AreaChart>
           </ChartContainer>
-          
-          {/* Scroll fade indicator for right side */}
-          {chartMetrics.scrollNeeded && (
-            <div 
-              className="absolute right-0 top-0 bottom-4 w-8 bg-gradient-to-l from-white to-transparent z-10 pointer-events-none"
-              style={{ opacity: 0.8 }}
-            />
-          )}
         </div>
       )}
     </div>
