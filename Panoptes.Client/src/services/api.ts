@@ -115,4 +115,20 @@ export const getHealth = async (): Promise<HealthResponse> => {
     return response.data;
 };
 
+// --- NEW: Retry Logic ---
+
+// Fetch execution history/retries for a specific delivery log
+// Make sure your backend has a route like: [HttpGet("logs/{id}/retries")]
+export const getRetryAttempts = async (logId: string): Promise<any[]> => {
+    const response = await api.get<any[]>(`/logs/${logId}/retries`);
+    return response.data;
+};
+
+// Manually retry a specific delivery log
+// Make sure your backend has a route like: [HttpPost("logs/{id}/retry")]
+export const triggerManualRetry = async (logId: string): Promise<void> => {
+    await api.post(`/logs/${logId}/retry`);
+};
+
+
 export default api;

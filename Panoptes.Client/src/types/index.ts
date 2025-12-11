@@ -36,3 +36,15 @@ export interface DeliveryLog {
     latencyMs: number;
     attemptedAt: string;
 }
+
+// In src/types.ts
+
+export interface RetryAttempt {
+  id: string;
+  attemptNumber: number;
+  status: 'success' | 'failure' | 'pending';
+  statusCode: number;
+  timestamp: string;
+  latencyMs: number;
+  error?: string;
+}
