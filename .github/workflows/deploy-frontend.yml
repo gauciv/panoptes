@@ -1,6 +1,10 @@
 name: Deploy Frontend
 
 on:
+  # 1. Manual Trigger (The "Run Workflow" Button)
+  workflow_dispatch:
+
+  # 2. Push Trigger (Runs on ANY push to main)
   push:
     branches: [ "main" ]
     paths:
@@ -16,10 +20,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # --- THE FIX IS HERE ---
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '22' # Upgraded from 18 to 22 to support Vite
           cache: 'npm'
           cache-dependency-path: './Panoptes.Client/package-lock.json'
 

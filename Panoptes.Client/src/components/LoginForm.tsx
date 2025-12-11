@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, ArrowLeft } from 'lucide-react'; // Added ArrowLeft for the back button
 import { Button } from './ui/button';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
@@ -14,53 +14,66 @@ interface FormValues {
   email: string;
   password: string;
   confirmPassword?: string;
+  code?: string; // Added this to handle the verification input
 }
 
 export const LoginForm: React.FC<LoginFormProps> = ({ mode }) => {
   const { login, register: registerUser } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
-  
+
+  // NEW: State to handle the transition from Login -> Verify
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [pendingEmail, setPendingEmail] = useState('');
+
   // Local state for visibility toggles
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  
+
   const {
     register,
     handleSubmit,
     formState: { errors },
     watch,
+    trigger
   } = useForm<FormValues>();
 
+  // Use your exact same styling class
+  const inputClasses = "w-full bg-transparent border-b border-white/20 py-2 text-sm text-white font-mono placeholder-white/20 focus:border-sentinel focus:outline-none transition-colors disabled:opacity-50 disabled:cursor-not-allowed";
+
+  // 1. STANDARD LOGIN/SIGNUP SUBMIT
   const onSubmit = async (data: FormValues) => {
     setIsLoading(true);
     try {
       if (mode === 'signin') {
-        const result = await login({ 
-            username: data.email, 
-            password: data.password 
+        const result = await login({
+          username: data.email,
+          password: data.password
         });
-        
+
         if (result.isSignedIn) {
-            toast.success("ACCESS GRANTED");
+          toast.success("ACCESS GRANTED");
         } else if (result.nextStep.signInStep === 'CONFIRM_SIGN_UP') {
-             handleVerification(data.email);
+          // Instead of window.prompt, we switch UI state
+          setPendingEmail(data.email);
+          setIsVerifying(true);
         }
       } else {
         const { nextStep } = await registerUser({
-            username: data.email,
-            password: data.password,
-            options: {
-                userAttributes: {
-                    email: data.email
-                }
+          username: data.email,
+          password: data.password,
+          options: {
+            userAttributes: {
+              email: data.email
             }
+          }
         });
 
         if (nextStep.signUpStep === 'CONFIRM_SIGN_UP') {
-            toast.success("Account created. Verification code sent.");
-            handleVerification(data.email);
+          toast.success("Verification code sent.");
+          setPendingEmail(data.email);
+          setIsVerifying(true);
         } else if (nextStep.signUpStep === 'COMPLETE_AUTO_SIGN_IN') {
-             toast.success("Account created successfully!");
+          toast.success("Account created successfully!");
         }
       }
     } catch (error: any) {
@@ -71,28 +84,84 @@ export const LoginForm: React.FC<LoginFormProps> = ({ mode }) => {
     }
   };
 
-  const handleVerification = async (email: string) => {
-    const code = window.prompt(`Enter the verification code sent to ${email}:`);
-    if (!code) return;
-    
+  // 2. NEW VERIFICATION SUBMIT
+  const handleVerifySubmit = async () => {
+    // Only validate the 'code' field here
+    const isValid = await trigger('code');
+    if (!isValid) return;
+
+    const code = watch('code');
+    setIsLoading(true);
+
     try {
-        await confirmSignUp({ username: email, confirmationCode: code });
-        toast.success("Verified! Please sign in.");
+      await confirmSignUp({ username: pendingEmail, confirmationCode: code! });
+      toast.success("Verified! Accessing system...");
+      setIsVerifying(false);
+      // Reload to force the auth state to update and log the user in
+      window.location.reload();
     } catch (err: any) {
-        toast.error(`Verification failed: ${err.message}`);
+      toast.error(`Verification failed: ${err.message}`);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  // Reusable style for all inputs to ensure visibility on dark backgrounds
-  const inputClasses = "w-full bg-transparent border-b border-white/20 py-2 text-sm text-white font-mono placeholder-white/20 focus:border-sentinel focus:outline-none transition-colors disabled:opacity-50 disabled:cursor-not-allowed";
+  // --- RENDER BLOCK 1: VERIFICATION UI (Matches your theme exactly) ---
+  if (isVerifying) {
+    return (
+      <div className="w-full flex flex-col gap-6 animate-in fade-in slide-in-from-right-8 duration-300">
+        {/* Header area specifically for verification */}
+        <div className="space-y-2">
+          <button
+            onClick={() => setIsVerifying(false)}
+            className="flex items-center gap-2 text-[10px] font-mono text-ghost/60 hover:text-sentinel transition-colors mb-2"
+          >
+            <ArrowLeft size={12} /> BACK_TO_LOGIN
+          </button>
+          <h3 className="text-lg font-bold text-white font-sans">SECURITY CHECK</h3>
+          <p className="text-xs text-ghost/70 font-mono">
+            Enter the sequence sent to <span className="text-white">{pendingEmail}</span>
+          </p>
+        </div>
 
+        {/* The Code Input - Uses your exact inputClasses */}
+        <div className="space-y-1">
+          <label className="block text-[10px] font-mono font-semibold text-ghost/60 uppercase tracking-wider">
+            VERIFICATION_CODE
+          </label>
+          <input
+            type="text"
+            {...register('code', { required: 'Verification code is required' })}
+            className={`${inputClasses} text-center tracking-[0.5em] text-lg font-bold`}
+            placeholder="000000"
+            maxLength={6}
+            disabled={isLoading}
+            autoFocus
+          />
+          {errors.code && <span className="text-red-500 text-[10px] font-mono mt-1 block">{errors.code.message}</span>}
+        </div>
+
+        {/* The Button - Uses your exact Button styling */}
+        <Button
+          type="button"
+          onClick={handleVerifySubmit}
+          className="w-full mt-2 bg-sentinel hover:bg-sentinel/90 text-black font-mono tracking-widest text-xs py-6"
+          disabled={isLoading}
+        >
+          {isLoading ? <span className="animate-pulse">VERIFYING...</span> : 'CONFIRM_SEQUENCE'}
+        </Button>
+      </div>
+    );
+  }
+
+  // --- RENDER BLOCK 2: YOUR ORIGINAL LOGIN FORM (Untouched) ---
   return (
     <form className="w-full flex flex-col gap-6" onSubmit={handleSubmit(onSubmit)}>
-      
-      {/* --- Email Field --- */}
+
+      {/* Email Field */}
       <div className="space-y-1">
         <label className="block text-[10px] font-mono font-semibold text-ghost/60 uppercase tracking-wider">
-            ID_SEQUENCE (EMAIL)
+          ID_SEQUENCE (EMAIL)
         </label>
         <input
           type="email"
@@ -110,40 +179,38 @@ export const LoginForm: React.FC<LoginFormProps> = ({ mode }) => {
         {errors.email && <span className="text-red-500 text-[10px] font-mono mt-1 block">{errors.email.message}</span>}
       </div>
 
-      {/* --- Password Field --- */}
+      {/* Password Field */}
       <div className="space-y-1">
         <label className="block text-[10px] font-mono font-semibold text-ghost/60 uppercase tracking-wider">
-            ACCESS_KEY
+          ACCESS_KEY
         </label>
         <div className="relative">
-            <input
-              type={showPassword ? 'text' : 'password'}
-              {...register('password', {
-                required: 'Password is required',
-                minLength: {
-                  value: 8,
-                  message: 'Password must be at least 8 characters',
-                },
-              })}
-              className={`${inputClasses} pr-10`}
-              placeholder="••••••••"
-              disabled={isLoading}
-            />
-            
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-0 top-1/2 -translate-y-1/2 p-2 text-ghost/40 hover:text-sentinel transition-colors focus:outline-none"
-              aria-label={showPassword ? "Hide password" : "Show password"}
-              disabled={isLoading}
-            >
-              {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-            </button>
+          <input
+            type={showPassword ? 'text' : 'password'}
+            {...register('password', {
+              required: 'Password is required',
+              minLength: {
+                value: 8,
+                message: 'Password must be at least 8 characters',
+              },
+            })}
+            className={`${inputClasses} pr-10`}
+            placeholder="••••••••"
+            disabled={isLoading}
+          />
+
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            className="absolute right-0 top-1/2 -translate-y-1/2 p-2 text-ghost/40 hover:text-sentinel transition-colors focus:outline-none"
+          >
+            {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+          </button>
         </div>
         {errors.password && <span className="text-red-500 text-[10px] font-mono mt-1 block">{errors.password.message}</span>}
       </div>
 
-      {/* --- Confirm Password (Signup Only) --- */}
+      {/* Confirm Password (Signup Only) */}
       {mode === 'signup' && (
         <div className="space-y-1">
           <label className="block text-[10px] font-mono font-semibold text-ghost/60 uppercase tracking-wider">
@@ -160,13 +227,11 @@ export const LoginForm: React.FC<LoginFormProps> = ({ mode }) => {
               placeholder="••••••••"
               disabled={isLoading}
             />
-            
+
             <button
               type="button"
               onClick={() => setShowConfirmPassword(!showConfirmPassword)}
               className="absolute right-0 top-1/2 -translate-y-1/2 p-2 text-ghost/40 hover:text-sentinel transition-colors focus:outline-none"
-              aria-label={showConfirmPassword ? "Hide password" : "Show password"}
-              disabled={isLoading}
             >
               {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
             </button>
@@ -177,7 +242,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ mode }) => {
         </div>
       )}
 
-      {/* --- Footer Actions --- */}
+      {/* Footer Actions */}
       <div className="flex items-center justify-between pt-2">
         <label className="flex items-center gap-2 cursor-pointer group">
           <div className="relative flex items-center">
@@ -186,7 +251,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ mode }) => {
           </div>
           <span className="text-[10px] font-mono text-ghost/60 group-hover:text-white transition-colors">REMEMBER_SESSION</span>
         </label>
-        
+
         {mode === 'signin' && (
           <a href="#" className="text-[10px] font-mono text-sentinel hover:text-white transition-colors">
             LOST_KEY?
@@ -194,14 +259,14 @@ export const LoginForm: React.FC<LoginFormProps> = ({ mode }) => {
         )}
       </div>
 
-      <Button 
-        type="submit" 
-        className="w-full mt-2 bg-sentinel hover:bg-sentinel/90 text-black font-mono tracking-widest text-xs py-6" 
+      <Button
+        type="submit"
+        className="w-full mt-2 bg-sentinel hover:bg-sentinel/90 text-black font-mono tracking-widest text-xs py-6"
         disabled={isLoading}
       >
-        {isLoading 
-            ? <span className="animate-pulse">PROCESSING...</span> 
-            : (mode === 'signin' ? 'INITIATE_LINK' : 'REGISTER_UNIT')
+        {isLoading
+          ? <span className="animate-pulse">PROCESSING...</span>
+          : (mode === 'signin' ? 'INITIATE_LINK' : 'REGISTER_UNIT')
         }
       </Button>
     </form>
