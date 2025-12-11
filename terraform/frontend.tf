@@ -55,28 +55,121 @@ resource "aws_s3_bucket_policy" "allow_cloudfront" {
 
 # CloudFront Distribution
 resource "aws_cloudfront_distribution" "cdn" {
+  
+  # --- ORIGIN 1: S3 (Frontend) ---
   origin {
     domain_name              = aws_s3_bucket.frontend_bucket.bucket_regional_domain_name
     origin_id                = "S3-Frontend"
     origin_access_control_id = aws_cloudfront_origin_access_control.oac.id
   }
 
+  # --- ORIGIN 2: Lightsail (Backend) ---
+  origin {
+    # CHANGE THIS LINE: Wrap the IP in nip.io
+    domain_name = "${aws_lightsail_static_ip.backend_ip.ip_address}.nip.io"
+    
+    origin_id   = "Lightsail-Backend"
+
+    custom_origin_config {
+      http_port              = 5033
+      https_port             = 443
+      origin_protocol_policy = "http-only" 
+      origin_ssl_protocols   = ["TLSv1.2"]
+    }
+  }
+
   enabled             = true
   is_ipv6_enabled     = true
   default_root_object = "index.html"
 
-  # SPA Routing Support
-  custom_error_response {
-    error_code         = 403
-    response_code      = 200
-    response_page_path = "/index.html"
-  }
-  custom_error_response {
-    error_code         = 404
-    response_code      = 200
-    response_page_path = "/index.html"
+  # --- BEHAVIOR 1: API Routes (Proxy to Backend) ---
+  # These match the paths your Vite proxy was handling locally
+  
+  # Route /setup -> Backend
+  ordered_cache_behavior {
+    path_pattern     = "/setup*"
+    allowed_methods  = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
+    cached_methods   = ["GET", "HEAD"]
+    target_origin_id = "Lightsail-Backend"
+
+    forwarded_values {
+      query_string = true
+      headers      = ["Authorization", "Content-Type", "Accept"] # Forward Auth headers
+      cookies {
+        forward = "all"
+      }
+    }
+
+    viewer_protocol_policy = "redirect-to-https"
+    min_ttl                = 0
+    default_ttl            = 0 # Do not cache API responses
+    max_ttl                = 0
   }
 
+  # Route /health -> Backend
+  ordered_cache_behavior {
+    path_pattern     = "/health*"
+    allowed_methods  = ["GET", "HEAD", "OPTIONS"]
+    cached_methods   = ["GET", "HEAD"]
+    target_origin_id = "Lightsail-Backend"
+
+    forwarded_values {
+      query_string = true
+      headers      = ["*"]
+      cookies {
+        forward = "all"
+      }
+    }
+
+    viewer_protocol_policy = "redirect-to-https"
+    min_ttl                = 0
+    default_ttl            = 0
+    max_ttl                = 0
+  }
+
+  # Route /Subscriptions -> Backend
+  ordered_cache_behavior {
+    path_pattern     = "/Subscriptions*"
+    allowed_methods  = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
+    cached_methods   = ["GET", "HEAD"]
+    target_origin_id = "Lightsail-Backend"
+
+    forwarded_values {
+      query_string = true
+      headers      = ["Authorization", "Content-Type"]
+      cookies {
+        forward = "all"
+      }
+    }
+
+    viewer_protocol_policy = "redirect-to-https"
+    min_ttl                = 0
+    default_ttl            = 0
+    max_ttl                = 0
+  }
+  
+  # Route /logs -> Backend
+  ordered_cache_behavior {
+    path_pattern     = "/logs*"
+    allowed_methods  = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
+    cached_methods   = ["GET", "HEAD"]
+    target_origin_id = "Lightsail-Backend"
+
+    forwarded_values {
+      query_string = true
+      headers      = ["Authorization", "Content-Type"]
+      cookies {
+        forward = "all"
+      }
+    }
+
+    viewer_protocol_policy = "redirect-to-https"
+    min_ttl                = 0
+    default_ttl            = 0
+    max_ttl                = 0
+  }
+
+  # --- BEHAVIOR 2: Default (Everything else -> S3) ---
   default_cache_behavior {
     allowed_methods  = ["GET", "HEAD", "OPTIONS"]
     cached_methods   = ["GET", "HEAD"]
@@ -93,6 +186,18 @@ resource "aws_cloudfront_distribution" "cdn" {
     min_ttl                = 0
     default_ttl            = 3600
     max_ttl                = 86400
+  }
+
+  # SPA Support (Handle React Router)
+  custom_error_response {
+    error_code         = 403
+    response_code      = 200
+    response_page_path = "/index.html"
+  }
+  custom_error_response {
+    error_code         = 404
+    response_code      = 200
+    response_page_path = "/index.html"
   }
 
   restrictions {

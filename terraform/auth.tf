@@ -55,9 +55,36 @@ resource "aws_cognito_user_pool_client" "panoptes_client" {
   
   generate_secret = false
   
-  # IMPORTANT: Update these with your final production URLs later
-  callback_urls = ["http://localhost:5173/", "https://${aws_cloudfront_distribution.cdn.domain_name}/"]
-  logout_urls   = ["http://localhost:5173/", "https://${aws_cloudfront_distribution.cdn.domain_name}/"]
+  # --- TOKEN VALIDITY SETTINGS (FIXED) ---
+  # We must set BOTH the value and the unit to avoid "Invalid Range" errors
+  
+  # 1. Access Token (Short lived, for API calls)
+  access_token_validity = 60
+  
+  # 2. ID Token (Contains user profile info)
+  id_token_validity = 60
+  
+  # 3. Refresh Token (Long lived, keeps user logged in)
+  refresh_token_validity = 3
+  
+  token_validity_units {
+    access_token  = "minutes"
+    id_token      = "minutes"
+    refresh_token = "days"
+  }
+  # ----------------------------------------
+
+  # IMPORTANT: Update these with your final production URLs
+  # Note: The CloudFront URL is dynamic, so we reference the resource directly
+  callback_urls = [
+    "http://localhost:5173/", 
+    "https://dr9btopcgp9z.cloudfront.net"
+  ]
+  
+  logout_urls = [
+    "http://localhost:5173/", 
+    "https://dr9btopcgp9z.cloudfront.net"
+  ]
 
   allowed_oauth_flows_user_pool_client = true
   allowed_oauth_flows                  = ["code"]
@@ -65,13 +92,4 @@ resource "aws_cognito_user_pool_client" "panoptes_client" {
   
   supported_identity_providers = ["COGNITO", "Google"]
   depends_on = [aws_cognito_identity_provider.google_provider]
-
-  # SESSION LIMIT CONFIGURATION
-  refresh_token_validity = 3  # 3 Days
-  
-  token_validity_units {
-    refresh_token = "days"
-    access_token  = "minutes"
-    id_token      = "minutes"
-  }
 }
