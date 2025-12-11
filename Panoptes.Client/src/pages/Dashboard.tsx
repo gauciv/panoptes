@@ -145,15 +145,17 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  const handleSetupComplete = () => {
-    setShowSetupWizard(false);
-    fetchSetupStatus();
-    fetchSystemInfo();
-    fetchSubscriptions();
-    toast.success('System configured successfully!');
-  };
+  const handleSetupComplete = () => {
+    setShowSetupWizard(false);
+    fetchSetupStatus();
+    fetchSystemInfo();
+    fetchSubscriptions();
+    toast.success('System configured successfully!');
+  };
 
-  useEffect(() => {
+  const handleSetupClose = () => {
+    setShowSetupWizard(false);
+  };  useEffect(() => {
     fetchSetupStatus();
     fetchSubscriptions();
     fetchLogs();
@@ -546,12 +548,10 @@ const Dashboard: React.FC = () => {
           }}
         />
 
-        {/* Setup Wizard Modal */}
-        {showSetupWizard && (
-          <SetupWizard onComplete={handleSetupComplete} />
-        )}
-    </div>
-  );
-};
-
-export default Dashboard;
+        {/* Setup Wizard Modal */}
+        {showSetupWizard && (
+          <SetupWizard onComplete={handleSetupComplete} onClose={handleSetupClose} />
+        )}
+    </div>
+  );
+};export default Dashboard;
