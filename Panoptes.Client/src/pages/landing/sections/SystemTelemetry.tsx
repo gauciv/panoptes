@@ -108,11 +108,7 @@ export function SystemTelemetry() {
                </motion.div>
             ))}
          </div>
-
-         
-
       </div>
-
     </section>
   );
 }
