@@ -80,11 +80,13 @@ export function SideNav() {
         <div className="my-4 border-t border-border" />
 
         {/* Secondary Navigation - General */}
-        <div className="px-2 mb-2">
-          <span className="text-xs font-mono text-muted-foreground uppercase tracking-wider">
-            General
-          </span>
-        </div>
+        {!isCollapsed && (
+          <div className="px-2 mb-2">
+            <span className="text-xs font-mono text-muted-foreground uppercase tracking-wider">
+              General
+            </span>
+          </div>
+        )}
         <div className="space-y-1">
           {SECONDARY_NAV_ITEMS.map((item) => (
             <SideNavItem 
