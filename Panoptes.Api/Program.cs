@@ -74,18 +74,10 @@ using (var scope = app.Services.CreateScope())
         var db = services.GetRequiredService<AppDbContext>();
         Console.WriteLine($"Connecting to PostgreSQL...");
         
-        // EnsureCreated() will create the DB and Tables if they don't exist.
-        // It's robust enough for a dev migration.
-        var created = db.Database.EnsureCreated();
         
-        if (created)
-        {
-            Console.WriteLine("PostgreSQL database created successfully.");
-        }
-        else
-        {
-            Console.WriteLine("PostgreSQL database already exists.");
-        }
+        Console.WriteLine("Applying EF Core Migrations...");
+        db.Database.Migrate(); 
+        Console.WriteLine("Migrations applied successfully.");
     }
     catch (Exception ex)
     {
