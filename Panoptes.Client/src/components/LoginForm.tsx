@@ -3,9 +3,7 @@ import { useForm } from 'react-hook-form';
 import { Eye, EyeOff } from 'lucide-react'; // Import icons
 import { Input } from './ui/input';
 import { Button } from './ui/button';
-import { useAuth } from '../context/AuthContext';
-import toast from 'react-hot-toast';
-import { confirmSignUp } from 'aws-amplify/auth'; // Import direct for the quick fix
+// TODO import { useAuth } from '../context/AuthContext';
 
 interface LoginFormProps {
   mode: 'signin' | 'signup';
@@ -18,8 +16,8 @@ interface FormValues {
 }
 
 export const LoginForm: React.FC<LoginFormProps> = ({ mode }) => {
-  const { login, register: registerUser } = useAuth();
-  const [isLoading, setIsLoading] = useState(false);
+   // TODO const { login, register: registerUser } = useAuth();
+  const [isLoading] = useState(false);
   
   const {
     register,
@@ -28,7 +26,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({ mode }) => {
     watch,
   } = useForm<FormValues>();
 
-<<<<<<< HEAD
   // 1. Local state for visibility toggles
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -36,64 +33,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({ mode }) => {
   const onSubmit = (data: FormValues) => {
     // Stub: Show a message for now
     alert(`Form submitted!\nMode: ${mode}\nEmail: ${data.email}`);
-=======
-  const onSubmit = async (data: FormValues) => {
-    setIsLoading(true);
-    try {
-      if (mode === 'signin') {
-        const result = await login({ 
-            username: data.email, 
-            password: data.password 
-        });
-        
-        if (result.isSignedIn) {
-            toast.success("ACCESS GRANTED");
-            // App.tsx will handle redirect via context state change
-        } else if (result.nextStep.signInStep === 'CONFIRM_SIGN_UP') {
-             // Handle case where user exists but isn't verified
-             handleVerification(data.email);
-        }
-      } else {
-        // Sign Up Mode
-        const { nextStep } = await registerUser({
-            username: data.email,
-            password: data.password,
-            options: {
-                userAttributes: {
-                    email: data.email // Required for standard Cognito config
-                }
-            }
-        });
-
-        if (nextStep.signUpStep === 'CONFIRM_SIGN_UP') {
-            toast.success("Account created. Verification code sent.");
-            handleVerification(data.email);
-        } else if (nextStep.signUpStep === 'COMPLETE_AUTO_SIGN_IN') {
-             toast.success("Account created successfully!");
-        }
-      }
-    } catch (error: any) {
-      console.error(error);
-      toast.error(error.message || "Authentication failed");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Temporary helper to handle verification without a full UI page yet
-  const handleVerification = async (email: string) => {
-    const code = window.prompt(`Enter the verification code sent to ${email}:`);
-    if (!code) return;
-    
-    try {
-        await confirmSignUp({ username: email, confirmationCode: code });
-        toast.success("Verified! Please sign in.");
-        // Optional: Switch mode to 'signin' via parent prop if we lifted state up
-        // For now, user just clicks "Have ID?"
-    } catch (err: any) {
-        toast.error(`Verification failed: ${err.message}`);
-    }
->>>>>>> 823e84aedd3be50e7a604250e94880178ca2e106
   };
 
   return (
@@ -121,7 +60,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({ mode }) => {
       {/* --- Password --- */}
       <div>
         <label className="block text-sm font-semibold font-mono text-ghost mb-2">Password</label>
-<<<<<<< HEAD
         <div className="relative">
           <Input
             // 2. Toggle type based on state
@@ -147,21 +85,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({ mode }) => {
             {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
           </button>
         </div>
-=======
-        <Input
-          type="password"
-          {...register('password', {
-            required: 'Password is required',
-            minLength: {
-              value: 8,
-              message: 'Password must be at least 8 characters',
-            },
-          })}
-          className="w-full"
-          placeholder="••••••••"
-          disabled={isLoading}
-        />
->>>>>>> 823e84aedd3be50e7a604250e94880178ca2e106
         {errors.password && <span className="text-destructive text-xs mt-1">{errors.password.message}</span>}
       </div>
 
@@ -169,7 +92,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({ mode }) => {
       {mode === 'signup' && (
         <div>
           <label className="block text-sm font-semibold text-ghost mb-2">Confirm Password</label>
-<<<<<<< HEAD
           <div className="relative">
             <Input
               type={showConfirmPassword ? 'text' : 'password'}
@@ -190,18 +112,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({ mode }) => {
               {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
             </button>
           </div>
-=======
-          <Input
-            type="password"
-            {...register('confirmPassword', {
-              required: 'Please confirm your password',
-              validate: (value) => value === watch('password') || 'Passwords do not match',
-            })}
-            className="w-full"
-            placeholder="••••••••"
-            disabled={isLoading}
-          />
->>>>>>> 823e84aedd3be50e7a604250e94880178ca2e106
           {errors.confirmPassword && (
             <span className="text-destructive text-xs mt-1">{errors.confirmPassword.message}</span>
           )}
