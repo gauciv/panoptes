@@ -25,9 +25,9 @@ function Landing() {
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const logoRef = useRef<HTMLImageElement | null>(null);
 
+  // 1. Boot Sequence
   useEffect(() => {
     document.body.style.overflow = 'hidden';
-
     const timer = setTimeout(() => {
       setLoading(false);
       document.body.style.overflow = 'unset';
@@ -35,6 +35,7 @@ function Landing() {
     return () => clearTimeout(timer);
   }, []);
 
+  // 2. Smooth Scroll (Lenis)
   useEffect(() => {
     if (loading) return; 
 
@@ -46,7 +47,6 @@ function Landing() {
 
     lenis.on('scroll', ScrollTrigger.update);
 
-    // The Animation Loop
     function raf(time: number) {
       lenis.raf(time);
       requestAnimationFrame(raf);
@@ -58,6 +58,7 @@ function Landing() {
     };
   }, [loading]);
 
+  // 3. GSAP Logo Animation
   useEffect(() => {
     if (loading) return; 
     
@@ -103,13 +104,12 @@ function Landing() {
         {/* 2. MAIN CONTENT CURTAIN (Z-10) */}
         <div className="relative z-10 w-full bg-[#000000] mb-[800px] shadow-[0_50px_100px_rgba(0,0,0,1)]">
           
-          {/* --- GRID BACKGROUND (MOVED INSIDE) --- */}
-          <div className="absolute top-0 left-0 right-0 h-[180vh] z-0 pointer-events-none overflow-hidden">
+          {/* --- GRID BACKGROUND --- */}
+          <div className="absolute top-0 left-0 right-0 h-[180vh] z-0 pointer-events-none overflow-hidden" aria-hidden="true">
             <AnimatedGrid />
             <div className="absolute inset-0 bg-gradient-to-br from-sentinel/10 via-[#012b15]/80 to-black opacity-90 mix-blend-multiply" />
-            {/* Fade out at the bottom of the grid so it blends into the solid black */}
             <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-[#000000] to-transparent" />
-        </div>
+          </div>
 
           {/* --- SCROLLABLE CONTENT --- */}
           <div className="relative z-10 mx-auto min-h-screen w-full max-w-[1600px] overflow-hidden"> 
@@ -120,7 +120,11 @@ function Landing() {
               {!loading && (
                 <header className="flex items-start justify-between px-6 py-6 lg:px-8">
                   <div className="flex items-center gap-2">
-                    <img src="/logo_panoptes.svg" alt="Panoptes Logo" className="w-[48px] h-[48px] opacity-80" />
+                    <img 
+                        src="/logo_panoptes.svg" 
+                        alt="Panoptes Logo - Realtime Blockchain Indexer" 
+                        className="w-[48px] h-[48px] opacity-80" 
+                    />
                     <ScrambleText
                       text="PANOPTES"
                       className="block font-michroma text-sm tracking-[0.25em] text-ghost max-w-[100px]"
@@ -129,7 +133,7 @@ function Landing() {
                     />
                   </div>
 
-                  <nav className="hidden items-center gap-64 md:flex">
+                  <nav className="hidden items-center gap-64 md:flex" aria-label="Primary Navigation">
                     <div className="flex flex-col gap-2 items-start">
                       <GlitchButton label="Features" href="#features" className="text-[10px]" maskText maskDelay={0.3} />
                       <GlitchButton label="Pricing" href="#pricing" className="text-[10px]" maskText maskDelay={0.4} />
@@ -178,7 +182,7 @@ function Landing() {
                       <motion.img
                         ref={logoRef}
                         src="/logo_3d.png"
-                        alt="Panoptes Logo"
+                        alt="Panoptes 3D Core Visualization"
                         className="relative z-10 object-contain mix-blend-screen" 
                         animate={loading ? { rotate: 360 } : { rotate: 0 }}
                         transition={loading 
@@ -207,19 +211,22 @@ function Landing() {
                 {!loading && (
                   <div className="mt-14 grid gap-auto lg:grid-cols-2 lg:items-end">
                     <div className="flex flex-col space-y-4 text-left">
+                      <h1>
+                        <ScrambleText
+                          text="PANOPTES"
+                          className="block text-5xl font-michroma text-ghost sm:text-6xl lg:text-7xl"
+                          delay={0.2}
+                          speed={50}
+                        />
+                      </h1>
                       <MaskText
                         text="Cardano Webhook Service."
                         className="block font-terminal text-xs uppercase tracking-[0.35em] text-ghost-muted"
                         margin="0px"
                         delay={0.1}
+                        as="h2" 
                       />
-                      
-                      <ScrambleText
-                        text="PANOPTES"
-                        className="block text-5xl font-michroma text-ghost sm:text-6xl lg:text-7xl"
-                        delay={0.2}
-                        speed={50}
-                      />
+
                     </div>
 
                     <div className="flex flex-col space-y-3 text-left lg:text-left">
@@ -232,11 +239,13 @@ function Landing() {
                           text="Reactive Webhooks for Cardano."
                           className="block text-3xl font-sans leading-tight text-ghost sm:text-4xl lg:text-5xl"
                           delay={0.4}
+                          as="p"
                       />
                       <MaskText
                         text="Bridge the gap between blockchain and backend."
                         className="block font-sans text-[32px] tracking-[0] text-ghost-muted"
                         delay={0.5}
+                        as="p"
                       />
                     </div>
                   </div>
@@ -245,11 +254,26 @@ function Landing() {
             </div>
 
             {/* === CONTENT SECTIONS === */}
-            <BentoGrid />
-            <IntegrationPipeline />
-            <DeploymentModules />
-            <PricingSection />
-            <SystemTelemetry />
+            {/* Using section wrappers for better document outline */}
+            <section aria-label="Live Metrics">
+                <BentoGrid />
+            </section>
+            
+            <section aria-label="Integration Process">
+                <IntegrationPipeline />
+            </section>
+
+            <section aria-label="Deployment Modules">
+                <DeploymentModules />
+            </section>
+
+            <section aria-label="Pricing Plans">
+                <PricingSection />
+            </section>
+
+            <section aria-label="System Telemetry">
+                <SystemTelemetry />
+            </section>
             
             <div className="h-12 w-full bg-[#000000]" />
 
