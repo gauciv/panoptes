@@ -5,7 +5,7 @@ type Claims = {
   email?: string;
   name?: string;
   picture?: string;
-  identities?: any;
+  identities?: unknown;
 };
 
 export function UserDetails({ compact = false }: { compact?: boolean }) {
