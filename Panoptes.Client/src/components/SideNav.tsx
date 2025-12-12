@@ -1,5 +1,5 @@
 import { useState, useEffect, useContext } from 'react';
-import { Menu, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Menu, X } from 'lucide-react';
 import { PRIMARY_NAV_ITEMS, SECONDARY_NAV_ITEMS } from '../config/navigation';
 import { SideNavItem } from './SideNavItem';
 import { SideNavFooter } from './SideNavFooter';
@@ -11,8 +11,7 @@ const COLLAPSE_STORAGE_KEY = 'panoptes-sidenav-collapsed';
 
 export function SideNav() {
   const { isDark, setIsDark } = useContext(ThemeContext);
-  // TODO :setIsCollapsed
-  const [isCollapsed] = useState(() => {
+  const [isCollapsed, setIsCollapsed] = useState(() => {
     const stored = localStorage.getItem(COLLAPSE_STORAGE_KEY);
     return stored ? JSON.parse(stored) : false;
   });
@@ -22,10 +21,9 @@ export function SideNav() {
     localStorage.setItem(COLLAPSE_STORAGE_KEY, JSON.stringify(isCollapsed));
   }, [isCollapsed]);
 
-  // TODO
-  // const toggleCollapse = () => {
-  //   setIsCollapsed(!isCollapsed);
-  // };
+  const toggleCollapse = () => {
+    setIsCollapsed(!isCollapsed);
+  };
 
   const toggleMobile = () => {
     setIsMobileOpen(!isMobileOpen);
@@ -53,10 +51,20 @@ export function SideNav() {
             </span>
           )}
         </div>
+        {!isCollapsed && (
+          <button
+            onClick={toggleCollapse}
+            className="hidden lg:block p-1 rounded-tech hover:bg-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sentinel focus-visible:ring-offset-2"
+            aria-label="Collapse navigation"
+            title="Collapse navigation"
+          >
+            <ChevronLeft className="w-5 h-5 text-muted-foreground" aria-hidden="true" />
+          </button>
+        )}
       </div>
 
       {/* Primary Navigation */}
-      <div className="flex-1 overflow-y-auto overflow-x-hidden py-4 px-2 min-h-0 nav-scrollbar">
+      <div className="flex-1 overflow-y-auto py-4 px-2">
         <div className="space-y-1">
           {PRIMARY_NAV_ITEMS.map((item) => (
             <SideNavItem 
@@ -72,13 +80,11 @@ export function SideNav() {
         <div className="my-4 border-t border-border" />
 
         {/* Secondary Navigation - General */}
-        {!isCollapsed && (
-          <div className="px-2 mb-2">
-            <span className="text-xs font-mono text-muted-foreground uppercase tracking-wider">
-              General
-            </span>
-          </div>
-        )}
+        <div className="px-2 mb-2">
+          <span className="text-xs font-mono text-muted-foreground uppercase tracking-wider">
+            General
+          </span>
+        </div>
         <div className="space-y-1">
           {SECONDARY_NAV_ITEMS.map((item) => (
             <SideNavItem 
@@ -104,6 +110,20 @@ export function SideNav() {
 
       {/* Documentation Footer */}
       <SideNavFooter isCollapsed={isCollapsed} />
+
+      {/* Expand Button (when collapsed) */}
+      {isCollapsed && (
+        <div className="p-2 border-t border-border hidden lg:block">
+          <button
+            onClick={toggleCollapse}
+            className="w-full p-3 rounded-tech hover:bg-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sentinel focus-visible:ring-offset-2"
+            aria-label="Expand navigation"
+            title="Expand navigation"
+          >
+            <ChevronRight className="w-5 h-5 text-muted-foreground mx-auto" aria-hidden="true" />
+          </button>
+        </div>
+      )}
     </>
   );
 
@@ -148,7 +168,7 @@ export function SideNav() {
         role="navigation"
         aria-label="Main navigation"
         className={cn(
-          'hidden lg:flex flex-col bg-background border-r border-border h-screen sticky top-0 transition-all duration-300 overflow-hidden',
+          'hidden lg:flex flex-col bg-background border-r border-border h-screen sticky top-0 transition-all duration-300',
           isCollapsed ? 'w-16' : 'w-60'
         )}
       >
@@ -157,4 +177,3 @@ export function SideNav() {
     </>
   );
 }
-
