@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { X } from 'lucide-react'; // Import X icon
+import { X } from 'lucide-react';
 import { LoginForm } from './LoginForm';
 import { OAuthButtons } from './OAuthButtons';
 import { ScrambleText } from './ScrambleText';
@@ -11,7 +11,6 @@ type LoginModalProps = {
   onClose: () => void;
 };
 
-// ... (Keep existing modalVariants) ...
 const modalVariants = {
   closed: { opacity: 0, scaleX: 0.005, scaleY: 0.005, y: 0, filter: "brightness(5) contrast(2)" },
   open: { 
@@ -26,24 +25,23 @@ const modalVariants = {
 
 export function LoginModal({ isOpen, onClose }: LoginModalProps) {
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
+  // New State: Is the form verifying? If so, hide Google buttons.
+  const [isVerifying, setIsVerifying] = useState(false);
   const { isPlaying } = useAudio(); 
 
   useEffect(() => {
     if (isPlaying) {
-      const openSfx = new Audio('sounds/menu_sound.mp3');
+      const openSfx = new Audio('/sounds/menu_sound.mp3');
       openSfx.volume = 0.3;
       openSfx.play().catch(() => {});
     }
-
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-    }
+    if (isOpen) document.body.style.overflow = 'hidden';
     return () => { document.body.style.overflow = 'unset'; };
   }, [isOpen, isPlaying]);
 
   const handleClose = () => {
     if (isPlaying) {
-      const closeSfx = new Audio('sounds/menu_sound.mp3');
+      const closeSfx = new Audio('/sounds/menu_sound.mp3');
       closeSfx.volume = 0.3;
       closeSfx.play().catch(() => {});
     }
@@ -71,11 +69,10 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
         className="pointer-events-auto relative z-10 w-full max-w-[900px] mx-4 overflow-hidden rounded-sm border border-white/10 bg-[#050505] shadow-2xl"
         role="dialog"
         aria-modal="true"
-        aria-labelledby="modal-title"
       >
         <div className="pointer-events-none absolute inset-0 z-50 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.1)_50%),linear-gradient(90deg,rgba(255,0,0,0.03),rgba(0,255,0,0.01),rgba(0,0,255,0.03))] bg-[length:100%_4px,6px_100%] opacity-20" />
 
-        {/* Accessible Close Button (Top Right) */}
+        {/* Close Button */}
         <button 
             onClick={handleClose}
             className="absolute top-4 right-4 z-[60] p-2 text-ghost/50 hover:text-white transition-colors focus:outline-none focus:ring-1 focus:ring-sentinel rounded"
@@ -88,44 +85,58 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
           
           {/* --- LEFT: FORM --- */}
           <div className="relative p-8 md:p-10 flex flex-col justify-center border-r border-white/5">
-            {/* "ESC" Hint (Visual Only) */}
             <div className="absolute top-4 left-4 font-mono text-[10px] text-ghost/20 select-none">
                 [ ESC_TO_ABORT ]
             </div>
 
             <div className="mt-8 mb-8">
                 <ScrambleText 
-                    text={mode === 'signin' ? "SYSTEM_LOGIN" : "NEW_OPERATOR"} 
+                    text={isVerifying ? "IDENTITY_CHECK" : (mode === 'signin' ? "SYSTEM_LOGIN" : "NEW_OPERATOR")} 
                     className="block font-michroma text-xl text-ghost" 
                     speed={50}
                 />
-                <p id="modal-title" className="font-mono text-[10px] text-ghost/50 mt-2">
-                    {mode === 'signin' ? "> ENTER ACCESS CREDENTIALS" : "> INITIALIZE REGISTRATION SEQUENCE"}
+                <p className="font-mono text-[10px] text-ghost/50 mt-2">
+                    {isVerifying 
+                        ? "> TWO-FACTOR AUTHENTICATION" 
+                        : (mode === 'signin' ? "> ENTER ACCESS CREDENTIALS" : "> INITIALIZE REGISTRATION SEQUENCE")
+                    }
                 </p>
             </div>
 
             <div className="flex-1">
-                <OAuthButtons />
+                {/* 1. Hide OAuth when verifying */}
+                <OAuthButtons isVerifying={isVerifying} />
                 
-                <div className="flex items-center gap-4 my-6">
-                    <div className="h-px flex-1 bg-white/10" />
-                    <span className="text-[10px] text-ghost/30">OR</span>
-                    <div className="h-px flex-1 bg-white/10" />
+                {/* 2. Hide Divider when verifying */}
+                {!isVerifying && (
+                    <div className="flex items-center gap-4 my-6">
+                        <div className="h-px flex-1 bg-white/10" />
+                        <span className="text-[10px] text-ghost/30">OR</span>
+                        <div className="h-px flex-1 bg-white/10" />
+                    </div>
+                )}
+
+                {/* 3. Render Form with Callback */}
+                <LoginForm 
+                    mode={mode} 
+                    setMode={setMode}
+                    onVerificationModeChange={setIsVerifying} // Passes state up
+                />
+            </div>
+
+            {/* 4. Hide "Switch Mode" button when verifying */}
+            {!isVerifying && (
+                <div className="mt-8 pt-4 border-t border-white/5">
+                    <button 
+                        onClick={() => setMode(mode === 'signin' ? 'signup' : 'signin')}
+                        className="text-xs font-mono text-ghost/60 hover:text-sentinel transition-colors focus:outline-none"
+                    >
+                        {mode === 'signin' 
+                            ? "> NO_ID? REQUEST_ACCESS" 
+                            : "> HAVE_ID? AUTHENTICATE"}
+                    </button>
                 </div>
-
-                <LoginForm mode={mode} />
-            </div>
-
-            <div className="mt-8 pt-4 border-t border-white/5">
-                <button 
-                    onClick={() => setMode(mode === 'signin' ? 'signup' : 'signin')}
-                    className="text-xs font-mono text-ghost/60 hover:text-sentinel transition-colors focus:outline-none"
-                >
-                    {mode === 'signin' 
-                        ? "> NO_ID? REQUEST_ACCESS" 
-                        : "> HAVE_ID? AUTHENTICATE"}
-                </button>
-            </div>
+            )}
           </div>
 
           {/* --- RIGHT: VISUAL --- */}

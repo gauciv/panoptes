@@ -19,7 +19,7 @@ const AdvancedOptionsModal: React.FC<AdvancedOptionsModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
-      {/* Backdrop */}
+      {/* Backdrop  */}
       <div 
         className="fixed inset-0 bg-[#050505] bg-opacity-85 transition-opacity" 
         onClick={onClose}
