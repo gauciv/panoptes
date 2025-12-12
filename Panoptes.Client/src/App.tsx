@@ -7,8 +7,10 @@ import Settings from './pages/Settings';
 import Health from './pages/Health';
 import { DashboardLayout } from './layouts/DashboardLayout';
 import Landing from './pages/Landing';
+import { useScrollbarTheme } from './hooks/useScrollbarTheme';
 import { useAuth, AuthProvider } from './context/AuthContext'; // 1. Import AuthProvider
 import { CustomCursor } from './pages/landing/components/Cursor';
+
 
 export const ThemeContext = createContext<{
   isDark: boolean;
@@ -59,12 +61,20 @@ function App() {
 
   useEffect(() => {
     const root = document.documentElement;
-    if (isDark) root.classList.add('dark');
-    else root.classList.remove('dark');
+    if (isDark) {
+      root.classList.add('dark');
+      root.classList.remove('light');
+    } else {
+      root.classList.remove('dark');
+      root.classList.add('light');
+    }
     try {
       localStorage.setItem('theme', isDark ? 'dark' : 'light');
     } catch (e) {}
   }, [isDark]);
+
+  // Apply scrollbar theme dynamically
+  useScrollbarTheme(isDark);
 
   return (
     <ThemeContext.Provider value={{ isDark, setIsDark }}>
