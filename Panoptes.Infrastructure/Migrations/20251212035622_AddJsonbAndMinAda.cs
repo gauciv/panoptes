@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -8,7 +7,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Panoptes.Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialCreate : Migration
+    public partial class AddJsonbAndMinAda : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -60,7 +59,8 @@ namespace Panoptes.Infrastructure.Migrations
                     IsPaused = table.Column<bool>(type: "boolean", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     PausedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    WalletAddresses = table.Column<List<string>>(type: "jsonb", nullable: true),
+                    MinimumLovelace = table.Column<decimal>(type: "numeric(20,0)", nullable: true),
+                    WalletAddresses = table.Column<string>(type: "jsonb", nullable: true),
                     MaxWebhooksPerMinute = table.Column<int>(type: "integer", nullable: false),
                     MaxWebhooksPerHour = table.Column<int>(type: "integer", nullable: false),
                     EnableBatching = table.Column<bool>(type: "boolean", nullable: false),

@@ -7,8 +7,10 @@ import Settings from './pages/Settings';
 import Health from './pages/Health';
 import { DashboardLayout } from './layouts/DashboardLayout';
 import Landing from './pages/Landing';
-import { useAuth, AuthProvider } from './context/AuthContext';
 import { useScrollbarTheme } from './hooks/useScrollbarTheme';
+import { useAuth, AuthProvider } from './context/AuthContext'; // 1. Import AuthProvider
+import { CustomCursor } from './pages/landing/components/Cursor';
+
 
 export const ThemeContext = createContext<{
   isDark: boolean;
@@ -76,22 +78,42 @@ function App() {
 
   return (
     <ThemeContext.Provider value={{ isDark, setIsDark }}>
-      {/* 2. WRAP EVERYTHING IN AUTHPROVIDER */}
-      <AuthProvider>
-        <Toaster
-          position="top-right"
+      <Toaster
+          position="bottom-right"
           toastOptions={{
-            style: { background: '#333', color: '#fff' },
-            success: {
-              style: { background: '#10b981', color: '#fff' },
-              iconTheme: { primary: '#fff', secondary: '#10b981' },
+            className: 'font-mono text-sm', 
+            style: {
+              border: '1px solid rgba(255,255,255,0.1)',
+              padding: '12px 16px',
+              color: '#F0F0F0',
+              backgroundColor: '#050505', 
+              borderRadius: '2px', 
             },
+            
+            success: {
+              iconTheme: {
+                primary: '#00FF94', 
+                secondary: 'black',
+              },
+              style: {
+                border: '1px solid rgba(0, 255, 148, 0.2)',
+              },
+            },
+
             error: {
-              style: { background: '#ef4444', color: '#fff' },
-              iconTheme: { primary: '#fff', secondary: '#ef4444' },
+              iconTheme: {
+                primary: '#EF4444', 
+                secondary: 'black',
+              },
+              style: {
+                border: '1px solid rgba(239, 68, 68, 0.2)', 
+                color: '#FFDDDD',
+              },
             },
           }}
         />
+      <CustomCursor/>
+      <AuthProvider>
         
         <Router>
           <Routes>

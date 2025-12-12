@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import clsx from 'clsx';
 import { Check, Server, Cloud, Shield, Lock } from 'lucide-react'; 
@@ -47,11 +47,20 @@ const plans = [
 
 
 function PricingRow({ plan, index }: { plan: typeof plans[0], index: number }) {
-  const delay = index * 0.15;
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile(); 
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  const delay = isMobile ? 0 : index * 0.15;
 
   return (
     <motion.div
-      initial="closed"
+      initial={isMobile ? "open" : "closed"}
       whileInView="open"
       viewport={{ once: true, margin: "-10%" }}
       variants={{
@@ -62,7 +71,7 @@ function PricingRow({ plan, index }: { plan: typeof plans[0], index: number }) {
         }
       }}
       className={clsx(
-        "group relative grid grid-cols-1 lg:grid-cols-12 items-center gap-6 lg:gap-8 rounded-sm border p-6 lg:p-8 transition-all duration-500",
+        "group relative grid grid-cols-1 lg:grid-cols-12 items-center gap-6 lg:gap-8 rounded-sm border p-6 lg:p-8 transition-colors duration-300",
         plan.highlight ? "border-sentinel/30 bg-sentinel/5 shadow-[0_0_30px_rgba(0,255,148,0.05)]" : "border-white/5 bg-[#050505]"
       )}
     >

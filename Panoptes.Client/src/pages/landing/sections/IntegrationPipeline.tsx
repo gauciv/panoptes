@@ -58,6 +58,14 @@ const steps = [
 export function IntegrationPipeline() {
   const [activeStep, setActiveStep] = useState(0);
   const autoPlayRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile(); 
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // Auto-cycle through steps
   useEffect(() => {
@@ -154,6 +162,8 @@ export function IntegrationPipeline() {
                         layoutId="activeArrow" 
                         className="absolute right-4 top-1/2 -translate-y-1/2 text-sentinel hidden md:block"
                         aria-hidden="true"
+                        initial={isMobile ? false : undefined}
+                        animate={isMobile ? false : undefined}
                       >
                         <ChevronRight size={20} />
                       </motion.div>
@@ -191,10 +201,10 @@ export function IntegrationPipeline() {
                    <AnimatePresence mode="wait">
                       <motion.pre
                         key={activeStep}
-                        initial={{ opacity: 0, y: 10 }}
+                        initial={isMobile ? { opacity: 1, y: 0 } : { opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        transition={{ duration: 0.2 }}
+                        exit={isMobile ? { opacity: 0 } : { opacity: 0, y: -10 }}
+                        transition={{ duration: isMobile ? 0 : 0.2 }}
                         className="font-mono text-sm text-ghost/80 leading-relaxed"
                       >
                           <code>

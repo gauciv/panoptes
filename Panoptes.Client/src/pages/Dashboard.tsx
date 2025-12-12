@@ -3,7 +3,6 @@ import { useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { getSubscriptions, getLogs, createSubscription, triggerTestEvent, updateSubscription, deleteSubscription, toggleSubscriptionActive, resetSubscription } from '../services/api';
 import { WebhookSubscription, DeliveryLog } from '../types';
-// MERGE: Branch added 'Inbox' icon for empty state
 import { Inbox } from 'lucide-react';
 
 // --- COMPONENTS ---
@@ -17,131 +16,123 @@ import EditSubscriptionModal from '../components/EditSubscriptionModal';
 import ConfirmationModal from '../components/ConfirmationModal';
 import StatsDashboard from '../components/StatsDashboard';
 import { SetupWizard } from '../components/SetupWizard';
-// MERGE: Branch added EmptyState and OnboardingTour
 import { EmptyState } from '../components/EmptyState';
 import { OnboardingTour } from '../components/OnboardingTour';
 
 // --- HOOKS ---
 import { useSubscriptionFilters } from '../hooks/useSubscriptionFilters';
-// MERGE: Branch added SUBSCRIPTION_TEMPLATES
 import { SUBSCRIPTION_TEMPLATES, SubscriptionTemplate } from '../config/templates';
 
 interface SystemInfo {
-  network: string;
-  grpcEndpoint: string;
-  hasApiKey: boolean;
-  availableNetworks: string[];
-  configuredVia: string;
+  network: string;
+  grpcEndpoint: string;
+  hasApiKey: boolean;
+  availableNetworks: string[];
+  configuredVia: string;
 }
 
 interface SetupStatus {
-  isConfigured: boolean;
-  network?: string;
-  grpcEndpoint?: string;
-  lastUpdated?: string;
+  isConfigured: boolean;
+  network?: string;
+  grpcEndpoint?: string;
+  lastUpdated?: string;
 }
 
 const Dashboard: React.FC = () => {
-  const location = useLocation();
+  const location = useLocation();
   const activeView = location.pathname === '/dashboard/analytics' ? 'analytics' : 'overview';
-  const [subscriptions, setSubscriptions] = useState<WebhookSubscription[]>([]);
-  const [logs, setLogs] = useState<DeliveryLog[]>([]);
-  const [totalLogs, setTotalLogs] = useState<number>(0);
-  const [isConnected, setIsConnected] = useState<boolean>(true);
-  const [loading, setLoading] = useState<boolean>(true); 
+  const [subscriptions, setSubscriptions] = useState<WebhookSubscription[]>([]);
+  const [logs, setLogs] = useState<DeliveryLog[]>([]);
+  const [totalLogs, setTotalLogs] = useState<number>(0);
+  const [isConnected, setIsConnected] = useState<boolean>(true);
+  const [loading, setLoading] = useState<boolean>(true); 
 
-  // Modals
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  
-  // Selection State
-  const [selectedSubscription, setSelectedSubscription] = useState<WebhookSubscription | null>(null); 
-  const [viewingSubscription, setViewingSubscription] = useState<WebhookSubscription | null>(null);
-  
-  const [error, setError] = useState<string | null>(null);
-  
-  // System Info
-  const [systemInfo, setSystemInfo] = useState<SystemInfo | null>(null);
-  const [setupStatus, setSetupStatus] = useState<SetupStatus | null>(null);
-  const [showSetupWizard, setShowSetupWizard] = useState(false);
+  // Modals
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  
+  // Selection State
+  const [selectedSubscription, setSelectedSubscription] = useState<WebhookSubscription | null>(null); 
+  const [viewingSubscription, setViewingSubscription] = useState<WebhookSubscription | null>(null);
+  
+  const [error, setError] = useState<string | null>(null);
+  
+  // System Info
+  const [systemInfo, setSystemInfo] = useState<SystemInfo | null>(null);
+  const [setupStatus, setSetupStatus] = useState<SetupStatus | null>(null);
+  const [showSetupWizard, setShowSetupWizard] = useState(false);
 
-  // MERGE: Branch added initialModalValues state for templates
-  const [initialModalValues, setInitialModalValues] = useState<{ name?: string; eventType?: string } | undefined>(undefined);
+  // Template State
+  const [initialModalValues, setInitialModalValues] = useState<{ name?: string; eventType?: string } | undefined>(undefined);
 
-  // --- FILTERS ---
-  const {
-    searchQuery,
-    statusFilter,
-    eventTypeFilter,
-    sortBy,
-    availableEventTypes,
-    activeFilterCount,
-    filteredSubscriptions,
-    setSearchQuery,
-    setStatusFilter,
-    setEventTypeFilter,
-    setSortBy,
-    clearFilters,
-  } = useSubscriptionFilters(subscriptions);
+  // --- FILTERS ---
+  const {
+    searchQuery,
+    statusFilter,
+    eventTypeFilter,
+    sortBy,
+    availableEventTypes,
+    activeFilterCount,
+    filteredSubscriptions,
+    setSearchQuery,
+    setStatusFilter,
+    setEventTypeFilter,
+    setSortBy,
+    clearFilters,
+  } = useSubscriptionFilters(subscriptions);
 
-  // --- DATA FETCHING ---
-  const fetchSubscriptions = async () => {
-    try {
-      const subsData = await getSubscriptions();
-      setSubscriptions(subsData);
-      setError(null);
-      setIsConnected(true);
-    } catch (error: any) {
-      console.error("Error fetching subscriptions:", error);
-      const errorMsg = error.response?.data || error.message || "Failed to fetch subscriptions.";
-      setError(`API Error: ${errorMsg}`);
-      setIsConnected(false);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // --- DATA FETCHING ---
+  const fetchSubscriptions = async () => {
+    try {
+      const subsData = await getSubscriptions();
+      setSubscriptions(subsData);
+      setError(null);
+      setIsConnected(true);
+    } catch (error: any) {
+      console.error("Error fetching subscriptions:", error);
+      const errorMsg = error.response?.data || error.message || "Failed to fetch subscriptions.";
+      setError(`API Error: ${errorMsg}`);
+      setIsConnected(false);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const fetchLogs = async () => {
-    try {
-      const logsData = await getLogs(0, 10);
-      setLogs(logsData.logs);
-      setTotalLogs(logsData.totalCount);
-      setError(null);
-      setIsConnected(true);
-    } catch (error: any) {
-      console.error("Error fetching logs:", error);
-      const errorMsg = error.response?.data || error.message || "Failed to fetch delivery logs.";
-      setError(`API Error: ${errorMsg}`);
-      setIsConnected(false);
-    }
-  };
+  const fetchLogs = async () => {
+    try {
+      const logsData = await getLogs(0, 10);
+      setLogs(logsData.logs);
+      setTotalLogs(logsData.totalCount);
+      setError(null);
+      setIsConnected(true);
+    } catch (error: any) {
+      console.error("Error fetching logs:", error);
+      const errorMsg = error.response?.data || error.message || "Failed to fetch delivery logs.";
+      setError(`API Error: ${errorMsg}`);
+      setIsConnected(false);
+    }
+  };
 
-  const fetchSystemInfo = async () => {
-    try {
-      const response = await fetch('/health/system-info');
-      const data = await response.json();
-      setSystemInfo(data);
-    } catch (error) {
-      console.error("Error fetching system info:", error);
-    }
-  };
+  const fetchSystemInfo = async () => {
+    try {
+      const response = await fetch('/health/system-info');
+      const data = await response.json();
+      setSystemInfo(data);
+    } catch (error) {
+      console.error("Error fetching system info:", error);
+    }
+  };
 
-  const fetchSetupStatus = async () => {
-    try {
-      const response = await fetch('/setup/status');
-      const data = await response.json();
-      setSetupStatus(data);
-      // MERGE: We keep the logic from 'main' to show the setup wizard
-      // if (!data.isConfigured) {
-      //   setShowSetupWizard(true);
-      // }
-      // The branch logic relies on 'handleTourFinish' to show the wizard, which is better
-      // for the onboarding flow. We'll rely on the onboarding tour logic in the component.
-    } catch (error) {
-      console.error("Error fetching setup status:", error);
-    }
-  };
+  const fetchSetupStatus = async () => {
+    try {
+      const response = await fetch('/setup/status');
+      const data = await response.json();
+      setSetupStatus(data);
+    } catch (error) {
+      console.error("Error fetching setup status:", error);
+    }
+  };
 
   const handleSetupComplete = () => {
     setShowSetupWizard(false);
@@ -552,4 +543,6 @@ const Dashboard: React.FC = () => {
         )}
     </div>
   );
-};export default Dashboard;
+};
+
+export default Dashboard;

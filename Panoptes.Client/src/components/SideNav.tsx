@@ -1,5 +1,5 @@
 import { useState, useEffect, useContext } from 'react';
-import { ChevronLeft, ChevronRight, Menu, X } from 'lucide-react';
+import { Menu, X } from 'lucide-react';
 import { PRIMARY_NAV_ITEMS, SECONDARY_NAV_ITEMS } from '../config/navigation';
 import { SideNavItem } from './SideNavItem';
 import { SideNavFooter } from './SideNavFooter';
@@ -11,7 +11,8 @@ const COLLAPSE_STORAGE_KEY = 'panoptes-sidenav-collapsed';
 
 export function SideNav() {
   const { isDark, setIsDark } = useContext(ThemeContext);
-  const [isCollapsed, setIsCollapsed] = useState(() => {
+  // TODO :setIsCollapsed
+  const [isCollapsed] = useState(() => {
     const stored = localStorage.getItem(COLLAPSE_STORAGE_KEY);
     return stored ? JSON.parse(stored) : false;
   });
@@ -21,9 +22,10 @@ export function SideNav() {
     localStorage.setItem(COLLAPSE_STORAGE_KEY, JSON.stringify(isCollapsed));
   }, [isCollapsed]);
 
-  const toggleCollapse = () => {
-    setIsCollapsed(!isCollapsed);
-  };
+  // TODO
+  // const toggleCollapse = () => {
+  //   setIsCollapsed(!isCollapsed);
+  // };
 
   const toggleMobile = () => {
     setIsMobileOpen(!isMobileOpen);
@@ -142,44 +144,16 @@ export function SideNav() {
       </nav>
 
       {/* Desktop Sidebar */}
-      <div className="hidden lg:block relative z-30 h-screen sticky top-0">
-        <nav
-          role="navigation"
-          aria-label="Main navigation"
-          className={cn(
-            'flex flex-col bg-background border-r border-border h-full transition-all duration-300 overflow-hidden relative z-20',
-            isCollapsed ? 'w-16' : 'w-60'
-          )}
-        >
-          <NavContent />
-        </nav>
-        
-        {/* Center Edge Toggle Button - Light/Dark Mode */}
-        <button
-          onClick={toggleCollapse}
-          className={cn(
-            "fixed top-1/2 -translate-y-1/2 z-10 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border transition-[left] duration-300 ease-in-out",
-            "bg-white dark:bg-[#050505] border border-border px-2 py-2 rounded-none hover:border-muted-foreground flex items-center justify-center",
-            isCollapsed ? 'left-[56px]' : 'left-[232px]'
-          )}
-          aria-label={isCollapsed ? "Expand navigation" : "Collapse navigation"}
-          title={isCollapsed ? "Expand navigation" : "Collapse navigation"}
-        >
-          {isCollapsed ? (
-            <ChevronRight 
-              className="w-5 h-5 text-gray-700 dark:text-white group-hover:text-gray-900 dark:group-hover:text-white transition-colors duration-200 ml-2" 
-              strokeWidth={2.5}
-              aria-hidden="true" 
-            />
-          ) : (
-            <ChevronLeft 
-              className="w-5 h-5 text-gray-700 dark:text-white group-hover:text-gray-900 dark:group-hover:text-white transition-colors duration-200 ml-2" 
-              strokeWidth={2.5}
-              aria-hidden="true" 
-            />
-          )}
-        </button>
-      </div>
+      <nav
+        role="navigation"
+        aria-label="Main navigation"
+        className={cn(
+          'hidden lg:flex flex-col bg-background border-r border-border h-screen sticky top-0 transition-all duration-300 overflow-hidden',
+          isCollapsed ? 'w-16' : 'w-60'
+        )}
+      >
+        <NavContent />
+      </nav>
     </>
   );
 }
