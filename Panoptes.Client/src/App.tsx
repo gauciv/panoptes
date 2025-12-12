@@ -71,6 +71,7 @@ function App() {
       {/* 2. WRAP EVERYTHING IN AUTHPROVIDER */}
       <CustomCursor/>
       <AuthProvider>
+        
         <Toaster
           position="top-right"
           toastOptions={{
