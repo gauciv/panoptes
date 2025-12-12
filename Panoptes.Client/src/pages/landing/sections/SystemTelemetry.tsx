@@ -37,6 +37,14 @@ export function SystemTelemetry() {
 
   const [activeIndices, setActiveIndices] = useState<number[]>([]);
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile(); 
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // 1. RANDOM PULSE EFFECT (Simulating data processing)
   useEffect(() => {
@@ -94,9 +102,9 @@ export function SystemTelemetry() {
             {stats.map((stat, i) => (
                <motion.div 
                  key={i}
-                 initial={{ opacity: 0, y: 20 }}
+                 initial={isMobile ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
                  whileInView={{ opacity: 1, y: 0 }}
-                 transition={{ delay: i * 0.1 }}
+                 transition={{ delay: isMobile ? 0 : i * 0.1 }}
                  className="flex flex-col items-center"
                >
                   <div className="font-michroma text-3xl md:text-4xl text-white mb-2">

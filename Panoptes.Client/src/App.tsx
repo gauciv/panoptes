@@ -8,6 +8,7 @@ import Health from './pages/Health';
 import { DashboardLayout } from './layouts/DashboardLayout';
 import Landing from './pages/Landing';
 import { useAuth, AuthProvider } from './context/AuthContext'; // 1. Import AuthProvider
+import { CustomCursor } from './pages/landing/components/Cursor';
 
 export const ThemeContext = createContext<{
   isDark: boolean;
@@ -68,7 +69,9 @@ function App() {
   return (
     <ThemeContext.Provider value={{ isDark, setIsDark }}>
       {/* 2. WRAP EVERYTHING IN AUTHPROVIDER */}
+      <CustomCursor/>
       <AuthProvider>
+        
         <Toaster
           position="top-right"
           toastOptions={{
