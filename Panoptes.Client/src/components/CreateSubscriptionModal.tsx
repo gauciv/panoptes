@@ -418,7 +418,7 @@ const CreateSubscriptionModal: React.FC<CreateSubscriptionModalProps> = ({
                     <p className="text-sm text-gray-600 dark:text-gray-300 mb-6 leading-relaxed">
                         You are about to listen to <strong className="text-gray-900 dark:text-white">EVERY transaction</strong> on the network without any wallet filters.
                         <br/><br/>
-                        This generates significant traffic. Ensure your server can handle this load.
+                        This generates significant traffic (approx 50+ events/min). Ensure your server can handle this load.
                     </p>
 
                     <div className="flex gap-3 justify-end">

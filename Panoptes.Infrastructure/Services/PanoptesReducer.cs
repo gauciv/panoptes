@@ -223,11 +223,15 @@ namespace Panoptes.Infrastructure.Services
                 var outputs = tx.Outputs()?.ToList() ?? new List<TransactionOutput>();
                 var inputs = tx.Inputs()?.ToList() ?? new List<TransactionInput>();
 
-                // --- STEP 1: PRE-CALCULATE AMOUNTS ---
-                // This fixes the "totalOutputLovelace does not exist" error
+                // --- STEP 1: PRE-CALCULATE (With Dual-Format Support) ---
                 
-                ulong totalTxLovelace = 0; // <--- DEFINED HERE
+                ulong totalTxLovelace = 0;
+                
+                // Dictionary now tracks amounts by address string (could be Hex OR Bech32)
+                // We will add entries for BOTH formats to ensure easy matching
                 var addressAmounts = new Dictionary<string, ulong>(); 
+                
+                // Output addresses set for quick lookups
                 var outputAddresses = new HashSet<string>();
                 var policyIds = new HashSet<string>();
 
@@ -236,9 +240,18 @@ namespace Panoptes.Infrastructure.Services
                     var addressBytes = output.Address();
                     if (addressBytes == null || addressBytes.Length == 0) continue;
 
+                    // 1. Get HEX Format
                     var addressHex = Convert.ToHexString(addressBytes).ToLowerInvariant();
-                    outputAddresses.Add(addressHex);
+                    
+                    // 2. Get BECH32 Format (addr_test1...) using existing helper
+                    // Note: We assume "preprod" network here, but helper handles prefix
+                    var addressBech32 = ConvertToBech32Address(addressHex).ToLowerInvariant();
 
+                    // Add BOTH to the set so filters match either one
+                    outputAddresses.Add(addressHex);
+                    outputAddresses.Add(addressBech32);
+
+                    // Calculate Amount
                     ulong outputLovelace = 0;
                     var amount = output.Amount();
 
@@ -259,17 +272,22 @@ namespace Panoptes.Infrastructure.Services
                         try { outputLovelace = Convert.ToUInt64(amount); } catch { }
                     }
 
-                    totalTxLovelace += outputLovelace; // <--- ACCUMULATED HERE
+                    totalTxLovelace += outputLovelace;
                     
-                    if (!addressAmounts.ContainsKey(addressHex))
-                        addressAmounts[addressHex] = 0;
+                    // Track amount against HEX key
+                    if (!addressAmounts.ContainsKey(addressHex)) addressAmounts[addressHex] = 0;
                     addressAmounts[addressHex] += outputLovelace;
+
+                    // Track amount against BECH32 key (Duplicate tracking for easy lookup)
+                    if (!addressAmounts.ContainsKey(addressBech32)) addressAmounts[addressBech32] = 0;
+                    addressAmounts[addressBech32] += outputLovelace;
                 }
 
                 // --- STEP 2: CHECK SUBSCRIPTIONS ---
                 foreach (var sub in subscriptions)
                 {
                     // Filter 1: Wallet Address Match
+                    // Now works because outputAddresses contains both Hex and Bech32
                     if (!IsRelevantForSubscription(sub, outputAddresses)) continue;
 
                     // Filter 2: Minimum ADA
@@ -277,32 +295,42 @@ namespace Panoptes.Infrastructure.Services
                     {
                         ulong relevantAmount = 0;
 
-                        if (!string.IsNullOrEmpty(sub.TargetAddress))
+                        // Case A: User specifically put addresses in the "Wallet Addresses" list (The Chips UI)
+                        // We prioritize this over "TargetAddress" (legacy field)
+                        if (sub.WalletAddresses != null && sub.WalletAddresses.Any())
                         {
-                            // If watching specific address, check amount sent to THAT address
-                            var targetLower = sub.TargetAddress.ToLowerInvariant();
-                            foreach (var kvp in addressAmounts) 
+                            // Check amounts received by ANY of the watched addresses
+                            foreach (var walletAddr in sub.WalletAddresses)
                             {
-                                var outAddr = kvp.Key;
-                                if (outAddr == targetLower || outAddr.Contains(targetLower) || targetLower.Contains(outAddr))
+                                var walletLower = walletAddr.ToLowerInvariant();
+                                if (addressAmounts.TryGetValue(walletLower, out var amt))
                                 {
-                                    relevantAmount += kvp.Value;
+                                    relevantAmount += amt;
                                 }
+                            }
+                        }
+                        // Case B: Legacy TargetAddress field (if used)
+                        else if (!string.IsNullOrEmpty(sub.TargetAddress))
+                        {
+                            var targetLower = sub.TargetAddress.ToLowerInvariant();
+                            if (addressAmounts.TryGetValue(targetLower, out var amt))
+                            {
+                                relevantAmount = amt;
                             }
                         }
                         else
                         {
-                            // If watching ALL transactions, use the total transaction amount
-                            relevantAmount = totalTxLovelace; // <--- USED HERE
+                            // Case C: Firehose (All transactions) -> Check total tx volume
+                            relevantAmount = totalTxLovelace;
                         }
 
                         if (relevantAmount < sub.MinimumLovelace.Value)
                         {
-                            continue; // Skip - value too low
+                            continue; // Amount too low
                         }
                     }
 
-                    // ... (Rest of your dispatch logic remains the same) ...
+                    // ... (Dispatch Logic) ...
                     
                     bool shouldDispatch = false;
                     string matchReason = "";
@@ -310,43 +338,34 @@ namespace Panoptes.Infrastructure.Services
                     switch (sub.EventType?.ToLowerInvariant())
                     {
                         case "transaction":
-                            if (string.IsNullOrEmpty(sub.TargetAddress)) { shouldDispatch = true; matchReason = "All transactions"; }
-                            else { shouldDispatch = true; matchReason = $"Address match: {sub.TargetAddress}"; }
+                            // If we passed the filters above, we dispatch
+                            shouldDispatch = true;
+                            matchReason = "Transaction match"; 
                             break;
+                            
                         case "nft mint":
                         case "mint":
                             var mint = tx.Mint();
                             if (mint != null && mint.Any()) { shouldDispatch = true; matchReason = "Mint event"; }
                             break;
+                            
                         case "asset move":
-                        case "transfer":
+                        case "assetmove":
                             if (policyIds.Any()) { shouldDispatch = true; matchReason = "Asset transfer"; }
                             break;
                     }
 
                     if (shouldDispatch)
                     {
+                        // Build payload
                         var payload = BuildEnhancedPayload(tx, txIndex, slot, blockHash, blockHeight, 
                             txHash, inputs, outputs, outputAddresses, policyIds, sub.EventType ?? "Unknown", matchReason);
                         
                         if (sub.IsRateLimited || sub.IsCircuitBroken || _disabledDuringProcessing.Contains(sub.Id)) continue;
                         if (!sub.IsActive) { await RecordPausedEvent(sub, payload); continue; }
                         
-                        if (_isCatchingUp)
-                        {
-                            if (!_pendingWebhooks.ContainsKey(sub.Id)) _pendingWebhooks[sub.Id] = new List<object>();
-                            _pendingWebhooks[sub.Id].Add(payload);
-                            if (_pendingWebhooks[sub.Id].Count >= BATCH_SIZE_DURING_CATCHUP)
-                            {
-                                var mostRecent = _pendingWebhooks[sub.Id].Last();
-                                _pendingWebhooks[sub.Id].Clear();
-                                if (await CheckRateLimitAsync(sub)) await DispatchWebhook(sub, mostRecent);
-                            }
-                        }
-                        else
-                        {
-                            if (await CheckRateLimitAsync(sub)) await DispatchWebhook(sub, payload);
-                        }
+                        // Force Real-Time (Catch-up Disabled)
+                        if (await CheckRateLimitAsync(sub)) await DispatchWebhook(sub, payload);
                     }
                 }
             }
@@ -667,27 +686,28 @@ namespace Panoptes.Infrastructure.Services
         /// </summary>
         private string ConvertToBech32Address(string hexAddress, string network = "preprod")
         {
-            if (string.IsNullOrEmpty(hexAddress))
-                return hexAddress;
+            if (string.IsNullOrEmpty(hexAddress)) return hexAddress;
 
             try
             {
                 var bytes = Convert.FromHexString(hexAddress);
-                if (bytes.Length == 0)
-                    return hexAddress;
+                if (bytes.Length == 0) return hexAddress;
 
-                // Determine prefix from header byte (first byte indicates network)
+                // --- FIX STARTS HERE ---
+                // Cardano Header Byte: [Type (4 bits) | Network (4 bits)]
                 var header = bytes[0];
-                var isTestnet = (header & 0xF0) != 0x00;
-                var prefix = isTestnet ? "addr_test" : "addr";
+                var networkId = header & 0x0F; // Extract lower 4 bits
+                
+                // Network ID 0 = Testnet (Preprod/Preview) -> prefix "addr_test"
+                // Network ID 1 = Mainnet -> prefix "addr"
+                var prefix = (networkId == 1) ? "addr" : "addr_test";
+                // --- FIX ENDS HERE ---
 
-                // Encode to Bech32
-                var encoded = Bech32Encode(prefix, bytes);
-                return encoded;
+                return Bech32Encode(prefix, bytes);
             }
-            catch
+            catch (Exception ex)
             {
-                // Fallback to hex if Bech32 encoding fails
+                _logger?.LogWarning("Failed to convert hex to bech32: {Error}", ex.Message);
                 return hexAddress;
             }
         }
