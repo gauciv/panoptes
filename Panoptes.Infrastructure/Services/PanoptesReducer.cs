@@ -223,60 +223,101 @@ namespace Panoptes.Infrastructure.Services
                 var outputs = tx.Outputs()?.ToList() ?? new List<TransactionOutput>();
                 var inputs = tx.Inputs()?.ToList() ?? new List<TransactionInput>();
 
-                // Extract addresses and assets from outputs
+                // --- STEP 1: PRE-CALCULATE AMOUNTS FOR FILTERING ---
+                // We do this ONCE per transaction, before looping subscriptions.
+                
+                ulong totalTxLovelace = 0;
+                var addressAmounts = new Dictionary<string, ulong>(); // Stores Lovelace received per address (Hex)
                 var outputAddresses = new HashSet<string>();
                 var policyIds = new HashSet<string>();
 
                 foreach (var output in outputs)
                 {
-                    // Get output address (returns byte[], convert to hex)
                     var addressBytes = output.Address();
-                    if (addressBytes != null && addressBytes.Length > 0)
-                    {
-                        var addressHex = Convert.ToHexString(addressBytes).ToLowerInvariant();
-                        outputAddresses.Add(addressHex);
-                    }
+                    if (addressBytes == null || addressBytes.Length == 0) continue;
 
-                    // Get multi-assets (NFTs/tokens) - use Value extension method
+                    var addressHex = Convert.ToHexString(addressBytes).ToLowerInvariant();
+                    outputAddresses.Add(addressHex);
+
+                    // Calculate Lovelace for this output
+                    ulong outputLovelace = 0;
                     var amount = output.Amount();
-                    if (amount is LovelaceWithMultiAsset lovelaceWithMultiAsset)
+
+                    if (amount is LovelaceWithMultiAsset lma)
                     {
-                        var multiAsset = lovelaceWithMultiAsset.MultiAsset;
+                        outputLovelace = lma.Lovelace();
+                        
+                        // Extract Policy IDs while we are here
+                        var multiAsset = lma.MultiAsset;
                         if (multiAsset?.Value != null)
                         {
                             foreach (var policy in multiAsset.Value.Keys)
                             {
-                                var policyHex = Convert.ToHexString(policy).ToLowerInvariant();
-                                policyIds.Add(policyHex);
+                                policyIds.Add(Convert.ToHexString(policy).ToLowerInvariant());
                             }
                         }
                     }
+                    else if (amount != null)
+                    {
+                        // Try simple conversion (fallback for pure ADA outputs)
+                        try { outputLovelace = Convert.ToUInt64(amount); } catch { }
+                    }
+
+                    // Add to totals
+                    totalTxLovelace += outputLovelace;
+                    
+                    if (!addressAmounts.ContainsKey(addressHex))
+                        addressAmounts[addressHex] = 0;
+                    addressAmounts[addressHex] += outputLovelace;
                 }
 
-                // Check each subscription for matches
+                // --- STEP 2: CHECK SUBSCRIPTIONS ---
                 foreach (var sub in subscriptions)
                 {
-                    // First check: wallet address filtering (if enabled)
-                    if (!IsRelevantForSubscription(sub, outputAddresses))
+                    // Filter 1: Wallet Address Match
+                    if (!IsRelevantForSubscription(sub, outputAddresses)) continue;
+
+                    // Filter 2: Minimum ADA (The Refined Logic)
+                    if (sub.MinimumLovelace.HasValue && sub.MinimumLovelace.Value > 0)
                     {
-                        // Transaction doesn't involve any of the filtered addresses - skip
-                        continue;
+                        ulong relevantAmount = 0;
+
+                        if (!string.IsNullOrEmpty(sub.TargetAddress))
+                        {
+                            // CASE A: User watching specific address -> Check amount sent to THAT address
+                            // We need to check both hex and potential bech32 decoding matches
+                            var targetLower = sub.TargetAddress.ToLowerInvariant();
+                            
+                            // Sum up amount for all outputs that match this target address
+                            foreach (var kvp in addressAmounts) 
+                            {
+                                var outAddr = kvp.Key; // This is Hex
+                                if (outAddr == targetLower || outAddr.Contains(targetLower) || targetLower.Contains(outAddr))
+                                {
+                                    relevantAmount += kvp.Value;
+                                }
+                            }
+                        }
+                        else
+                        {
+                            // CASE B: User watching ALL transactions (Firehose) -> Check Total Tx Amount
+                            relevantAmount = totalTxLovelace;
+                        }
+
+                        // The Check:
+                        if (relevantAmount < sub.MinimumLovelace.Value)
+                        {
+                            // Skip - Value is too low
+                            continue;
+                        }
                     }
 
                     bool shouldDispatch = false;
                     string matchReason = "";
-                    
-                    // Debug: Log subscription details on first transaction of significant blocks
-                    if (txIndex == 0 && blockHeight % 500 == 0)
-                    {
-                        _logger?.LogInformation("Checking subscription '{Name}' (EventType: '{EventType}', TargetAddress: '{Addr}', WalletFilter: {Filter}, Active: {Active})", 
-                            sub.Name, sub.EventType, sub.TargetAddress ?? "(none)", sub.WalletAddresses?.Count ?? 0, sub.IsActive);
-                    }
 
                     switch (sub.EventType?.ToLowerInvariant())
                     {
                         case "transaction":
-                            // Match by address if specified, otherwise match all transactions
                             if (string.IsNullOrEmpty(sub.TargetAddress))
                             {
                                 shouldDispatch = true;
@@ -284,30 +325,18 @@ namespace Panoptes.Infrastructure.Services
                             }
                             else
                             {
-                                // Try matching both hex format and bech32 format
                                 var targetAddressLower = sub.TargetAddress.ToLowerInvariant();
-                                
-                                // Check if any output address contains the target (for hex comparison)
-                                // or if the target is a bech32 address, we match against hex
-                                if (outputAddresses.Contains(targetAddressLower))
+                                if (outputAddresses.Contains(targetAddressLower) || 
+                                    outputAddresses.Any(addr => addr.Contains(targetAddressLower) || targetAddressLower.Contains(addr)))
                                 {
                                     shouldDispatch = true;
-                                    matchReason = $"Address match (hex): {sub.TargetAddress}";
-                                }
-                                // Also check if the target address (possibly bech32) matches any output
-                                // For now, if user enters partial hex, try to match
-                                else if (outputAddresses.Any(addr => addr.Contains(targetAddressLower) || targetAddressLower.Contains(addr)))
-                                {
-                                    shouldDispatch = true;
-                                    matchReason = $"Address partial match: {sub.TargetAddress}";
+                                    matchReason = $"Address match: {sub.TargetAddress}";
                                 }
                             }
                             break;
 
                         case "nft mint":
-                        case "nftmint":
                         case "mint":
-                            // Check if this transaction mints assets (has mint field)
                             var mint = tx.Mint();
                             if (mint != null && mint.Any())
                             {
@@ -329,16 +358,10 @@ namespace Panoptes.Infrastructure.Services
                             break;
 
                         case "asset move":
-                        case "assetmove":
                         case "transfer":
-                            // Match asset transfers by policy ID
                             if (string.IsNullOrEmpty(sub.PolicyId))
                             {
-                                if (policyIds.Any())
-                                {
-                                    shouldDispatch = true;
-                                    matchReason = "Any asset transfer";
-                                }
+                                if (policyIds.Any()) { shouldDispatch = true; matchReason = "Any asset transfer"; }
                             }
                             else if (policyIds.Contains(sub.PolicyId.ToLowerInvariant()))
                             {
@@ -346,74 +369,37 @@ namespace Panoptes.Infrastructure.Services
                                 matchReason = $"Policy transfer: {sub.PolicyId}";
                             }
                             break;
-
-                        default:
-                            // Unknown event type - skip
-                            break;
                     }
 
                     if (shouldDispatch)
                     {
-                        // Build enhanced payload with more details
+                        // Build payload (Re-using the data we parsed would be faster, but keeping your existing helper is fine)
                         var payload = BuildEnhancedPayload(tx, txIndex, slot, blockHash, blockHeight, 
                             txHash, inputs, outputs, outputAddresses, policyIds, sub.EventType ?? "Unknown", matchReason);
                         
-                        // SKIP ENTIRELY if subscription is disabled (rate-limited or circuit-broken)
-                        // This is a safety check in case the subscription wasn't filtered properly
-                        if (sub.IsRateLimited || sub.IsCircuitBroken || _disabledDuringProcessing.Contains(sub.Id))
-                        {
-                            _logger?.LogDebug("Skipping disabled subscription {Name} - not recording or dispatching", sub.Name);
-                            continue;
-                        }
+                        if (sub.IsRateLimited || sub.IsCircuitBroken || _disabledDuringProcessing.Contains(sub.Id)) continue;
                         
-                        // Handle paused (inactive) subscriptions: record the event but don't dispatch
                         if (!sub.IsActive)
                         {
-                            _logger?.LogInformation("⏸️ Subscription {Name} is paused - recording event without dispatching", sub.Name);
                             await RecordPausedEvent(sub, payload);
                             continue;
                         }
                         
-                        // During catch-up, batch webhooks instead of dispatching immediately
                         if (_isCatchingUp)
                         {
-                            // Add to batch
-                            if (!_pendingWebhooks.ContainsKey(sub.Id))
-                            {
-                                _pendingWebhooks[sub.Id] = new List<object>();
-                            }
-                            
+                            if (!_pendingWebhooks.ContainsKey(sub.Id)) _pendingWebhooks[sub.Id] = new List<object>();
                             _pendingWebhooks[sub.Id].Add(payload);
                             
-                            // If batch is full, send the most recent one and clear
                             if (_pendingWebhooks[sub.Id].Count >= BATCH_SIZE_DURING_CATCHUP)
                             {
-                                var mostRecentPayload = _pendingWebhooks[sub.Id].Last();
+                                var mostRecent = _pendingWebhooks[sub.Id].Last();
                                 _pendingWebhooks[sub.Id].Clear();
-                                
-                                _logger?.LogInformation("📦 [BATCH] Sending 1 of {Count} webhooks for {Name} (keeping most recent)", 
-                                    BATCH_SIZE_DURING_CATCHUP, sub.Name);
-                                
-                                // Check rate limits before dispatching
-                                if (await CheckRateLimitAsync(sub))
-                                {
-                                    await DispatchWebhook(sub, mostRecentPayload);
-                                }
+                                if (await CheckRateLimitAsync(sub)) await DispatchWebhook(sub, mostRecent);
                             }
                         }
                         else
                         {
-                            // Real-time mode: dispatch immediately with rate limiting
-                            if (!await CheckRateLimitAsync(sub))
-                            {
-                                _logger?.LogWarning("⚠️ Rate limit exceeded for {Name}, skipping webhook", sub.Name);
-                                continue;
-                            }
-                            
-                            _logger?.LogInformation("🔔 Dispatching webhook to {Name} for {EventType}: {Reason}", 
-                                sub.Name, sub.EventType, matchReason);
-                            
-                            await DispatchWebhook(sub, payload);
+                            if (await CheckRateLimitAsync(sub)) await DispatchWebhook(sub, payload);
                         }
                     }
                 }
