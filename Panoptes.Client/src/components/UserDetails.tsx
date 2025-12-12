@@ -40,7 +40,7 @@ export function UserDetails() {
     <div className="px-3 py-3 border-t border-border">
       <div className="flex items-center gap-3">
         {claims.picture ? (
-          <img src={claims.picture} alt="User avatar" className="w-8 h-8 rounded-full border border-border" />
+          <img src={claims.picture} alt={`${claims.name || claims.email || 'User'}'s avatar`} className="w-8 h-8 rounded-full border border-border" />
         ) : (
           <div className="w-8 h-8 rounded-full bg-accent border border-border" />
         )}
