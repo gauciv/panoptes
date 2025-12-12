@@ -1,4 +1,3 @@
-import { GlitchButton } from '@/components/GlitchButton';
 
 export function Footer() {
   return (

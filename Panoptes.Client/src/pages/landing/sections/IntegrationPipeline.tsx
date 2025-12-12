@@ -58,7 +58,6 @@ const steps = [
 export function IntegrationPipeline() {
   const [activeStep, setActiveStep] = useState(0);
   const autoPlayRef = useRef<ReturnType<typeof setInterval> | null>(null);
-<<<<<<< HEAD
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -70,11 +69,6 @@ export function IntegrationPipeline() {
 
   // Auto-cycle through steps
   useEffect(() => {
-=======
-
-  // Auto-cycle through steps
-  useEffect(() => {
->>>>>>> a2faaab6e764c398e0da2df5b6a14287425d3a30
 
     const timer = setInterval(() => {
       setActiveStep((prev) => (prev + 1) % steps.length);
@@ -168,11 +162,8 @@ export function IntegrationPipeline() {
                         layoutId="activeArrow" 
                         className="absolute right-4 top-1/2 -translate-y-1/2 text-sentinel hidden md:block"
                         aria-hidden="true"
-<<<<<<< HEAD
                         initial={isMobile ? false : undefined}
                         animate={isMobile ? false : undefined}
-=======
->>>>>>> a2faaab6e764c398e0da2df5b6a14287425d3a30
                       >
                         <ChevronRight size={20} />
                       </motion.div>

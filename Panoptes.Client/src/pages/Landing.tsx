@@ -209,7 +209,6 @@ function Landing() {
                 </div>
 
                 {/* --- HERO TEXT SECTION --- */}
-<<<<<<< HEAD
                   {!loading && (
                     <div className="mt-8 md:mt-14 grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 lg:items-end">
                       
@@ -258,79 +257,15 @@ function Landing() {
                           as="p"
                         />
                       </div>
-=======
-                {!loading && (
-                  <div className="mt-14 grid gap-auto lg:grid-cols-2 lg:items-end">
-                    <div className="flex flex-col space-y-4 text-left">
-                      <h1>
-                        <ScrambleText
-                          text="PANOPTES"
-                          className="block text-5xl font-michroma text-ghost sm:text-6xl lg:text-7xl"
-                          delay={0.2}
-                          speed={50}
-                        />
-                      </h1>
-                      <MaskText
-                        text="Cardano Webhook Service."
-                        className="block font-terminal text-xs uppercase tracking-[0.35em] text-ghost-muted"
-                        margin="0px"
-                        delay={0.1}
-                        as="h2" 
-                      />
-
-                    </div>
-
-                    <div className="flex flex-col space-y-3 text-left lg:text-left">
-                      <ScrambleText
-                        text="Scroll Down"
-                        className="block font-terminal text-[10px] uppercase tracking-[0.35em] text-ghost-muted"
-                        delay={0.3}
-                      />
-                      <MaskText
-                          text="Reactive Webhooks for Cardano."
-                          className="block text-3xl font-sans leading-tight text-ghost sm:text-4xl lg:text-5xl"
-                          delay={0.4}
-                          as="p"
-                      />
-                      <MaskText
-                        text="Bridge the gap between blockchain and backend."
-                        className="block font-sans text-[32px] tracking-[0] text-ghost-muted"
-                        delay={0.5}
-                        as="p"
-                      />
->>>>>>> a2faaab6e764c398e0da2df5b6a14287425d3a30
                     </div>
                   )}
               </main>
             </div>
 
             {/* === CONTENT SECTIONS === */}
-<<<<<<< HEAD
             <section aria-label="Live Metrics">
                 <BentoGrid />
             </section>
-=======
-            {/* Using section wrappers for better document outline */}
-            <section aria-label="Live Metrics">
-                <BentoGrid />
-            </section>
-            
-            <section aria-label="Integration Process">
-                <IntegrationPipeline />
-            </section>
-
-            <section aria-label="Deployment Modules">
-                <DeploymentModules />
-            </section>
-
-            <section aria-label="Pricing Plans">
-                <PricingSection />
-            </section>
-
-            <section aria-label="System Telemetry">
-                <SystemTelemetry />
-            </section>
->>>>>>> a2faaab6e764c398e0da2df5b6a14287425d3a30
             
             <section aria-label="Integration Process">
                 <IntegrationPipeline />

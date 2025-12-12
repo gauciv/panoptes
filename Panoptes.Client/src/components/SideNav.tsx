@@ -1,5 +1,5 @@
 import { useState, useEffect, useContext } from 'react';
-import { ChevronLeft, ChevronRight, Menu, X } from 'lucide-react';
+import { Menu, X } from 'lucide-react';
 import { PRIMARY_NAV_ITEMS, SECONDARY_NAV_ITEMS } from '../config/navigation';
 import { SideNavItem } from './SideNavItem';
 import { SideNavFooter } from './SideNavFooter';
@@ -11,7 +11,8 @@ const COLLAPSE_STORAGE_KEY = 'panoptes-sidenav-collapsed';
 
 export function SideNav() {
   const { isDark, setIsDark } = useContext(ThemeContext);
-  const [isCollapsed, setIsCollapsed] = useState(() => {
+  // TODO :setIsCollapsed
+  const [isCollapsed] = useState(() => {
     const stored = localStorage.getItem(COLLAPSE_STORAGE_KEY);
     return stored ? JSON.parse(stored) : false;
   });
@@ -21,9 +22,10 @@ export function SideNav() {
     localStorage.setItem(COLLAPSE_STORAGE_KEY, JSON.stringify(isCollapsed));
   }, [isCollapsed]);
 
-  const toggleCollapse = () => {
-    setIsCollapsed(!isCollapsed);
-  };
+  // TODO
+  // const toggleCollapse = () => {
+  //   setIsCollapsed(!isCollapsed);
+  // };
 
   const toggleMobile = () => {
     setIsMobileOpen(!isMobileOpen);
