@@ -242,6 +242,20 @@ export default function Settings() {
               </>
             )}
           </div>
+          
+          {/* Onboarding Tutorial Button */}
+          <div className="mt-4 pt-4 border-t border-gray-200">
+            <Button
+              onClick={() => {
+                localStorage.removeItem('panoptes_onboarding_completed');
+                navigate('/dashboard');
+              }}
+              variant="outline"
+              className="w-full"
+            >
+              Launch Tutorial
+            </Button>
+          </div>
         </div>
 
         {/* Success/Error Messages */}

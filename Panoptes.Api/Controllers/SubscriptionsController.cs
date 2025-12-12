@@ -421,7 +421,7 @@ namespace Panoptes.Api.Controllers
                 var responseBody = await response.Content.ReadAsStringAsync();
                 
                 // Try to parse the response as JSON, otherwise return as string
-                object parsedBody;
+                object? parsedBody;
                 try 
                 { 
                     parsedBody = System.Text.Json.JsonSerializer.Deserialize<object>(responseBody); 

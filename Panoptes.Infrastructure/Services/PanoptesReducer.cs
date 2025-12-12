@@ -30,6 +30,9 @@ namespace Panoptes.Infrastructure.Services
         // Rate limit tracking: subscriptionId -> (webhooks in last minute, webhooks in last hour, timestamps)
         private readonly Dictionary<Guid, (Queue<DateTime> minuteWindow, Queue<DateTime> hourWindow)> _rateLimitTracking = new();
         
+        // Track subscriptions that have been disabled during current processing (to skip them immediately)
+        private readonly HashSet<Guid> _disabledDuringProcessing = new();
+        
         // Catch-up mode detection
         private DateTime _lastBlockProcessedAt = DateTime.UtcNow;
         private bool _isCatchingUp = false;
@@ -116,11 +119,57 @@ namespace Panoptes.Infrastructure.Services
                 var mode = _isCatchingUp ? "[CATCH-UP]" : "[REAL-TIME]";
                 _logger?.LogInformation("{Mode} Processing block at slot {Slot}, height {Height}", mode, slot, blockHeight);
             }
+            
+            // Clear the disabled-during-processing set at the start of each block
+            // (subscriptions disabled in previous blocks are already excluded by the DB query)
+            _disabledDuringProcessing.Clear();
 
-            // Fetch all subscriptions (both active and paused - paused ones still record events)
-            var subscriptions = await _dbContext.WebhookSubscriptions
-                .AsNoTracking()
+            // Fetch ALL subscriptions first, then filter based on actual rate limit status
+            var allSubscriptions = await _dbContext.WebhookSubscriptions
+                .Where(s => !s.IsCircuitBroken) // Circuit broken is a persistent flag
                 .ToListAsync();
+            
+            // Check actual rate limit status from delivery logs for each subscription
+            var rateLimitCheckTime = DateTime.UtcNow;
+            var oneMinuteAgo = rateLimitCheckTime.AddMinutes(-1);
+            var oneHourAgo = rateLimitCheckTime.AddHours(-1);
+            
+            var subscriptions = new List<WebhookSubscription>();
+            
+            foreach (var sub in allSubscriptions)
+            {
+                // Calculate actual rate limit status from delivery logs (same as controller does for UI)
+                var recentLogs = await _dbContext.DeliveryLogs
+                    .Where(l => l.SubscriptionId == sub.Id && l.AttemptedAt >= oneHourAgo)
+                    .ToListAsync();
+                
+                var inLastMinute = recentLogs.Count(l => l.AttemptedAt >= oneMinuteAgo);
+                var inLastHour = recentLogs.Count;
+                
+                var isActuallyRateLimited = 
+                    (sub.MaxWebhooksPerMinute > 0 && inLastMinute >= sub.MaxWebhooksPerMinute) ||
+                    (sub.MaxWebhooksPerHour > 0 && inLastHour >= sub.MaxWebhooksPerHour);
+                
+                // Update the DB flag if it doesn't match reality
+                if (isActuallyRateLimited != sub.IsRateLimited)
+                {
+                    sub.IsRateLimited = isActuallyRateLimited;
+                    await _dbContext.SaveChangesAsync();
+                }
+                
+                // Only include non-rate-limited subscriptions
+                if (!isActuallyRateLimited)
+                {
+                    subscriptions.Add(sub);
+                }
+                else
+                {
+                    _logger?.LogDebug("Skipping rate-limited subscription {Name} ({MinRate}% min, {HourRate}% hour)", 
+                        sub.Name, 
+                        sub.MaxWebhooksPerMinute > 0 ? (inLastMinute * 100 / sub.MaxWebhooksPerMinute) : 0,
+                        sub.MaxWebhooksPerHour > 0 ? (inLastHour * 100 / sub.MaxWebhooksPerHour) : 0);
+                }
+            }
 
             // Log subscription count periodically
             if (blockHeight % 100 == 0 && subscriptions.Any())
@@ -309,6 +358,14 @@ namespace Panoptes.Infrastructure.Services
                         var payload = BuildEnhancedPayload(tx, txIndex, slot, blockHash, blockHeight, 
                             txHash, inputs, outputs, outputAddresses, policyIds, sub.EventType ?? "Unknown", matchReason);
                         
+                        // SKIP ENTIRELY if subscription is disabled (rate-limited or circuit-broken)
+                        // This is a safety check in case the subscription wasn't filtered properly
+                        if (sub.IsRateLimited || sub.IsCircuitBroken || _disabledDuringProcessing.Contains(sub.Id))
+                        {
+                            _logger?.LogDebug("Skipping disabled subscription {Name} - not recording or dispatching", sub.Name);
+                            continue;
+                        }
+                        
                         // Handle paused (inactive) subscriptions: record the event but don't dispatch
                         if (!sub.IsActive)
                         {
@@ -369,10 +426,11 @@ namespace Panoptes.Infrastructure.Services
 
         private async Task DispatchWebhook(WebhookSubscription sub, object payload)
         {
-            // Skip if subscription is circuit broken
-            if (sub.IsCircuitBroken || !sub.IsActive)
+            // Skip if subscription is disabled (circuit broken, rate limited, inactive, or disabled during this processing cycle)
+            if (sub.IsCircuitBroken || sub.IsRateLimited || !sub.IsActive || _disabledDuringProcessing.Contains(sub.Id))
             {
-                _logger?.LogDebug("Skipping webhook dispatch for {Name} - subscription is inactive or circuit broken", sub.Name);
+                _logger?.LogDebug("Skipping webhook dispatch for {Name} - subscription is disabled (CircuitBroken={CB}, RateLimited={RL}, Inactive={Inactive}, DisabledDuringProcessing={DDP})", 
+                    sub.Name, sub.IsCircuitBroken, sub.IsRateLimited, !sub.IsActive, _disabledDuringProcessing.Contains(sub.Id));
                 return;
             }
 
@@ -647,11 +705,21 @@ namespace Panoptes.Infrastructure.Services
             // Check limits
             if (sub.MaxWebhooksPerMinute > 0 && minuteWindow.Count >= sub.MaxWebhooksPerMinute)
             {
+                sub.IsRateLimited = true;
+                _disabledDuringProcessing.Add(sub.Id); // Track locally to skip immediately
+                await _dbContext.SaveChangesAsync();
+                _logger?.LogWarning("🚫 Rate limit exceeded for {Name}: {Count}/{Max} per minute - subscription disabled", 
+                    sub.Name, minuteWindow.Count, sub.MaxWebhooksPerMinute);
                 return false;
             }
 
             if (sub.MaxWebhooksPerHour > 0 && hourWindow.Count >= sub.MaxWebhooksPerHour)
             {
+                sub.IsRateLimited = true;
+                _disabledDuringProcessing.Add(sub.Id); // Track locally to skip immediately
+                await _dbContext.SaveChangesAsync();
+                _logger?.LogWarning("🚫 Rate limit exceeded for {Name}: {Count}/{Max} per hour - subscription disabled", 
+                    sub.Name, hourWindow.Count, sub.MaxWebhooksPerHour);
                 return false;
             }
 

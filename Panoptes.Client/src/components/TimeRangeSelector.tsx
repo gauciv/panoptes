@@ -126,13 +126,13 @@ const TimeRangeSelector: React.FC<TimeRangeSelectorProps> = ({
 
       {/* Custom date picker popover */}
       {isCustomOpen && (
-        <div className="absolute right-0 top-full mt-2 p-4 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+        <div className="absolute right-0 top-full mt-2 p-4 bg-white dark:bg-gray-900 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50">
           <div className="mb-4">
-            <h3 className="text-sm font-medium text-gray-900 mb-3">Select Date Range</h3>
+            <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">Select Date Range</h3>
             
             <div className="flex gap-4 items-center">
               <div>
-                <label className="block text-xs text-gray-500 mb-1">Start Date</label>
+                <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Start Date</label>
                 <DatePicker
                   selected={startDate}
                   onChange={(date) => setStartDate(date)}
@@ -140,16 +140,16 @@ const TimeRangeSelector: React.FC<TimeRangeSelectorProps> = ({
                   startDate={startDate}
                   endDate={endDate}
                   maxDate={endDate ?? new Date()}
-                  className="w-32 px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-sentinel focus:border-transparent"
+                  className="w-32 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-sentinel focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                   dateFormat="MMM d, yyyy"
                   placeholderText="Start"
                 />
               </div>
               
-              <span className="text-gray-400 mt-5">→</span>
+              <span className="text-gray-400 dark:text-gray-500 mt-5">→</span>
               
               <div>
-                <label className="block text-xs text-gray-500 mb-1">End Date</label>
+                <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">End Date</label>
                 <DatePicker
                   selected={endDate}
                   onChange={(date) => setEndDate(date)}
@@ -158,7 +158,7 @@ const TimeRangeSelector: React.FC<TimeRangeSelectorProps> = ({
                   endDate={endDate}
                   minDate={startDate ?? undefined}
                   maxDate={new Date()}
-                  className="w-32 px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-sentinel focus:border-transparent"
+                  className="w-32 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-sentinel focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                   dateFormat="MMM d, yyyy"
                   placeholderText="End"
                 />
@@ -169,7 +169,7 @@ const TimeRangeSelector: React.FC<TimeRangeSelectorProps> = ({
           <div className="flex gap-2 justify-end">
             <button
               onClick={() => setIsCustomOpen(false)}
-              className="px-3 py-1.5 text-xs font-medium text-gray-600 hover:text-gray-800 transition-colors"
+              className="px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
             >
               Cancel
             </button>

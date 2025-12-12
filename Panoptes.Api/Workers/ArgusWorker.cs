@@ -195,8 +195,7 @@ namespace Panoptes.Api.Workers
                                 
                                 // OPTIONAL: Save this starting point immediately to DB so restarts don't fetch tip again
                                 // This is safe because we haven't processed any blocks yet
-                                dbContext.SystemStates.Add(new SystemState { Key = "LastSyncedSlot", Value = startSlot.ToString() });
-                                dbContext.SystemStates.Add(new SystemState { Key = "LastSyncedHash", Value = startHash });
+                                dbContext.SystemStates.Add(new SystemState { Key = "LastSyncedSlot", Value = startSlot.ToString() ?? string.Empty });                                dbContext.SystemStates.Add(new SystemState { Key = "LastSyncedHash", Value = startHash });
                                 await dbContext.SaveChangesAsync(stoppingToken);
 
                                 _logger.LogInformation("🚀 Fast-forwarded to Network Tip: Slot {Slot}, Hash {Hash}", startSlot, startHash);
@@ -210,7 +209,7 @@ namespace Panoptes.Api.Workers
                         }
 
                         // Add the calculated start point to intersections
-                        intersections.Add(new Point(startHash, startSlot.Value));
+                        intersections.Add(new Point(startHash!, startSlot.Value));
 
                         // Network Magic: Mainnet = 764824073, Preprod = 1, Preview = 2
                         ulong networkMagic = network switch

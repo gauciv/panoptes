@@ -43,9 +43,7 @@ interface SetupStatus {
 
 const Dashboard: React.FC = () => {
   const location = useLocation();
-  const activeView = location.pathname === '/analytics' ? 'analytics' : 'overview';
-  
-  // --- STATE ---
+  const activeView = location.pathname === '/dashboard/analytics' ? 'analytics' : 'overview';
   const [subscriptions, setSubscriptions] = useState<WebhookSubscription[]>([]);
   const [logs, setLogs] = useState<DeliveryLog[]>([]);
   const [totalLogs, setTotalLogs] = useState<number>(0);
