@@ -33,99 +33,83 @@ export function SideNav() {
     setIsMobileOpen(false);
   };
 
-  const NavContent = () => (
-    <>
-      {/* Logo Section */}
-      <div className="flex items-center justify-between p-4 border-b border-border">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="flex-shrink-0">
-            <img 
-              src="/logo_panoptes.svg" 
-              alt="Panoptes Logo" 
-              className="w-8 h-8"
-            />
-          </div>
-          {!isCollapsed && (
-            <span className="font-michroma text-sm tracking-[0.18em] uppercase text-foreground truncate">
-              Panoptes
-            </span>
-          )}
-        </div>
-        {!isCollapsed && (
-          <button
-            onClick={toggleCollapse}
-            className="hidden lg:block p-1 rounded-tech hover:bg-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sentinel focus-visible:ring-offset-2"
-            aria-label="Collapse navigation"
-            title="Collapse navigation"
-          >
-            <ChevronLeft className="w-5 h-5 text-muted-foreground" aria-hidden="true" />
-          </button>
-        )}
-      </div>
+  // Modified to accept forceExpanded prop
+  const NavContent = ({ forceExpanded = false }: { forceExpanded?: boolean }) => {
+    // If forced expanded (mobile), ignore the isCollapsed state
+    const effectiveCollapsed = forceExpanded ? false : isCollapsed;
 
-      {/* Primary Navigation */}
-      <div className="flex-1 overflow-y-auto py-4 px-2">
-        <div className="space-y-1">
-          {PRIMARY_NAV_ITEMS.map((item) => (
-            <SideNavItem 
-              key={item.path} 
-              item={item} 
-              isCollapsed={isCollapsed}
-              onClick={closeMobile}
-            />
-          ))}
-        </div>
-
-        {/* Divider */}
-        <div className="my-4 border-t border-border" />
-
-        {/* Secondary Navigation - General */}
-        <div className="px-2 mb-2">
-          <span className="text-xs font-mono text-muted-foreground uppercase tracking-wider">
-            General
-          </span>
-        </div>
-        <div className="space-y-1">
-          {SECONDARY_NAV_ITEMS.map((item) => (
-            <SideNavItem 
-              key={item.path} 
-              item={item} 
-              isCollapsed={isCollapsed}
-              onClick={closeMobile}
-            />
-          ))}
-          
-          {/* Theme Toggle */}
-          <div className={cn(
-            "flex items-center gap-3 px-3 py-2 rounded-tech transition-colors",
-            isCollapsed ? "justify-center" : ""
-          )}>
-            {!isCollapsed && (
-              <span className="text-sm font-mono text-muted-foreground">Theme</span>
+    return (
+      <>
+        {/* Logo Section */}
+        <div className="flex items-center justify-between p-4 border-b border-border">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="flex-shrink-0">
+              <img 
+                src="/logo_panoptes.svg" 
+                alt="Panoptes Logo" 
+                className="w-8 h-8"
+              />
+            </div>
+            {!effectiveCollapsed && (
+              <span className="font-michroma text-sm tracking-[0.18em] uppercase text-foreground truncate">
+                Panoptes
+              </span>
             )}
-            <ThemeToggle isDark={isDark} toggle={() => setIsDark(!isDark)} compact={isCollapsed} />
           </div>
         </div>
-      </div>
 
-      {/* Documentation Footer */}
-      <SideNavFooter isCollapsed={isCollapsed} />
+        {/* Primary Navigation */}
+        <div className="flex-1 overflow-y-auto overflow-x-hidden py-4 px-2 min-h-0 nav-scrollbar">
+          <div className="space-y-1">
+            {PRIMARY_NAV_ITEMS.map((item) => (
+              <SideNavItem 
+                key={item.path} 
+                item={item} 
+                isCollapsed={effectiveCollapsed} // Use effective state
+                onClick={closeMobile}
+              />
+            ))}
+          </div>
 
-      {/* Expand Button (when collapsed) */}
-      {isCollapsed && (
-        <div className="p-2 border-t border-border hidden lg:block">
-          <button
-            onClick={toggleCollapse}
-            className="w-full p-3 rounded-tech hover:bg-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sentinel focus-visible:ring-offset-2"
-            aria-label="Expand navigation"
-            title="Expand navigation"
-          >
-            <ChevronRight className="w-5 h-5 text-muted-foreground mx-auto" aria-hidden="true" />
-          </button>
+          {/* Divider */}
+          <div className="my-4 border-t border-border" />
+
+          {/* Secondary Navigation - General */}
+          {!effectiveCollapsed && (
+            <div className="px-2 mb-2">
+              <span className="text-xs font-mono text-muted-foreground uppercase tracking-wider">
+                General
+              </span>
+            </div>
+          )}
+          <div className="space-y-1">
+            {SECONDARY_NAV_ITEMS.map((item) => (
+              <SideNavItem 
+                key={item.path} 
+                item={item} 
+                isCollapsed={effectiveCollapsed} // Use effective state
+                onClick={closeMobile}
+              />
+            ))}
+            
+            {/* Theme Toggle */}
+            <div className={cn(
+              "flex items-center gap-3 px-3 py-2 rounded-tech transition-colors",
+              effectiveCollapsed ? "justify-center" : ""
+            )}>
+              {!effectiveCollapsed && (
+                <span className="text-sm font-mono text-muted-foreground">Theme</span>
+              )}
+              <ThemeToggle isDark={isDark} toggle={() => setIsDark(!isDark)} compact={effectiveCollapsed} />
+            </div>
+          </div>
         </div>
-      )}
-    </>
-  );
+
+        {/* Documentation Footer */}
+        <SideNavFooter isCollapsed={effectiveCollapsed} />
+      </>
+    );
+  };
 
   return (
     <>
@@ -160,20 +144,50 @@ export function SideNav() {
           isMobileOpen ? 'translate-x-0' : '-translate-x-full'
         )}
       >
-        <NavContent />
+        {/* Force expanded on mobile so text is always visible */}
+        <NavContent forceExpanded={true} />
       </nav>
 
       {/* Desktop Sidebar */}
-      <nav
-        role="navigation"
-        aria-label="Main navigation"
-        className={cn(
-          'hidden lg:flex flex-col bg-background border-r border-border h-screen sticky top-0 transition-all duration-300',
-          isCollapsed ? 'w-16' : 'w-60'
-        )}
-      >
-        <NavContent />
-      </nav>
+      <div className="hidden lg:block relative z-30 h-screen sticky top-0">
+        <nav
+          role="navigation"
+          aria-label="Main navigation"
+          className={cn(
+            'flex flex-col bg-background border-r border-border h-full transition-all duration-300 overflow-hidden relative z-20',
+            isCollapsed ? 'w-16' : 'w-60'
+          )}
+        >
+          {/* Default behavior on desktop */}
+          <NavContent />
+        </nav>
+        
+        {/* Center Edge Toggle Button - Light/Dark Mode */}
+        <button
+          onClick={toggleCollapse}
+          className={cn(
+            "fixed top-1/2 -translate-y-1/2 z-10 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border transition-[left] duration-300 ease-in-out",
+            "bg-white dark:bg-[#050505] border border-border px-2 py-2 rounded-none hover:border-muted-foreground flex items-center justify-center",
+            isCollapsed ? 'left-[56px]' : 'left-[232px]'
+          )}
+          aria-label={isCollapsed ? "Expand navigation" : "Collapse navigation"}
+          title={isCollapsed ? "Expand navigation" : "Collapse navigation"}
+        >
+          {isCollapsed ? (
+            <ChevronRight 
+              className="w-5 h-5 text-gray-700 dark:text-white group-hover:text-gray-900 dark:group-hover:text-white transition-colors duration-200 ml-2" 
+              strokeWidth={2.5}
+              aria-hidden="true" 
+            />
+          ) : (
+            <ChevronLeft 
+              className="w-5 h-5 text-gray-700 dark:text-white group-hover:text-gray-900 dark:group-hover:text-white transition-colors duration-200 ml-2" 
+              strokeWidth={2.5}
+              aria-hidden="true" 
+            />
+          )}
+        </button>
+      </div>
     </>
   );
 }
