@@ -25,6 +25,7 @@ export interface WebhookSubscription {
     firstFailureInWindowAt?: string | null;
     isCircuitBroken?: boolean;
     circuitBrokenReason?: string | null;
+    minimumLovelace?: number | null;
 }
 
 export interface DeliveryLog {
