@@ -410,10 +410,10 @@ const Dashboard: React.FC = () => {
           }
         }}
         data-tour="create-subscription"
-        className={`px-4 py-2 rounded-tech text-sm font-medium transition-colors ${
+        className={`px-5 py-2.5 text-sm font-semibold uppercase tracking-wide text-white border transition-all duration-200 ${
           setupStatus?.isConfigured
-            ? 'bg-sentinel hover:bg-sentinel-hover'
-            : 'bg-gray-400 hover:bg-gray-500' // Changed to branch's hover for the unconfigured state
+            ? 'bg-[#006A33] border-[#006A33] hover:bg-[#008844] hover:shadow-[0_0_15px_rgba(0,106,51,0.5)]'
+            : 'bg-gray-400 border-gray-400 hover:bg-gray-500' // Changed to branch's hover for the unconfigured state
         } text-white`}
         style={{ color: '#ffffff' }}
         title={!setupStatus?.isConfigured ? 'Click to configure API' : ''}
