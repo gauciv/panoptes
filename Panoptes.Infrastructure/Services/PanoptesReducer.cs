@@ -125,8 +125,9 @@ namespace Panoptes.Infrastructure.Services
             _disabledDuringProcessing.Clear();
 
             // Fetch ALL subscriptions first, then filter based on actual rate limit status
+            // Fetch active, non-deleted subscriptions
             var allSubscriptions = await _dbContext.WebhookSubscriptions
-                .Where(s => !s.IsCircuitBroken) // Circuit broken is a persistent flag
+                .Where(s => !s.IsCircuitBroken && !s.IsDeleted) // <--- FIX HERE
                 .ToListAsync();
             
             // Check actual rate limit status from delivery logs for each subscription

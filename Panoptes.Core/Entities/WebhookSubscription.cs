@@ -16,6 +16,8 @@ namespace Panoptes.Core.Entities
         public DateTime CreatedAt { get; set; }
         public DateTime? PausedAt { get; set; }
         public ulong? MinimumLovelace { get; set; }
+
+        public bool IsDeleted { get; set; } = false;
         
         // Address filtering: null = listen to all, empty = none, populated = filter by these addresses
         public List<string>? WalletAddresses { get; set; }
