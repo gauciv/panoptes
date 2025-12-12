@@ -34,23 +34,29 @@ export function SideNav() {
     setIsMobileOpen(false);
   };
 
-  const NavContent = () => (
-    <>
-      {/* Logo Section */}
-      <div className="flex items-center justify-between p-4 border-b border-border">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="flex-shrink-0">
-            <img 
-              src="/logo_panoptes.svg" 
-              alt="Panoptes Logo" 
-              className="w-8 h-8"
-            />
+  // Modified to accept forceExpanded prop
+  const NavContent = ({ forceExpanded = false }: { forceExpanded?: boolean }) => {
+    // If forced expanded (mobile), ignore the isCollapsed state
+    const effectiveCollapsed = forceExpanded ? false : isCollapsed;
+
+    return (
+      <>
+        {/* Logo Section */}
+        <div className="flex items-center justify-between p-4 border-b border-border">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="flex-shrink-0">
+              <img 
+                src="/logo_panoptes.svg" 
+                alt="Panoptes Logo" 
+                className="w-8 h-8"
+              />
+            </div>
+            {!effectiveCollapsed && (
+              <span className="font-michroma text-sm tracking-[0.18em] uppercase text-foreground truncate">
+                Panoptes
+              </span>
+            )}
           </div>
-          {!isCollapsed && (
-            <span className="font-michroma text-sm tracking-[0.18em] uppercase text-foreground truncate">
-              Panoptes
-            </span>
-          )}
         </div>
       </div>
       {/* User Details when authenticated (shows Google info) */}
@@ -58,57 +64,58 @@ export function SideNav() {
         <UserDetails />
       )}
 
-      {/* Primary Navigation */}
-      <div className="flex-1 overflow-y-auto overflow-x-hidden py-4 px-2 min-h-0 nav-scrollbar">
-        <div className="space-y-1">
-          {PRIMARY_NAV_ITEMS.map((item) => (
-            <SideNavItem 
-              key={item.path} 
-              item={item} 
-              isCollapsed={isCollapsed}
-              onClick={closeMobile}
-            />
-          ))}
+        {/* Primary Navigation */}
+        <div className="flex-1 overflow-y-auto overflow-x-hidden py-4 px-2 min-h-0 nav-scrollbar">
+          <div className="space-y-1">
+            {PRIMARY_NAV_ITEMS.map((item) => (
+              <SideNavItem 
+                key={item.path} 
+                item={item} 
+                isCollapsed={effectiveCollapsed} // Use effective state
+                onClick={closeMobile}
+              />
+            ))}
+          </div>
+
+          {/* Divider */}
+          <div className="my-4 border-t border-border" />
+
+          {/* Secondary Navigation - General */}
+          {!effectiveCollapsed && (
+            <div className="px-2 mb-2">
+              <span className="text-xs font-mono text-muted-foreground uppercase tracking-wider">
+                General
+              </span>
+            </div>
+          )}
+          <div className="space-y-1">
+            {SECONDARY_NAV_ITEMS.map((item) => (
+              <SideNavItem 
+                key={item.path} 
+                item={item} 
+                isCollapsed={effectiveCollapsed} // Use effective state
+                onClick={closeMobile}
+              />
+            ))}
+            
+            {/* Theme Toggle */}
+            <div className={cn(
+              "flex items-center gap-3 px-3 py-2 rounded-tech transition-colors",
+              effectiveCollapsed ? "justify-center" : ""
+            )}>
+              {!effectiveCollapsed && (
+                <span className="text-sm font-mono text-muted-foreground">Theme</span>
+              )}
+              <ThemeToggle isDark={isDark} toggle={() => setIsDark(!isDark)} compact={effectiveCollapsed} />
+            </div>
+          </div>
         </div>
 
-        {/* Divider */}
-        <div className="my-4 border-t border-border" />
-
-        {/* Secondary Navigation - General */}
-        {!isCollapsed && (
-          <div className="px-2 mb-2">
-            <span className="text-xs font-mono text-muted-foreground uppercase tracking-wider">
-              General
-            </span>
-          </div>
-        )}
-        <div className="space-y-1">
-          {SECONDARY_NAV_ITEMS.map((item) => (
-            <SideNavItem 
-              key={item.path} 
-              item={item} 
-              isCollapsed={isCollapsed}
-              onClick={closeMobile}
-            />
-          ))}
-          
-          {/* Theme Toggle */}
-          <div className={cn(
-            "flex items-center gap-3 px-3 py-2 rounded-tech transition-colors",
-            isCollapsed ? "justify-center" : ""
-          )}>
-            {!isCollapsed && (
-              <span className="text-sm font-mono text-muted-foreground">Theme</span>
-            )}
-            <ThemeToggle isDark={isDark} toggle={() => setIsDark(!isDark)} compact={isCollapsed} />
-          </div>
-        </div>
-      </div>
-
-      {/* Documentation Footer */}
-      <SideNavFooter isCollapsed={isCollapsed} />
-    </>
-  );
+        {/* Documentation Footer */}
+        <SideNavFooter isCollapsed={effectiveCollapsed} />
+      </>
+    );
+  };
 
   return (
     <>
@@ -143,7 +150,8 @@ export function SideNav() {
           isMobileOpen ? 'translate-x-0' : '-translate-x-full'
         )}
       >
-        <NavContent />
+        {/* Force expanded on mobile so text is always visible */}
+        <NavContent forceExpanded={true} />
       </nav>
 
       {/* Desktop Sidebar */}
@@ -156,6 +164,7 @@ export function SideNav() {
             isCollapsed ? 'w-16' : 'w-60'
           )}
         >
+          {/* Default behavior on desktop */}
           <NavContent />
         </nav>
         
@@ -188,4 +197,3 @@ export function SideNav() {
     </>
   );
 }
-

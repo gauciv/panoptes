@@ -60,15 +60,13 @@ function ActiveReducersList() {
     { id: '05', name: 'StakeReg', status: 'IDLE', count: 45 },
   ]);
 
-  // Simulate random event counts increasing
   useEffect(() => {
     const interval = setInterval(() => {
       setReducers(prev => prev.map(r => {
         if (r.status === 'IDLE') return r;
-        // Randomly increment count
         return { ...r, count: r.count + Math.floor(Math.random() * 3) };
       }));
-    }, 200); // Fast tick
+    }, 200); 
 
     return () => clearInterval(interval);
   }, []);
@@ -191,9 +189,20 @@ export function LiveChainFeed() {
 }
 // --- MAIN CARD SHELL (CRT EFFECT) ---
 function BentoCard({ children, className, delay = 0 }: { children: React.ReactNode; className?: string; delay?: number }) {
+  // 1. Detect Mobile State
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile(); // Check on mount
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   return (
     <motion.div
-      initial="closed"
+      // 2. Conditionally apply animations
+      initial={isMobile ? "open" : "closed"}
       whileInView="open"
       viewport={{ once: true, margin: "-10%" }}
       variants={{
@@ -212,10 +221,10 @@ function BentoCard({ children, className, delay = 0 }: { children: React.ReactNo
           filter: "brightness(1) contrast(1)",
           transition: {
             duration: 0.6,
-            delay: delay,
+            delay: isMobile ? 0 : delay, // No delay on mobile
             scaleX: { duration: 0.2, ease: "easeOut" }, 
-            scaleY: { duration: 0.4, delay: delay + 0.15, ease: "circOut" },
-            filter: { duration: 0.5, delay: delay + 0.2 },
+            scaleY: { duration: 0.4, delay: isMobile ? 0 : delay + 0.15, ease: "circOut" },
+            filter: { duration: 0.5, delay: isMobile ? 0 : delay + 0.2 },
             opacity: { duration: 0.1 },
           }
         }
@@ -232,7 +241,6 @@ function BentoCard({ children, className, delay = 0 }: { children: React.ReactNo
     </motion.div>
   );
 }
-
 // --- HEADER ---
 function CardHeader({ title, icon: Icon, delay }: { title: string; icon: any; delay: number }) {
   return (

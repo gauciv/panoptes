@@ -17,7 +17,7 @@ import { FloatingBar } from './landing/header/FloatingBar';
 import { DeploymentModules } from './landing/sections/DeploymentModules';
 import { PricingSection } from './landing/sections/PricingSection';
 import { SystemTelemetry } from './landing/sections/SystemTelemetry';
-import { StickyFooter } from './landing/components/StickyFooter';
+import { Footer } from './landing/components/Footer';
 import { AudioProvider } from './landing/context/VolumeContext';
 
 function Landing() {
@@ -102,7 +102,8 @@ function Landing() {
         </AnimatePresence>
 
         {/* 2. MAIN CONTENT CURTAIN (Z-10) */}
-        <div className="relative z-10 w-full bg-[#000000] mb-[800px] shadow-[0_50px_100px_rgba(0,0,0,1)]">
+        {/* FIX: Removed 'mb-[800px]' to fix the huge gap at bottom */}
+        <div className="relative w-full bg-[#000000] shadow-[0_50px_100px_rgba(0,0,0,1)]">
           
           {/* --- GRID BACKGROUND --- */}
           <div className="absolute top-0 left-0 right-0 h-[180vh] z-0 pointer-events-none overflow-hidden" aria-hidden="true">
@@ -127,7 +128,7 @@ function Landing() {
                     />
                     <ScrambleText
                       text="PANOPTES"
-                      className="block font-michroma text-sm tracking-[0.25em] text-ghost max-w-[100px]"
+                      className="hidden lg:block font-michroma text-sm tracking-[0.25em] text-ghost max-w-[100px]"
                       delay={0} 
                       margin='0px'
                     />
@@ -208,53 +209,60 @@ function Landing() {
                 </div>
 
                 {/* --- HERO TEXT SECTION --- */}
-                {!loading && (
-                  <div className="mt-14 grid gap-auto lg:grid-cols-2 lg:items-end">
-                    <div className="flex flex-col space-y-4 text-left">
-                      <h1>
-                        <ScrambleText
-                          text="PANOPTES"
-                          className="block text-5xl font-michroma text-ghost sm:text-6xl lg:text-7xl"
-                          delay={0.2}
-                          speed={50}
+                  {!loading && (
+                    <div className="mt-8 md:mt-14 grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 lg:items-end">
+                      
+                      {/* LEFT COLUMN: BRANDING */}
+                      <div className="flex flex-col space-y-2 md:space-y-4 text-left">
+                        <h1>
+                          <ScrambleText
+                            text="PANOPTES"
+                            // Mobile: 4xl (compact), Tablet: 6xl, Desktop: 7xl
+                            className="block font-michroma text-4xl sm:text-6xl lg:text-7xl text-ghost leading-none"
+                            delay={0.2}
+                            speed={50}
+                          />
+                        </h1>
+                        <MaskText
+                          text="Cardano Webhook Service."
+                          // Mobile: 10px, Desktop: xs
+                          className="block font-terminal text-[10px] md:text-xs uppercase tracking-[0.2em] md:tracking-[0.35em] text-ghost-muted"
+                          margin="0px"
+                          delay={0.1}
+                          as="h2"
                         />
-                      </h1>
-                      <MaskText
-                        text="Cardano Webhook Service."
-                        className="block font-terminal text-xs uppercase tracking-[0.35em] text-ghost-muted"
-                        margin="0px"
-                        delay={0.1}
-                        as="h2" 
-                      />
+                      </div>
 
-                    </div>
-
-                    <div className="flex flex-col space-y-3 text-left lg:text-left">
-                      <ScrambleText
-                        text="Scroll Down"
-                        className="block font-terminal text-[10px] uppercase tracking-[0.35em] text-ghost-muted"
-                        delay={0.3}
-                      />
-                      <MaskText
-                          text="Reactive Webhooks for Cardano."
-                          className="block text-3xl font-sans leading-tight text-ghost sm:text-4xl lg:text-5xl"
-                          delay={0.4}
+                      {/* RIGHT COLUMN: DESCRIPTION */}
+                      <div className="flex flex-col space-y-2 md:space-y-3 text-left">
+                        <ScrambleText
+                          text="Scroll Down"
+                          className="block font-terminal text-[10px] uppercase tracking-[0.35em] text-ghost-muted mb-2"
+                          delay={0.3}
+                        />
+                        
+                        <MaskText
+                            text="Reactive Webhooks for Cardano."
+                            // Mobile: 2xl, Tablet: 3xl, Desktop: 5xl
+                            className="block font-sans text-2xl sm:text-3xl lg:text-5xl leading-[1.1] text-ghost"
+                            delay={0.4}
+                            as="p"
+                        />
+                        
+                        <MaskText
+                          text="Bridge the gap between blockchain and backend."
+                          // Mobile: lg (readable), Desktop: 3xl
+                          className="block font-sans text-lg sm:text-2xl lg:text-4xl leading-[1.2] text-ghost-muted"
+                          delay={0.5}
                           as="p"
-                      />
-                      <MaskText
-                        text="Bridge the gap between blockchain and backend."
-                        className="block font-sans text-[32px] tracking-[0] text-ghost-muted"
-                        delay={0.5}
-                        as="p"
-                      />
+                        />
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
               </main>
             </div>
 
             {/* === CONTENT SECTIONS === */}
-            {/* Using section wrappers for better document outline */}
             <section aria-label="Live Metrics">
                 <BentoGrid />
             </section>
@@ -275,16 +283,13 @@ function Landing() {
                 <SystemTelemetry />
             </section>
             
-            <div className="h-12 w-full bg-[#000000]" />
+            {/* FIX: Removed the empty spacer div (h-12) here */}
 
           </div>
+          
+          {/* Footer inside the main wrapper */}
+          <Footer />
         </div>
-
-        {/* 3. STICKY FOOTER (Z-1) */}
-        <div className="fixed bottom-0 left-0 right-0 z-1 h-[800px]">
-           <StickyFooter />
-        </div>
-
       </div>
     </AudioProvider>
   );

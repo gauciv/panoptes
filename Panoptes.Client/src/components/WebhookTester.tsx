@@ -100,86 +100,86 @@ const WebhookTester: React.FC<WebhookTesterProps> = ({
   };
 
   const getStatusColor = (status: number) => {
-    if (status === 0) return 'text-red-600 bg-red-50 border-red-200 dark:bg-red-900/40 dark:text-red-300 dark:border-red-700';
-    if (status >= 200 && status < 300) return 'text-green-600 bg-green-50 border-green-200 dark:bg-green-900/30 dark:text-green-200 dark:border-green-700';
-    return 'text-amber-600 bg-amber-50 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-700';
+    if (status === 0) return 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/50 border-red-200 dark:border-red-500/50';
+    if (status >= 200 && status < 300) return 'text-[#006A33] dark:text-[#00ff66] bg-[#006A33]/10 dark:bg-[#006A33]/20 border-[#006A33]';
+    return 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/50 border-amber-200 dark:border-amber-500/50';
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm dark:shadow-lg overflow-hidden mt-6">
+    <div className="bg-white dark:bg-[#0a0a0a] border border-[#006A33]/30 shadow-sm dark:shadow-[0_0_15px_rgba(0,106,51,0.1)] overflow-hidden mt-6">
       
       {/* 1. Header with Target URL and Send Button */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/40">
+      <div className="flex items-center justify-between px-6 py-4 border-b border-[#006A33]/30 bg-gray-50 dark:bg-[#050505]">
         <div>
-          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Webhook Tester</h3>
-          <p className="text-sm text-gray-500 dark:text-gray-300">
-            Send a test payload to <span className="font-mono text-xs bg-gray-200 dark:bg-gray-800 text-gray-800 dark:text-gray-100 px-1 py-0.5 rounded">{targetUrl}</span>
+          <h3 className="text-lg font-medium text-[#006A33] dark:text-[#00ff66]">Webhook Tester</h3>
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            Send a test payload to <span className="font-mono text-xs bg-[#006A33]/10 dark:bg-[#006A33]/20 text-[#006A33] dark:text-[#00ff66] px-2 py-0.5 border border-[#006A33]/30 dark:border-[#006A33]/50">{targetUrl}</span>
           </p>
         </div>
         <button
           onClick={handleTestWebhook}
           disabled={isLoading}
-          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold uppercase tracking-wide text-white bg-[#006A33] border border-[#006A33] hover:bg-[#008844] hover:shadow-[0_0_15px_rgba(0,106,51,0.5)] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
         >
           {isLoading ? (
             <Icons.Spinner className="w-4 h-4 animate-spin" />
           ) : (
             <Icons.Play className="w-4 h-4" />
           )}
-          {isLoading ? 'Sending...' : 'Send Test Webhook'}
+          {isLoading ? 'Sending...' : 'SEND_TEST_WEBHOOK'}
         </button>
       </div>
 
       {/* 2. Tab Navigation */}
-      <div className="flex border-b border-gray-200 dark:border-gray-700">
+      <div className="flex border-b border-[#006A33]/30">
         <button
           onClick={() => setActiveTab('request')}
-          className={`flex-1 py-3 text-sm font-medium text-center transition-colors border-b-2 ${
+          className={`flex-1 py-3 text-sm font-medium text-center transition-all duration-200 border-b-2 ${
             activeTab === 'request'
-              ? 'border-indigo-600 text-indigo-600 bg-indigo-50/50 dark:bg-indigo-900/20'
-              : 'border-transparent text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-900'
+              ? 'border-[#006A33] text-[#006A33] dark:text-[#00ff66] bg-[#006A33]/10'
+              : 'border-transparent text-gray-500 hover:text-[#006A33] dark:hover:text-[#00ff66] hover:bg-[#006A33]/5'
           }`}
         >
           Request Payload
         </button>
         <button
           onClick={() => setActiveTab('response')}
-          className={`flex-1 py-3 text-sm font-medium text-center transition-colors border-b-2 flex items-center justify-center gap-2 ${
+          className={`flex-1 py-3 text-sm font-medium text-center transition-all duration-200 border-b-2 flex items-center justify-center gap-2 ${
             activeTab === 'response'
-              ? 'border-indigo-600 text-indigo-600 bg-indigo-50/50 dark:bg-indigo-900/20'
-              : 'border-transparent text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-900'
+              ? 'border-[#006A33] text-[#006A33] dark:text-[#00ff66] bg-[#006A33]/10'
+              : 'border-transparent text-gray-500 hover:text-[#006A33] dark:hover:text-[#00ff66] hover:bg-[#006A33]/5'
           }`}
         >
           Response
           {/* Status Indicator Dot */}
           {result && (
-            <span className={`w-2 h-2 rounded-full ${result.status >= 200 && result.status < 300 ? 'bg-green-500' : 'bg-red-500'}`} />
+            <span className={`w-2 h-2 ${result.status >= 200 && result.status < 300 ? 'bg-[#006A33] dark:bg-[#00ff66] dark:shadow-[0_0_6px_#00ff66]' : 'bg-red-500 dark:shadow-[0_0_6px_#ef4444]'}`} />
           )}
         </button>
       </div>
 
       {/* 3. Content Area */}
-      <div className="min-h-[300px] bg-white dark:bg-gray-800">
+      <div className="min-h-[300px] bg-white dark:bg-[#0a0a0a]">
         
         {/* --- REQUEST TAB --- */}
         {activeTab === 'request' && (
           <div className="p-6 animate-in fade-in duration-200">
             <div className="flex items-center justify-between mb-4">
-              <span className="text-xs font-semibold uppercase tracking-wider text-gray-500">JSON Payload</span>
+              <span className="text-xs font-semibold uppercase tracking-wider text-[#006A33]">JSON Payload</span>
               <button 
                 onClick={() => copyToClipboard(JSON.stringify(samplePayload, null, 2), 'req')}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
+                className="text-gray-500 hover:text-[#006A33] dark:hover:text-[#00ff66] transition-colors"
                 title="Copy JSON"
               >
                 {copiedSection === 'req' ? (
-                  <Icons.Check className="w-4 h-4 text-green-500" />
+                  <Icons.Check className="w-4 h-4 text-[#006A33] dark:text-[#00ff66]" />
                 ) : (
                   <Icons.Copy className="w-4 h-4" />
                 )}
               </button>
             </div>
-            <div className="bg-slate-50 dark:bg-gray-900 rounded-md border border-slate-200 dark:border-gray-700 overflow-hidden">
-              <pre className="p-4 text-xs font-mono text-slate-700 dark:text-gray-100 overflow-auto max-h-[400px]">
+            <div className="bg-gray-50 dark:bg-[#050505] border border-[#006A33]/30 overflow-hidden">
+              <pre className="p-4 text-xs font-mono text-gray-800 dark:text-white overflow-auto max-h-[400px]">
                 {JSON.stringify(samplePayload, null, 2)}
               </pre>
             </div>
@@ -192,19 +192,19 @@ const WebhookTester: React.FC<WebhookTesterProps> = ({
             
             {/* Empty State */}
             {!result && !isLoading && (
-              <div className="h-full flex flex-col items-center justify-center text-gray-400 dark:text-gray-300 py-12">
-                <div className="w-12 h-12 bg-gray-100 dark:bg-gray-900 rounded-full flex items-center justify-center mb-3">
-                  <Icons.Play className="w-5 h-5 ml-1 opacity-50" />
+              <div className="h-full flex flex-col items-center justify-center text-gray-500 py-12">
+                <div className="w-12 h-12 bg-[#006A33]/10 border border-[#006A33]/30 flex items-center justify-center mb-3">
+                  <Icons.Play className="w-5 h-5 ml-1 text-[#006A33] opacity-50" />
                 </div>
-                <p className="text-sm">Click "Send Test Webhook" to trigger a request.</p>
+                <p className="text-sm text-gray-500">Click "SEND_TEST_WEBHOOK" to trigger a request.</p>
               </div>
             )}
 
             {/* Loading State */}
             {isLoading && (
-              <div className="h-full flex flex-col items-center justify-center text-gray-400 dark:text-gray-300 py-12">
-                <Icons.Spinner className="w-8 h-8 animate-spin text-indigo-500 mb-3" />
-                <p className="text-sm">Waiting for response...</p>
+              <div className="h-full flex flex-col items-center justify-center text-gray-400 py-12">
+                <Icons.Spinner className="w-8 h-8 animate-spin text-[#006A33] mb-3" />
+                <p className="text-sm text-[#006A33]">Waiting for response...</p>
               </div>
             )}
 
@@ -213,7 +213,7 @@ const WebhookTester: React.FC<WebhookTesterProps> = ({
               <div className="space-y-4">
                 {/* Metrics Row */}
                 <div className="grid grid-cols-2 gap-3">
-                  <div className={`flex flex-col p-3 rounded-md border ${getStatusColor(result.status)}`}>
+                  <div className={`flex flex-col p-3 border ${getStatusColor(result.status)}`}>
                     <span className="text-xs font-medium opacity-80 uppercase">Status</span>
                     <div className="flex items-center gap-2 mt-1">
                       {result.status >= 400 ? (
@@ -226,23 +226,23 @@ const WebhookTester: React.FC<WebhookTesterProps> = ({
                     </div>
                   </div>
                   
-                  <div className="flex flex-col p-3 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-sm dark:shadow-lg">
-                    <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Latency</span>
+                  <div className="flex flex-col p-3 border border-[#006A33]/30 bg-gray-50 dark:bg-[#050505]">
+                    <span className="text-xs font-medium text-[#006A33] uppercase">Latency</span>
                     <div className="flex items-center gap-2 mt-1 text-gray-700 dark:text-gray-200">
-                      <Icons.Clock className="w-5 h-5 text-indigo-500" />
-                      <span className="text-xl font-bold">{result.durationMs}</span>
-                      <span className="text-sm text-gray-500 dark:text-gray-300">ms</span>
+                      <Icons.Clock className="w-5 h-5 text-[#006A33]" />
+                      <span className="text-xl font-bold text-[#006A33] dark:text-[#00ff66]">{result.durationMs}</span>
+                      <span className="text-sm text-gray-500">ms</span>
                     </div>
                   </div>
                 </div>
 
                 {/* Signature Header */}
                 {result.signature && (
-                  <div className="bg-white dark:bg-gray-900 p-3 rounded border border-gray-200 dark:border-gray-700 shadow-sm dark:shadow-lg flex items-center gap-3">
-                    <Icons.ShieldCheck className="w-5 h-5 text-emerald-500 flex-shrink-0" />
+                  <div className="bg-gray-50 dark:bg-[#050505] p-3 border border-[#006A33]/30 flex items-center gap-3">
+                    <Icons.ShieldCheck className="w-5 h-5 text-[#006A33] flex-shrink-0" />
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs text-gray-500 dark:text-gray-400 uppercase">HMAC Signature</p>
-                      <p className="text-xs font-mono text-gray-700 dark:text-gray-200 truncate" title={result.signature}>
+                      <p className="text-xs text-[#006A33] uppercase">HMAC Signature</p>
+                      <p className="text-xs font-mono text-[#006A33] dark:text-[#00ff66] truncate" title={result.signature}>
                         {result.signature}
                       </p>
                     </div>
@@ -252,20 +252,20 @@ const WebhookTester: React.FC<WebhookTesterProps> = ({
                 {/* Response Body */}
                 <div className="relative pt-2">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-semibold uppercase tracking-wider text-gray-500">Response Body</span>
+                    <span className="text-xs font-semibold uppercase tracking-wider text-[#006A33]">Response Body</span>
                     <button 
                       onClick={() => copyToClipboard(JSON.stringify(result.responseBody, null, 2), 'res')}
-                      className="text-gray-400 hover:text-gray-600 transition-colors"
+                      className="text-gray-500 hover:text-[#006A33] dark:hover:text-[#00ff66] transition-colors"
                     >
                        {copiedSection === 'res' ? (
-                          <Icons.Check className="w-3 h-3 text-green-500" />
+                          <Icons.Check className="w-3 h-3 text-[#006A33] dark:text-[#00ff66]" />
                        ) : (
                           <Icons.Copy className="w-3 h-3" />
                        )}
                     </button>
                   </div>
-                  <div className="bg-slate-900 rounded-md border border-slate-800 overflow-hidden">
-                    <pre className="p-4 text-xs font-mono text-green-400 overflow-auto max-h-[300px]">
+                  <div className="bg-gray-50 dark:bg-[#050505] border border-[#006A33]/30 overflow-hidden">
+                    <pre className="p-4 text-xs font-mono text-gray-800 dark:text-white overflow-auto max-h-[300px]">
                       {JSON.stringify(result.responseBody, null, 2)}
                     </pre>
                   </div>

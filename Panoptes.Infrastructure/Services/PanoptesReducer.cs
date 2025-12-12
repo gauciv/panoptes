@@ -125,8 +125,9 @@ namespace Panoptes.Infrastructure.Services
             _disabledDuringProcessing.Clear();
 
             // Fetch ALL subscriptions first, then filter based on actual rate limit status
+            // Fetch active, non-deleted subscriptions
             var allSubscriptions = await _dbContext.WebhookSubscriptions
-                .Where(s => !s.IsCircuitBroken) // Circuit broken is a persistent flag
+                .Where(s => !s.IsCircuitBroken && !s.IsDeleted) // <--- FIX HERE
                 .ToListAsync();
             
             // Check actual rate limit status from delivery logs for each subscription
@@ -223,198 +224,149 @@ namespace Panoptes.Infrastructure.Services
                 var outputs = tx.Outputs()?.ToList() ?? new List<TransactionOutput>();
                 var inputs = tx.Inputs()?.ToList() ?? new List<TransactionInput>();
 
-                // Extract addresses and assets from outputs
+                // --- STEP 1: PRE-CALCULATE (With Dual-Format Support) ---
+                
+                ulong totalTxLovelace = 0;
+                
+                // Dictionary now tracks amounts by address string (could be Hex OR Bech32)
+                // We will add entries for BOTH formats to ensure easy matching
+                var addressAmounts = new Dictionary<string, ulong>(); 
+                
+                // Output addresses set for quick lookups
                 var outputAddresses = new HashSet<string>();
                 var policyIds = new HashSet<string>();
 
                 foreach (var output in outputs)
                 {
-                    // Get output address (returns byte[], convert to hex)
                     var addressBytes = output.Address();
-                    if (addressBytes != null && addressBytes.Length > 0)
-                    {
-                        var addressHex = Convert.ToHexString(addressBytes).ToLowerInvariant();
-                        outputAddresses.Add(addressHex);
-                    }
+                    if (addressBytes == null || addressBytes.Length == 0) continue;
 
-                    // Get multi-assets (NFTs/tokens) - use Value extension method
+                    // 1. Get HEX Format
+                    var addressHex = Convert.ToHexString(addressBytes).ToLowerInvariant();
+                    
+                    // 2. Get BECH32 Format (addr_test1...) using existing helper
+                    // Note: We assume "preprod" network here, but helper handles prefix
+                    var addressBech32 = ConvertToBech32Address(addressHex).ToLowerInvariant();
+
+                    // Add BOTH to the set so filters match either one
+                    outputAddresses.Add(addressHex);
+                    outputAddresses.Add(addressBech32);
+
+                    // Calculate Amount
+                    ulong outputLovelace = 0;
                     var amount = output.Amount();
-                    if (amount is LovelaceWithMultiAsset lovelaceWithMultiAsset)
+
+                    if (amount is LovelaceWithMultiAsset lma)
                     {
-                        var multiAsset = lovelaceWithMultiAsset.MultiAsset;
+                        outputLovelace = lma.Lovelace();
+                        var multiAsset = lma.MultiAsset;
                         if (multiAsset?.Value != null)
                         {
                             foreach (var policy in multiAsset.Value.Keys)
                             {
-                                var policyHex = Convert.ToHexString(policy).ToLowerInvariant();
-                                policyIds.Add(policyHex);
+                                policyIds.Add(Convert.ToHexString(policy).ToLowerInvariant());
                             }
                         }
                     }
+                    else if (amount != null)
+                    {
+                        try { outputLovelace = Convert.ToUInt64(amount); } catch { }
+                    }
+
+                    totalTxLovelace += outputLovelace;
+                    
+                    // Track amount against HEX key
+                    if (!addressAmounts.ContainsKey(addressHex)) addressAmounts[addressHex] = 0;
+                    addressAmounts[addressHex] += outputLovelace;
+
+                    // Track amount against BECH32 key (Duplicate tracking for easy lookup)
+                    if (!addressAmounts.ContainsKey(addressBech32)) addressAmounts[addressBech32] = 0;
+                    addressAmounts[addressBech32] += outputLovelace;
                 }
 
-                // Check each subscription for matches
+                // --- STEP 2: CHECK SUBSCRIPTIONS ---
                 foreach (var sub in subscriptions)
                 {
-                    // First check: wallet address filtering (if enabled)
-                    if (!IsRelevantForSubscription(sub, outputAddresses))
+                    // Filter 1: Wallet Address Match
+                    // Now works because outputAddresses contains both Hex and Bech32
+                    if (!IsRelevantForSubscription(sub, outputAddresses)) continue;
+
+                    // Filter 2: Minimum ADA
+                    if (sub.MinimumLovelace.HasValue && sub.MinimumLovelace.Value > 0)
                     {
-                        // Transaction doesn't involve any of the filtered addresses - skip
-                        continue;
+                        ulong relevantAmount = 0;
+
+                        // Case A: User specifically put addresses in the "Wallet Addresses" list (The Chips UI)
+                        // We prioritize this over "TargetAddress" (legacy field)
+                        if (sub.WalletAddresses != null && sub.WalletAddresses.Any())
+                        {
+                            // Check amounts received by ANY of the watched addresses
+                            foreach (var walletAddr in sub.WalletAddresses)
+                            {
+                                var walletLower = walletAddr.ToLowerInvariant();
+                                if (addressAmounts.TryGetValue(walletLower, out var amt))
+                                {
+                                    relevantAmount += amt;
+                                }
+                            }
+                        }
+                        // Case B: Legacy TargetAddress field (if used)
+                        else if (!string.IsNullOrEmpty(sub.TargetAddress))
+                        {
+                            var targetLower = sub.TargetAddress.ToLowerInvariant();
+                            if (addressAmounts.TryGetValue(targetLower, out var amt))
+                            {
+                                relevantAmount = amt;
+                            }
+                        }
+                        else
+                        {
+                            // Case C: Firehose (All transactions) -> Check total tx volume
+                            relevantAmount = totalTxLovelace;
+                        }
+
+                        if (relevantAmount < sub.MinimumLovelace.Value)
+                        {
+                            continue; // Amount too low
+                        }
                     }
 
+                    // ... (Dispatch Logic) ...
+                    
                     bool shouldDispatch = false;
                     string matchReason = "";
-                    
-                    // Debug: Log subscription details on first transaction of significant blocks
-                    if (txIndex == 0 && blockHeight % 500 == 0)
-                    {
-                        _logger?.LogInformation("Checking subscription '{Name}' (EventType: '{EventType}', TargetAddress: '{Addr}', WalletFilter: {Filter}, Active: {Active})", 
-                            sub.Name, sub.EventType, sub.TargetAddress ?? "(none)", sub.WalletAddresses?.Count ?? 0, sub.IsActive);
-                    }
 
                     switch (sub.EventType?.ToLowerInvariant())
                     {
                         case "transaction":
-                            // Match by address if specified, otherwise match all transactions
-                            if (string.IsNullOrEmpty(sub.TargetAddress))
-                            {
-                                shouldDispatch = true;
-                                matchReason = "All transactions";
-                            }
-                            else
-                            {
-                                // Try matching both hex format and bech32 format
-                                var targetAddressLower = sub.TargetAddress.ToLowerInvariant();
-                                
-                                // Check if any output address contains the target (for hex comparison)
-                                // or if the target is a bech32 address, we match against hex
-                                if (outputAddresses.Contains(targetAddressLower))
-                                {
-                                    shouldDispatch = true;
-                                    matchReason = $"Address match (hex): {sub.TargetAddress}";
-                                }
-                                // Also check if the target address (possibly bech32) matches any output
-                                // For now, if user enters partial hex, try to match
-                                else if (outputAddresses.Any(addr => addr.Contains(targetAddressLower) || targetAddressLower.Contains(addr)))
-                                {
-                                    shouldDispatch = true;
-                                    matchReason = $"Address partial match: {sub.TargetAddress}";
-                                }
-                            }
+                            // If we passed the filters above, we dispatch
+                            shouldDispatch = true;
+                            matchReason = "Transaction match"; 
                             break;
-
+                            
                         case "nft mint":
-                        case "nftmint":
                         case "mint":
-                            // Check if this transaction mints assets (has mint field)
                             var mint = tx.Mint();
-                            if (mint != null && mint.Any())
-                            {
-                                if (string.IsNullOrEmpty(sub.PolicyId))
-                                {
-                                    shouldDispatch = true;
-                                    matchReason = "Any mint event";
-                                }
-                                else
-                                {
-                                    var mintPolicies = mint.Keys.Select(k => Convert.ToHexString(k).ToLowerInvariant());
-                                    if (mintPolicies.Contains(sub.PolicyId.ToLowerInvariant()))
-                                    {
-                                        shouldDispatch = true;
-                                        matchReason = $"Policy match: {sub.PolicyId}";
-                                    }
-                                }
-                            }
+                            if (mint != null && mint.Any()) { shouldDispatch = true; matchReason = "Mint event"; }
                             break;
-
+                            
                         case "asset move":
                         case "assetmove":
-                        case "transfer":
-                            // Match asset transfers by policy ID
-                            if (string.IsNullOrEmpty(sub.PolicyId))
-                            {
-                                if (policyIds.Any())
-                                {
-                                    shouldDispatch = true;
-                                    matchReason = "Any asset transfer";
-                                }
-                            }
-                            else if (policyIds.Contains(sub.PolicyId.ToLowerInvariant()))
-                            {
-                                shouldDispatch = true;
-                                matchReason = $"Policy transfer: {sub.PolicyId}";
-                            }
-                            break;
-
-                        default:
-                            // Unknown event type - skip
+                            if (policyIds.Any()) { shouldDispatch = true; matchReason = "Asset transfer"; }
                             break;
                     }
 
                     if (shouldDispatch)
                     {
-                        // Build enhanced payload with more details
+                        // Build payload
                         var payload = BuildEnhancedPayload(tx, txIndex, slot, blockHash, blockHeight, 
                             txHash, inputs, outputs, outputAddresses, policyIds, sub.EventType ?? "Unknown", matchReason);
                         
-                        // SKIP ENTIRELY if subscription is disabled (rate-limited or circuit-broken)
-                        // This is a safety check in case the subscription wasn't filtered properly
-                        if (sub.IsRateLimited || sub.IsCircuitBroken || _disabledDuringProcessing.Contains(sub.Id))
-                        {
-                            _logger?.LogDebug("Skipping disabled subscription {Name} - not recording or dispatching", sub.Name);
-                            continue;
-                        }
+                        if (sub.IsRateLimited || sub.IsCircuitBroken || _disabledDuringProcessing.Contains(sub.Id)) continue;
+                        if (!sub.IsActive) { await RecordPausedEvent(sub, payload); continue; }
                         
-                        // Handle paused (inactive) subscriptions: record the event but don't dispatch
-                        if (!sub.IsActive)
-                        {
-                            _logger?.LogInformation("⏸️ Subscription {Name} is paused - recording event without dispatching", sub.Name);
-                            await RecordPausedEvent(sub, payload);
-                            continue;
-                        }
-                        
-                        // During catch-up, batch webhooks instead of dispatching immediately
-                        if (_isCatchingUp)
-                        {
-                            // Add to batch
-                            if (!_pendingWebhooks.ContainsKey(sub.Id))
-                            {
-                                _pendingWebhooks[sub.Id] = new List<object>();
-                            }
-                            
-                            _pendingWebhooks[sub.Id].Add(payload);
-                            
-                            // If batch is full, send the most recent one and clear
-                            if (_pendingWebhooks[sub.Id].Count >= BATCH_SIZE_DURING_CATCHUP)
-                            {
-                                var mostRecentPayload = _pendingWebhooks[sub.Id].Last();
-                                _pendingWebhooks[sub.Id].Clear();
-                                
-                                _logger?.LogInformation("📦 [BATCH] Sending 1 of {Count} webhooks for {Name} (keeping most recent)", 
-                                    BATCH_SIZE_DURING_CATCHUP, sub.Name);
-                                
-                                // Check rate limits before dispatching
-                                if (await CheckRateLimitAsync(sub))
-                                {
-                                    await DispatchWebhook(sub, mostRecentPayload);
-                                }
-                            }
-                        }
-                        else
-                        {
-                            // Real-time mode: dispatch immediately with rate limiting
-                            if (!await CheckRateLimitAsync(sub))
-                            {
-                                _logger?.LogWarning("⚠️ Rate limit exceeded for {Name}, skipping webhook", sub.Name);
-                                continue;
-                            }
-                            
-                            _logger?.LogInformation("🔔 Dispatching webhook to {Name} for {EventType}: {Reason}", 
-                                sub.Name, sub.EventType, matchReason);
-                            
-                            await DispatchWebhook(sub, payload);
-                        }
+                        // Force Real-Time (Catch-up Disabled)
+                        if (await CheckRateLimitAsync(sub)) await DispatchWebhook(sub, payload);
                     }
                 }
             }
@@ -735,27 +687,28 @@ namespace Panoptes.Infrastructure.Services
         /// </summary>
         private string ConvertToBech32Address(string hexAddress, string network = "preprod")
         {
-            if (string.IsNullOrEmpty(hexAddress))
-                return hexAddress;
+            if (string.IsNullOrEmpty(hexAddress)) return hexAddress;
 
             try
             {
                 var bytes = Convert.FromHexString(hexAddress);
-                if (bytes.Length == 0)
-                    return hexAddress;
+                if (bytes.Length == 0) return hexAddress;
 
-                // Determine prefix from header byte (first byte indicates network)
+                // --- FIX STARTS HERE ---
+                // Cardano Header Byte: [Type (4 bits) | Network (4 bits)]
                 var header = bytes[0];
-                var isTestnet = (header & 0xF0) != 0x00;
-                var prefix = isTestnet ? "addr_test" : "addr";
+                var networkId = header & 0x0F; // Extract lower 4 bits
+                
+                // Network ID 0 = Testnet (Preprod/Preview) -> prefix "addr_test"
+                // Network ID 1 = Mainnet -> prefix "addr"
+                var prefix = (networkId == 1) ? "addr" : "addr_test";
+                // --- FIX ENDS HERE ---
 
-                // Encode to Bech32
-                var encoded = Bech32Encode(prefix, bytes);
-                return encoded;
+                return Bech32Encode(prefix, bytes);
             }
-            catch
+            catch (Exception ex)
             {
-                // Fallback to hex if Bech32 encoding fails
+                _logger?.LogWarning("Failed to convert hex to bech32: {Error}", ex.Message);
                 return hexAddress;
             }
         }
@@ -881,20 +834,10 @@ namespace Panoptes.Infrastructure.Services
             string eventType,
             string matchReason)
         {
-            // Extract input addresses for proper change detection
-            var inputAddresses = new HashSet<string>();
-            foreach (var input in inputs)
-            {
-                // Note: We can't get the address directly from TransactionInput
-                // We'd need to fetch the previous transaction output
-                // For now, we'll use a different heuristic
-            }
-            
-            // Calculate total ADA from outputs and build enhanced output details
             ulong totalOutputLovelace = 0;
             var outputDetails = new List<object>();
             
-            foreach (var output in outputs.Take(20))
+            foreach (var output in outputs.Take(20)) 
             {
                 var addressBytes = output.Address();
                 var addressHex = addressBytes != null && addressBytes.Length > 0 
@@ -906,46 +849,32 @@ namespace Panoptes.Infrastructure.Services
 
                 var amount = output.Amount();
                 
-                // DIAGNOSTIC: Log the raw amount type for debugging
-                var amountTypeName = amount?.GetType().FullName ?? "null";
-                _logger?.LogDebug($"Output amount type: {amountTypeName}");
-                
-                // Get lovelace amount - handle multiple possible types
+                // --- PARSING FIX (Handle Coin Wrapper) ---
                 if (amount is LovelaceWithMultiAsset lovelaceWithMultiAsset)
                 {
                     lovelace = lovelaceWithMultiAsset.Lovelace();
-                    _logger?.LogDebug($"Parsed Lovelace from LovelaceWithMultiAsset: {lovelace} at address {addressHex}");
-                    totalOutputLovelace += lovelace;
-
+                    
                     var multiAsset = lovelaceWithMultiAsset.MultiAsset;
                     if (multiAsset?.Value != null)
                     {
                         foreach (var policy in multiAsset.Value.Keys)
                         {
                             var policyHex = Convert.ToHexString(policy).ToLowerInvariant();
-                            
-                            // Get asset names from the policy
                             if (multiAsset.Value.TryGetValue(policy, out var policyAssets) && policyAssets?.Value != null)
                             {
                                 foreach (var assetName in policyAssets.Value.Keys)
                                 {
                                     var assetNameHex = Convert.ToHexString(assetName).ToLowerInvariant();
-                                    
-                                    // Try to decode as UTF-8, but keep hex as source of truth
                                     string? assetNameUtf8 = null;
-                                    try
-                                    {
+                                    try {
                                         var decoded = System.Text.Encoding.UTF8.GetString(assetName);
-                                        // Verify it's valid UTF-8 (no control chars or invalid sequences)
                                         if (decoded.All(c => !char.IsControl(c) || char.IsWhiteSpace(c)))
                                             assetNameUtf8 = decoded;
-                                    }
-                                    catch { /* Invalid UTF-8, keep null */ }
+                                    } catch {}
                                     
                                     if (policyAssets.Value.TryGetValue(assetName, out var quantity))
                                     {
-                                        assets.Add(new
-                                        {
+                                        assets.Add(new {
                                             PolicyId = policyHex,
                                             NameHex = assetNameHex,
                                             NameUTF8 = assetNameUtf8,
@@ -959,96 +888,33 @@ namespace Panoptes.Infrastructure.Services
                 }
                 else if (amount != null)
                 {
-                    // Handle other amount types (e.g., plain Lovelace, Coin, etc.)
-                    var amountType = amount.GetType();
-                    _logger?.LogWarning($"Unknown amount type: {amountType.FullName} at address {addressHex}");
-                    _logger?.LogWarning($"  Attempting alternate parsing methods...");
-                    
-                    // Strategy 1: Check for Coin property/method (older Chrysalis versions)
-                    {
-                        var coinProperty = amountType.GetProperty("Coin");
-                        if (coinProperty != null)
-                        {
-                            var coinValue = coinProperty.GetValue(amount);
-                            if (coinValue is ulong coinLovelace)
-                            {
-                                lovelace = coinLovelace;
-                                _logger?.LogWarning($"  ✅ Extracted {lovelace} lovelace from Coin property");
-                                totalOutputLovelace += lovelace;
-                            }
-                        }
+                    // The "Coin" type is likely an object wrapper, not a primitive.
+                    // We use 'dynamic' to inspect it at runtime without needing the exact type import.
+                    try 
+                    { 
+                        // 1. Try casting to dynamic to access properties
+                        dynamic dynamicAmount = amount;
                         
-                        // Strategy 3: Try to convert to ulong if possible
-                        if (lovelace == 0)
-                        {
-                            try
-                            {
-                                // Try direct conversion
-                                var convertedValue = Convert.ToUInt64(amount);
-                                lovelace = convertedValue;
-                                _logger?.LogWarning($"  ✅ Converted amount to ulong: {lovelace} lovelace");
-                                totalOutputLovelace += lovelace;
-                            }
-                            catch (Exception ex)
-                            {
-                                _logger?.LogWarning($"  ❌ Failed to convert amount to ulong: {ex.Message}");
-                                
-                                // Strategy 4: Use reflection to inspect all properties
-                                var properties = amountType.GetProperties();
-                                _logger?.LogWarning($"  Available properties on {amountType.Name}:");
-                                foreach (var prop in properties)
-                                {
-                                    try
-                                    {
-                                        var propValue = prop.GetValue(amount);
-                                        _logger?.LogWarning($"    - {prop.Name}: {propValue} (Type: {prop.PropertyType.Name})");
-                                    }
-                                    catch
-                                    {
-                                        _logger?.LogWarning($"    - {prop.Name}: <unable to read>");
-                                    }
-                                }
+                        // Check common property names for Coin wrappers
+                        try { lovelace = (ulong)dynamicAmount; } // Implicit cast
+                        catch {
+                            try { lovelace = (ulong)dynamicAmount.Value; } // .Value property
+                            catch { 
+                                // Fallback: Reflection for "Coin" property (seen in older logs)
+                                var prop = amount.GetType().GetProperty("Coin") ?? amount.GetType().GetProperty("Value");
+                                if (prop != null) lovelace = Convert.ToUInt64(prop.GetValue(amount));
                             }
                         }
+                    } 
+                    catch {
+                        _logger?.LogWarning("Failed to parse Coin object for {Addr}. Type: {Type}", addressHex, amount.GetType().Name);
                     }
                 }
-                else
-                {
-                    _logger?.LogError($"Amount is null for output at address {addressHex}");
-                }
+                // --- END FIX ---
 
-                // CRITICAL DIAGNOSTIC: Check for suspicious 0-value outputs
-                // On Cardano, outputs MUST have minimum ADA (usually ~1 ADA)
-                // If we see 0, it means our parser failed to read the value correctly
-                if (lovelace == 0 && assets.Count == 0)
-                {
-                    _logger?.LogWarning($"⚠️ SUSPICIOUS ZERO VALUE DETECTED - Parsing may have failed!");
-                    _logger?.LogWarning($"  Address: {addressHex} (Bech32: {ConvertToBech32Address(addressHex)})");
-                    _logger?.LogWarning($"  Raw Amount Type: {amount?.GetType().FullName ?? "null"}");
-                    _logger?.LogWarning($"  Amount is LovelaceWithMultiAsset: {amount is LovelaceWithMultiAsset}");
-                    
-                    // Try alternate parsing methods
-                    if (amount != null)
-                    {
-                        _logger?.LogWarning($"  Amount ToString: {amount}");
-                        _logger?.LogWarning($"  Amount object dump: {System.Text.Json.JsonSerializer.Serialize(amount)}");
-                    }
-                    
-                    _logger?.LogWarning($"  Assets found: {assets.Count}");
-                    _logger?.LogWarning($"  OutputIndex in transaction: {outputs.IndexOf(output)}");
-                    _logger?.LogWarning($"  Total outputs in tx: {outputs.Count}");
-                    _logger?.LogWarning("  ⚠️ This output will be HIDDEN from webhook payload - potential data loss!");
-                    
-                    continue;
-                }
-                
-                // Additional safety check: Warn if lovelace is suspiciously low but non-zero
-                if (lovelace > 0 && lovelace < 1_000_000) // Less than 1 ADA
-                {
-                    _logger?.LogWarning($"Low ADA output detected: {lovelace} lovelace ({lovelace / 1_000_000.0:F6} ADA) at {addressHex}");
-                }
+                totalOutputLovelace += lovelace;
 
-                // Convert hex address to Bech32
+                // Use the Bech32 converter we fixed earlier
                 var bech32Address = ConvertToBech32Address(addressHex);
 
                 outputDetails.Add(new
@@ -1058,60 +924,35 @@ namespace Panoptes.Infrastructure.Services
                     Amount = new
                     {
                         Lovelace = lovelace,
-                        Ada = Math.Round(lovelace / 1_000_000.0, 2)
+                        Ada = Math.Round(lovelace / 1_000_000.0, 6)
                     },
                     Assets = assets,
-                    // CRITICAL: IsChange = null when input hydration is disabled
-                    // Reason: Without knowing input addresses, we CANNOT determine if this is change
-                    // Default false would be a lie (implying "this is a payment to recipient")
-                    // Default true would be a lie (implying "this is change back to sender")
-                    // null = "We don't know - developer must determine from context"
-                    // 
-                    // For bot developers: Treat null as "potential payment" to be safe
-                    // False positive (alerting on change) is better than false negative (missing real payment)
                     IsChange = (bool?)null
                 });
             }
 
-            // FIX #3: Calculate TotalReceived per address (OUTPUT ONLY - NOT net balance)
-            // WARNING: This is NOT a balance calculation (which requires Input - Output)
-            // This shows how much ADA each address RECEIVED in this transaction
-            var totalReceivedPerAddress = new Dictionary<string, long>();
-            
-            // Sum all outputs per address
-            foreach (var output in outputDetails)
+            // Calculate Total Received per address
+            var totalReceivedPerAddress = new Dictionary<string, string>(); // Changed to string for formatted ADA
+            var tempTotals = new Dictionary<string, double>();
+
+            foreach (var detail in outputDetails)
             {
-                var outputAddr = ((dynamic)output).Address.ToString();
-                var outputLovelace = (ulong)((dynamic)output).Amount.Lovelace;
-                
-                if (!string.IsNullOrEmpty(outputAddr))
-                {
-                    if (!totalReceivedPerAddress.ContainsKey(outputAddr))
-                        totalReceivedPerAddress[outputAddr] = 0;
-                    totalReceivedPerAddress[outputAddr] += (long)outputLovelace;
-                }
+                var addr = (string)((dynamic)detail).Address;
+                var amt = (double)((dynamic)detail).Amount.Ada;
+                if (!tempTotals.ContainsKey(addr)) tempTotals[addr] = 0;
+                tempTotals[addr] += amt;
             }
             
-            // Format as ADA strings (no +/- signs - this is absolute received amount)
-            var totalReceivedFormatted = totalReceivedPerAddress
-                .Where(b => b.Value != 0)
-                .ToDictionary(
-                    b => b.Key,
-                    b => {
-                        var ada = b.Value / 1_000_000.0;
-                        return $"{ada:F2} ADA";
-                    }
-                );
+            // Format the totals
+            foreach(var kvp in tempTotals)
+            {
+                totalReceivedPerAddress[kvp.Key] = $"{kvp.Value:F6} ADA";
+            }
 
-            // Build input list
-            // NOTE: Input amounts are NOT hydrated in this version
-            // Reason: Requires fetching previous transaction outputs (expensive blockchain queries)
-            // Workaround: Use TxHash + OutputIndex to query block explorer APIs if needed
             var inputDetails = inputs.Take(20).Select(input => new
             {
                 TxHash = Convert.ToHexString(input.TransactionId()).ToLowerInvariant(),
                 OutputIndex = input.Index()
-                // Amount: NOT AVAILABLE - requires querying previous tx outputs
             }).ToList();
 
             var fee = tx.Fee();
@@ -1120,54 +961,29 @@ namespace Panoptes.Infrastructure.Services
             {
                 Event = eventType,
                 TxHash = txHash,
-                
-                // Transaction metadata - use this to verify data completeness
                 Metadata = new
                 {
                     MatchReason = matchReason,
                     InputCount = inputs.Count,
                     OutputCount = outputs.Count,
                     OutputsIncluded = outputDetails.Count,
-                    InputsIncluded = inputDetails.Count,
-                    InputAmountsHydrated = false, // We don't fetch previous tx data
-                    TotalOutputAda = Math.Round(totalOutputLovelace / 1_000_000.0, 2),
-                    TruncationNote = inputs.Count > 20 || outputs.Count > 20 
-                        ? "Transaction has more than 20 inputs/outputs. Only first 20 shown." 
-                        : null,
-                    // CRITICAL SANITY CHECK: If OutputCount > OutputsIncluded AND TotalOutputAda is 0
-                    // This suggests we filtered outputs due to parsing failures (not just truncation)
-                    DataLossWarning = outputs.Count > outputDetails.Count && totalOutputLovelace == 0
-                        ? "⚠️ CRITICAL: Outputs were filtered due to 0 ADA values. This may indicate a parsing bug. Check logs for 'SUSPICIOUS ZERO VALUE' warnings."
-                        : outputs.Count > outputDetails.Count
-                        ? $"Note: {outputs.Count - outputDetails.Count} output(s) filtered (0 ADA values or truncation limit)"
-                        : null
+                    TotalOutputAda = Math.Round(totalOutputLovelace / 1_000_000.0, 6),
+                    TruncationNote = inputs.Count > 20 || outputs.Count > 20 ? "Truncated to 20 items" : null
                 },
-                
-                // WARNING: TotalReceived is OUTPUT-ONLY. Not a net balance calculation.
-                // Since InputAmountsHydrated=false, we cannot calculate true balance (In - Out)
-                // TotalReceived shows: "How much ADA this address received in outputs"
-                // For self-transfers, this does NOT mean the address "gained" this amount
-                TotalReceived = totalReceivedFormatted.Count > 0 ? totalReceivedFormatted : null,
-                
-                // Grouped fee information
+                TotalReceived = totalReceivedPerAddress, // Clean dictionary
                 Fees = new
                 {
                     Lovelace = fee,
-                    Ada = Math.Round(fee / 1_000_000.0, 2)
+                    Ada = Math.Round(fee / 1_000_000.0, 6)
                 },
-                
-                // Detailed transaction data
                 Inputs = inputDetails,
                 Outputs = outputDetails,
-                
-                // Context information
                 Block = new
                 {
                     Slot = slot,
                     Hash = blockHash,
                     Height = blockHeight
                 },
-                
                 Timestamp = DateTime.UtcNow.ToString("o")
             };
         }
