@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import clsx from 'clsx';
 import { Crosshair, Database, ShieldAlert, ArrowUpRight } from 'lucide-react';
@@ -15,7 +16,7 @@ const modules = [
     color: 'text-sentinel',
     border: 'group-hover:border-sentinel/50',
     bg: 'group-hover:bg-sentinel/5',
-    path: "M0 80 L20 75 L40 80 L60 50 L80 60 L100 20 L120 40 L140 30 L160 50 L180 10 L200 40"
+   //  path: "M0 80 L20 75 L40 80 L60 50 L80 60 L100 20 L120 40 L140 30 L160 50 L180 10 L200 40"
   },
   {
     id: 'MOD_02',
@@ -27,7 +28,7 @@ const modules = [
     color: 'text-blue-400',
     border: 'group-hover:border-blue-400/50',
     bg: 'group-hover:bg-blue-400/5',
-    path: "M20 20 L180 20 L180 40 L20 40 Z M20 50 L180 50 L180 70 L20 70 Z M20 80 L180 80 L180 100 L20 100 Z"
+   //  path: "M20 20 L180 20 L180 40 L20 40 Z M20 50 L180 50 L180 70 L20 70 Z M20 80 L180 80 L180 100 L20 100 Z"
   },
   {
     id: 'MOD_03',
@@ -39,18 +40,28 @@ const modules = [
     color: 'text-red-400',
     border: 'group-hover:border-red-400/50',
     bg: 'group-hover:bg-red-400/5',
-    path: "M100 10 L180 40 V90 C180 140 100 190 100 190 C100 190 20 140 20 90 V40 Z"
+   //  path: "M100 10 L180 40 V90 C180 140 100 190 100 190 C100 190 20 140 20 90 V40 Z"
   }
 ];
 
 // --- INDIVIDUAL MODULE CARD ---
 function ModuleCard({ item, index }: { item: typeof modules[0], index: number }) {
-  // Stagger delay based on index
-  const delay = index * 0.1;
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile(); 
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Standard delay logic (same as BentoGrid)
+  const delay = isMobile ? 0 : index * 0.1;
 
   return (
     <motion.div
-       initial="closed"
+      // Logic copied EXACTLY from BentoGrid reference
+      initial={isMobile ? "open" : "closed"}
       whileInView="open"
       viewport={{ once: true, margin: "-10%" }}
       variants={{
@@ -68,25 +79,28 @@ function ModuleCard({ item, index }: { item: typeof modules[0], index: number })
           y: 0,
           filter: "brightness(1) contrast(1)",
           transition: {
-            duration: 0.3,
-            delay: delay,
+            duration: 0.6,
+            delay: delay, // Use variable
+            // Snappy width expansion (0.2s)
             scaleX: { duration: 0.2, ease: "easeOut" }, 
-            scaleY: { duration: 0.2, delay: delay + 0.15, ease: "circOut" },
+            // Height expands AFTER width (0.4s)
+            scaleY: { duration: 0.4, delay: delay + 0.15, ease: "circOut" },
+            // Filters settle last
             filter: { duration: 0.5, delay: delay + 0.2 },
             opacity: { duration: 0.1 },
           }
         }
       }}
       className={clsx(
-        "group relative flex flex-col justify-between overflow-hidden rounded-sm border border-white/10 bg-[#050505] p-8 transition-all duration-500 hover:-translate-y-2",
+        "group relative flex flex-col justify-between overflow-hidden rounded-sm border border-white/10 bg-[#050505] p-8 transition-colors duration-300",
         item.border
       )}
     >
-      {/* 1. CRT SCANLINE OVERLAY (From BentoGrid) */}
+      {/* 1. CRT SCANLINE OVERLAY */}
       <div className="pointer-events-none absolute inset-0 z-20 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.1)_50%),linear-gradient(90deg,rgba(255,0,0,0.03),rgba(0,255,0,0.01),rgba(0,0,255,0.03))] bg-[length:100%_4px,6px_100%] opacity-20" />
 
       {/* 2. BACKGROUND HOLOGRAPHIC ANIMATION */}
-      <div className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-500 group-hover:opacity-20 z-0">
+      {/* <div className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-500 group-hover:opacity-20 z-0">
          <svg className="h-full w-full" preserveAspectRatio="none">
             <motion.path
                d={item.path}
@@ -95,18 +109,16 @@ function ModuleCard({ item, index }: { item: typeof modules[0], index: number })
                strokeWidth="2"
                className={item.color}
                initial={{ pathLength: 0 }}
-               whileInView={{ pathLength: 1 }} // animate when visible
+               whileInView={{ pathLength: 1 }}
                transition={{ duration: 1.5, ease: "easeInOut", delay: delay + 0.5 }}
             />
          </svg>
-         {/* Grid overlay */}
          <div className={clsx("absolute inset-0 bg-[radial-gradient(circle_at_center,currentColor_1px,transparent_1px)] bg-[length:10px_10px] opacity-20", item.color)} />
-      </div>
+      </div> */}
 
       {/* 3. HEADER CONTENT */}
       <div className="relative z-10">
          <div className="mb-6 flex items-start justify-between">
-            {/* Icon Box */}
             <div className={clsx(
                "flex h-12 w-12 items-center justify-center rounded-sm border bg-[#0A0A0A] transition-colors duration-300",
                "border-white/10 text-ghost/50",
@@ -115,7 +127,6 @@ function ModuleCard({ item, index }: { item: typeof modules[0], index: number })
                <item.icon size={24} />
             </div>
             
-            {/* ID Badge */}
             <div className="font-mono text-[10px] text-ghost/30">
                [{item.id}]
             </div>
@@ -132,7 +143,7 @@ function ModuleCard({ item, index }: { item: typeof modules[0], index: number })
          </p>
       </div>
 
-      {/* 4. FOOTER (Status & Action) */}
+      {/* 4. FOOTER */}
       <div className="relative z-10 mt-8 flex items-center justify-between border-t border-white/5 pt-4">
          <div className="flex items-center gap-2">
             <div className={clsx("h-1.5 w-1.5 rounded-full animate-pulse", item.color.replace('text-', 'bg-'))} />
@@ -175,6 +186,7 @@ export function DeploymentModules() {
         </div>
 
         {/* MODULES GRID */}
+        {/* Important: Removed motion.div wrapper to let cards trigger individually like BentoGrid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
            {modules.map((mod, i) => (
               <ModuleCard key={mod.id} item={mod} index={i} />

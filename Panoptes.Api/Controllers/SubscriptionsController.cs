@@ -7,7 +7,7 @@ using Panoptes.Infrastructure.Services;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
-using System.Net.Http; // Ensure this is included
+using System.Net.Http;
 
 namespace Panoptes.Api.Controllers
 {
@@ -82,7 +82,7 @@ namespace Panoptes.Api.Controllers
                     Message = response.IsSuccessStatusCode 
                         ? "Webhook URL is reachable and accepting requests" 
                         : $"Webhook URL responded with status {response.StatusCode}",
-                    Latency = 0 // Could track this with Stopwatch if needed
+                    Latency = 0
                 });
             }
             catch (HttpRequestException ex)
@@ -106,11 +106,11 @@ namespace Panoptes.Api.Controllers
         [HttpPost]
         public async Task<ActionResult<WebhookSubscription>> CreateSubscription(WebhookSubscription subscription)
         {
-            // Check for duplicate subscription name
+            // Check for duplicate subscription name (Excluding deleted ones)
             if (!string.IsNullOrWhiteSpace(subscription.Name))
             {
                 var existingSubscription = await _dbContext.WebhookSubscriptions
-                    .FirstOrDefaultAsync(s => s.Name == subscription.Name);
+                    .FirstOrDefaultAsync(s => s.Name == subscription.Name && !s.IsDeleted);
                 
                 if (existingSubscription != null)
                 {
@@ -118,9 +118,9 @@ namespace Panoptes.Api.Controllers
                 }
             }
 
-            // Check for duplicate EventType and TargetUrl combination
+            // Check for duplicate EventType and TargetUrl combination (Excluding deleted ones)
             var duplicateEventTypeAndUrl = await _dbContext.WebhookSubscriptions
-                .FirstOrDefaultAsync(s => s.EventType == subscription.EventType && s.TargetUrl == subscription.TargetUrl);
+                .FirstOrDefaultAsync(s => s.EventType == subscription.EventType && s.TargetUrl == subscription.TargetUrl && !s.IsDeleted);
             
             if (duplicateEventTypeAndUrl != null)
             {
@@ -157,14 +157,13 @@ namespace Panoptes.Api.Controllers
             // Auto-generate SecretKey (ignore any client-provided value)
             subscription.SecretKey = Guid.NewGuid().ToString("N");
             
-            // Default to active if not specified
-            // Note: bool defaults to false, but frontend sends true explicitly
-            // This is kept for clarity
-            
             if (subscription.CreatedAt == default)
             {
                 subscription.CreatedAt = DateTime.UtcNow;
             }
+
+            // NEW: Ensure deleted flag is false
+            subscription.IsDeleted = false;
 
             _dbContext.WebhookSubscriptions.Add(subscription);
             await _dbContext.SaveChangesAsync();
@@ -180,14 +179,16 @@ namespace Panoptes.Api.Controllers
         {
             try
             {
-                var subscriptions = await _dbContext.WebhookSubscriptions.ToListAsync();
+                // CHANGED: Filter out deleted subscriptions
+                var subscriptions = await _dbContext.WebhookSubscriptions
+                    .Where(s => !s.IsDeleted) // <--- SOFT DELETE FILTER
+                    .ToListAsync();
                 
                 // Optimized: Calculate rate limit status with a single grouped query
                 var now = DateTime.UtcNow;
                 var oneMinuteAgo = now.AddMinutes(-1);
                 var oneHourAgo = now.AddHours(-1);
                 
-                // Get all rate limit stats in one query
                 var rateLimitStats = await _dbContext.DeliveryLogs
                     .Where(l => l.AttemptedAt >= oneHourAgo)
                     .GroupBy(l => l.SubscriptionId)
@@ -200,7 +201,6 @@ namespace Panoptes.Api.Controllers
                     })
                     .ToDictionaryAsync(x => x.SubscriptionId);
                 
-                // Apply stats to subscriptions
                 var isCatchingUp = _reducer.IsCatchingUp;
                 foreach (var sub in subscriptions)
                 {
@@ -214,14 +214,12 @@ namespace Panoptes.Api.Controllers
                     }
                     else
                     {
-                        // No logs in the time window
                         sub.WebhooksInLastMinute = 0;
                         sub.WebhooksInLastHour = 0;
                         sub.LastWebhookAt = null;
                         sub.IsRateLimited = false;
                     }
                     
-                    // Mark as syncing if in catch-up mode and no webhooks sent yet
                     sub.IsSyncing = isCatchingUp && sub.LastWebhookAt == null;
                 }
                 
@@ -245,7 +243,7 @@ namespace Panoptes.Api.Controllers
                 var logs = await _dbContext.DeliveryLogs
                     .OrderByDescending(l => l.AttemptedAt)
                     .Skip(skip ?? 0)
-                    .Take(Math.Min(take ?? 50, 100)) // Max 100 per request
+                    .Take(Math.Min(take ?? 50, 100))
                     .ToListAsync();
 
                 return Ok(new LogsResponse { Logs = logs, TotalCount = totalCount });
@@ -265,8 +263,8 @@ namespace Panoptes.Api.Controllers
         {
             try
             {
-                // Verify subscription exists
                 var subscription = await _dbContext.WebhookSubscriptions.FindAsync(id);
+                // We allow viewing logs for deleted subscriptions if accessed directly via ID
                 if (subscription == null)
                 {
                     return NotFound($"Subscription with ID {id} not found.");
@@ -280,11 +278,10 @@ namespace Panoptes.Api.Controllers
                     .Where(l => l.SubscriptionId == id)
                     .OrderByDescending(l => l.AttemptedAt)
                     .Skip(skip ?? 0)
-                    .Take(Math.Min(take ?? 50, 100)) // Max 100 per request
+                    .Take(Math.Min(take ?? 50, 100))
                     .ToListAsync();
 
                 var result = new LogsResponse { Logs = logs, TotalCount = totalCount };
-                _logger.LogDebug("[GetSubscriptionLogs] Returning {Count} logs out of {Total} total", logs.Count, totalCount);
                 return Ok(result);
             }
             catch (Exception ex)
@@ -300,12 +297,12 @@ namespace Panoptes.Api.Controllers
             try
             {
                 var subscription = await _dbContext.WebhookSubscriptions.FindAsync(id);
-                if (subscription == null)
+                // CHANGED: Respect soft delete
+                if (subscription == null || subscription.IsDeleted)
                 {
                     return NotFound($"Subscription with ID {id} not found.");
                 }
 
-                // Calculate rate limit status (optimized with single query)
                 var now = DateTime.UtcNow;
                 var oneMinuteAgo = now.AddMinutes(-1);
                 var oneHourAgo = now.AddHours(-1);
@@ -337,7 +334,6 @@ namespace Panoptes.Api.Controllers
                     subscription.IsRateLimited = false;
                 }
                 
-                // Mark as syncing if in catch-up mode and no webhooks sent yet
                 subscription.IsSyncing = _reducer.IsCatchingUp && subscription.LastWebhookAt == null;
 
                 return Ok(subscription);
@@ -349,15 +345,12 @@ namespace Panoptes.Api.Controllers
             }
         }
 
-        /// <summary>
-        /// Existing endpoint that generates a backend-defined test event.
-        /// Route: POST /Subscriptions/test/{id}
-        /// </summary>
         [HttpPost("test/{id}")]
         public async Task<ActionResult<DeliveryLog>> TestSubscription(Guid id)
         {
             var sub = await _dbContext.WebhookSubscriptions.FindAsync(id);
-            if (sub == null)
+            // CHANGED: Prevent testing deleted subs
+            if (sub == null || sub.IsDeleted)
             {
                 return NotFound($"Subscription with ID {id} not found.");
             }
@@ -373,7 +366,6 @@ namespace Panoptes.Api.Controllers
             
             var log = await _dispatcher.DispatchAsync(sub, testPayload);
             
-            // Set delivery status based on response
             if (log.ResponseStatusCode >= 200 && log.ResponseStatusCode < 300)
             {
                 log.Status = DeliveryStatus.Success;
@@ -390,16 +382,13 @@ namespace Panoptes.Api.Controllers
             return Ok(log);
         }
 
-        /// <summary>
-        /// NEW ENDPOINT: Passthrough test that sends the Frontend-provided JSON payload.
-        /// Route: POST /Subscriptions/{id}/test
-        /// Matches the route used by the new WebhookTester UI component.
-        /// </summary>
         [HttpPost("{id}/test")]
         public async Task<IActionResult> TestWebhookDirect(Guid id, [FromBody] object payload)
         {
             var subscription = await _dbContext.WebhookSubscriptions.FindAsync(id);
-            if (subscription == null) return NotFound($"Subscription with ID {id} not found.");
+            // CHANGED: Prevent testing deleted subs
+            if (subscription == null || subscription.IsDeleted) 
+                return NotFound($"Subscription with ID {id} not found.");
 
             if (!Uri.TryCreate(subscription.TargetUrl, UriKind.Absolute, out var uri))
             {
@@ -409,27 +398,18 @@ namespace Panoptes.Api.Controllers
             try 
             {
                 using var client = new HttpClient();
-                client.Timeout = TimeSpan.FromSeconds(10); // 10s timeout for testing
+                client.Timeout = TimeSpan.FromSeconds(10);
 
                 var json = System.Text.Json.JsonSerializer.Serialize(payload);
                 var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
-
-                // Note: If you have a SecretKey logic, you can add the X-Signature header here.
 
                 var response = await client.PostAsync(subscription.TargetUrl, content);
                 
                 var responseBody = await response.Content.ReadAsStringAsync();
                 
-                // Try to parse the response as JSON, otherwise return as string
                 object? parsedBody;
-                try 
-                { 
-                    parsedBody = System.Text.Json.JsonSerializer.Deserialize<object>(responseBody); 
-                } 
-                catch 
-                { 
-                    parsedBody = responseBody; 
-                }
+                try { parsedBody = System.Text.Json.JsonSerializer.Deserialize<object>(responseBody); } 
+                catch { parsedBody = responseBody; }
 
                 return StatusCode((int)response.StatusCode, parsedBody);
             }
@@ -443,7 +423,8 @@ namespace Panoptes.Api.Controllers
         public async Task<ActionResult<WebhookSubscription>> UpdateSubscription(Guid id, WebhookSubscription subscription)
         {
             var existingSub = await _dbContext.WebhookSubscriptions.FindAsync(id);
-            if (existingSub == null)
+            // CHANGED: Check deleted flag
+            if (existingSub == null || existingSub.IsDeleted)
             {
                 return NotFound($"Subscription with ID {id} not found.");
             }
@@ -459,16 +440,16 @@ namespace Panoptes.Api.Controllers
                 existingSub.TargetUrl = subscription.TargetUrl;
             }
 
-            // Update allowed fields (SecretKey is NOT updatable by client)
+            // Update allowed fields
             if (!string.IsNullOrWhiteSpace(subscription.Name))
             {
-                // Check if the new name conflicts with another subscription
+                // Check if name conflicts (excluding self and deleted)
                 var duplicateSubscription = await _dbContext.WebhookSubscriptions
-                    .FirstOrDefaultAsync(s => s.Name == subscription.Name && s.Id != id);
+                    .FirstOrDefaultAsync(s => s.Name == subscription.Name && s.Id != id && !s.IsDeleted);
                 
                 if (duplicateSubscription != null)
                 {
-                    return BadRequest($"A subscription with the name '{subscription.Name}' already exists. Please use a different name.");
+                    return BadRequest($"A subscription with the name '{subscription.Name}' already exists.");
                 }
                 
                 existingSub.Name = subscription.Name;
@@ -479,26 +460,26 @@ namespace Panoptes.Api.Controllers
                 existingSub.EventType = subscription.EventType;
             }
 
-            // Check for duplicate EventType and TargetUrl combination after updates
             var newEventType = !string.IsNullOrWhiteSpace(subscription.EventType) ? subscription.EventType : existingSub.EventType;
             var newTargetUrl = !string.IsNullOrWhiteSpace(subscription.TargetUrl) ? subscription.TargetUrl : existingSub.TargetUrl;
             
             var duplicateEventTypeAndUrl = await _dbContext.WebhookSubscriptions
-                .FirstOrDefaultAsync(s => s.EventType == newEventType && s.TargetUrl == newTargetUrl && s.Id != id);
+                .FirstOrDefaultAsync(s => s.EventType == newEventType && s.TargetUrl == newTargetUrl && s.Id != id && !s.IsDeleted);
             
             if (duplicateEventTypeAndUrl != null)
             {
-                return BadRequest($"A subscription with event type '{newEventType}' and target URL '{newTargetUrl}' already exists. Please use a different combination.");
+                return BadRequest($"A subscription with event type '{newEventType}' and target URL '{newTargetUrl}' already exists.");
             }
 
             existingSub.IsActive = subscription.IsActive;
             existingSub.TargetAddress = subscription.TargetAddress;
             existingSub.PolicyId = subscription.PolicyId;
+            
+            // NEW: Add MinimumLovelace update support
+            existingSub.MinimumLovelace = subscription.MinimumLovelace;
 
-            // Update wallet address filter if provided
             if (subscription.WalletAddresses != null)
             {
-                // Validate addresses
                 var invalidAddresses = subscription.WalletAddresses
                     .Where(addr => !string.IsNullOrWhiteSpace(addr) && !IsValidCardanoAddress(addr))
                     .ToList();
@@ -516,20 +497,15 @@ namespace Panoptes.Api.Controllers
             return Ok(existingSub);
         }
 
-        /// <summary>
-        /// Reset a subscription's circuit breaker and rate limit state. Use this when a subscription is disabled 
-        /// due to rate limiting or circuit breaker and you want to re-enable it.
-        /// </summary>
         [HttpPost("{id}/reset")]
         public async Task<ActionResult<WebhookSubscription>> ResetSubscription(Guid id)
         {
             var sub = await _dbContext.WebhookSubscriptions.FindAsync(id);
-            if (sub == null)
+            if (sub == null || sub.IsDeleted)
             {
                 return NotFound($"Subscription with ID {id} not found.");
             }
 
-            // Reset circuit breaker, rate limit, and re-enable subscription
             sub.IsActive = true;
             sub.IsPaused = false;
             sub.PausedAt = null;
@@ -540,40 +516,28 @@ namespace Panoptes.Api.Controllers
             sub.LastFailureAt = null;
             sub.IsRateLimited = false;
 
-            _logger.LogInformation("🔄 Subscription {Name} (ID: {Id}) reset - circuit breaker and rate limit cleared", sub.Name, sub.Id);
+            _logger.LogInformation("🔄 Subscription {Name} (ID: {Id}) reset", sub.Name, sub.Id);
 
             await _dbContext.SaveChangesAsync();
 
             return Ok(sub);
         }
 
-        /// <summary>
-        /// Toggle subscription active state - switches between active and paused.
-        /// When deactivating (pausing), events are still recorded but not dispatched.
-        /// When activating (resuming), pending events will be dispatched.
-        /// </summary>
-        /// <param name="id">The subscription ID</param>
-        /// <param name="deliverLatestOnly">If true, only the latest halted event will be delivered on resume; others will be discarded</param>
         [HttpPost("{id}/toggle")]
         public async Task<ActionResult<WebhookSubscription>> ToggleSubscription(Guid id, [FromQuery] bool deliverLatestOnly = false)
         {
             var sub = await _dbContext.WebhookSubscriptions.FindAsync(id);
-            if (sub == null)
+            if (sub == null || sub.IsDeleted)
             {
                 return NotFound($"Subscription with ID {id} not found.");
             }
 
-            // Toggle the active state
-            // Note: IsPaused is the inverse of IsActive (when active=false, isPaused=true)
             sub.IsActive = !sub.IsActive;
             sub.IsPaused = !sub.IsActive;
             
             if (sub.IsActive)
             {
-                // Resuming - clear the paused timestamp
                 sub.PausedAt = null;
-                
-                // Get all paused events
                 var pausedEvents = await _dbContext.DeliveryLogs
                     .Where(l => l.SubscriptionId == id && l.Status == DeliveryStatus.Paused)
                     .OrderByDescending(l => l.AttemptedAt)
@@ -581,39 +545,29 @@ namespace Panoptes.Api.Controllers
                 
                 if (deliverLatestOnly && pausedEvents.Count > 0)
                 {
-                    // Only deliver the latest event, discard the rest
                     var latestEvent = pausedEvents.First();
                     latestEvent.Status = DeliveryStatus.Retrying;
                     latestEvent.NextRetryAt = DateTime.UtcNow;
                     latestEvent.ResponseBody = "Subscription activated - queued for delivery (latest only)";
                     
-                    // Mark the rest as discarded
                     foreach (var log in pausedEvents.Skip(1))
                     {
                         log.Status = DeliveryStatus.Failed;
                         log.ResponseBody = "Discarded - subscription resumed with 'deliver latest only' option";
                     }
-                    
-                    _logger.LogInformation("▶️ Subscription {Name} (ID: {Id}) activated with 'deliver latest only'. 1 event queued, {DiscardedCount} discarded.", 
-                        sub.Name, sub.Id, pausedEvents.Count - 1);
                 }
                 else
                 {
-                    // Deliver all paused events
                     foreach (var log in pausedEvents)
                     {
                         log.Status = DeliveryStatus.Retrying;
                         log.NextRetryAt = DateTime.UtcNow;
                         log.ResponseBody = "Subscription activated - queued for delivery";
                     }
-                    
-                    _logger.LogInformation("▶️ Subscription {Name} (ID: {Id}) activated. {Count} pending events queued.", 
-                        sub.Name, sub.Id, pausedEvents.Count);
                 }
             }
             else
             {
-                // Pausing - set the paused timestamp
                 sub.PausedAt = DateTime.UtcNow;
                 _logger.LogInformation("⏸️ Subscription {Name} (ID: {Id}) paused", sub.Name, sub.Id);
             }
@@ -627,12 +581,20 @@ namespace Panoptes.Api.Controllers
         public async Task<ActionResult> DeleteSubscription(Guid id)
         {
             var sub = await _dbContext.WebhookSubscriptions.FindAsync(id);
-            if (sub == null)
+            if (sub == null || sub.IsDeleted)
             {
                 return NotFound($"Subscription with ID {id} not found.");
             }
 
-            _dbContext.WebhookSubscriptions.Remove(sub);
+            // CHANGED: Soft Delete Implementation
+            // Instead of Remove(sub), we set IsDeleted = true
+            sub.IsDeleted = true;
+            
+            // Also deactivate it so it doesn't process new events
+            sub.IsActive = false;
+            
+            // Logs remain in DB for analytics history
+            
             await _dbContext.SaveChangesAsync();
 
             return NoContent();

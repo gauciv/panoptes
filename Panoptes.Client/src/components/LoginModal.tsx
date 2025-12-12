@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { X } from 'lucide-react';
+import clsx from 'clsx';
 import { LoginForm } from './LoginForm';
 import { OAuthButtons } from './OAuthButtons';
 import { ScrambleText } from './ScrambleText';
@@ -25,9 +26,18 @@ const modalVariants = {
 
 export function LoginModal({ isOpen, onClose }: LoginModalProps) {
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
-  // New State: Is the form verifying? If so, hide Google buttons.
   const [isVerifying, setIsVerifying] = useState(false);
+  const [isMobileDevice, setIsMobileDevice] = useState(false);
   const { isPlaying } = useAudio(); 
+
+  useEffect(() => {
+    const checkDevice = () => {
+      const userAgent = typeof window.navigator === "undefined" ? "" : navigator.userAgent;
+      const mobileRegex = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i;
+      setIsMobileDevice(mobileRegex.test(userAgent));
+    };
+    checkDevice();
+  }, []);
 
   useEffect(() => {
     if (isPlaying) {
@@ -81,9 +91,16 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
             <X size={20} />
         </button>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 min-h-[550px]">
+        {/* 2. Grid Layout: 
+            - If mobile device: Force 1 column
+            - If desktop: Use 2 columns 
+        */}
+        <div className={clsx(
+            "grid min-h-[550px]", 
+            isMobileDevice ? "grid-cols-1" : "grid-cols-1 md:grid-cols-2"
+        )}>
           
-          {/* --- LEFT: FORM --- */}
+          {/* --- LEFT: FORM (Always Visible) --- */}
           <div className="relative p-8 md:p-10 flex flex-col justify-center border-r border-white/5">
             <div className="absolute top-4 left-4 font-mono text-[10px] text-ghost/20 select-none">
                 [ ESC_TO_ABORT ]
@@ -104,10 +121,8 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
             </div>
 
             <div className="flex-1">
-                {/* 1. Hide OAuth when verifying */}
                 <OAuthButtons isVerifying={isVerifying} />
                 
-                {/* 2. Hide Divider when verifying */}
                 {!isVerifying && (
                     <div className="flex items-center gap-4 my-6">
                         <div className="h-px flex-1 bg-white/10" />
@@ -116,15 +131,13 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
                     </div>
                 )}
 
-                {/* 3. Render Form with Callback */}
                 <LoginForm 
                     mode={mode} 
                     setMode={setMode}
-                    onVerificationModeChange={setIsVerifying} // Passes state up
+                    onVerificationModeChange={setIsVerifying}
                 />
             </div>
 
-            {/* 4. Hide "Switch Mode" button when verifying */}
             {!isVerifying && (
                 <div className="mt-8 pt-4 border-t border-white/5">
                     <button 
@@ -139,27 +152,29 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
             )}
           </div>
 
-          {/* --- RIGHT: VISUAL --- */}
-          <div className="relative hidden md:flex flex-col items-center justify-center bg-zinc-900/20">
-             <div className="absolute inset-0 opacity-20" 
-                  style={{ backgroundImage: 'radial-gradient(circle at center, #00FF94 1px, transparent 1px)', backgroundSize: '30px 30px' }} 
-             />
-             
-             <div className="relative z-10">
-                <div className="h-32 w-32 rounded-full border border-sentinel/20 flex items-center justify-center animate-pulse">
-                    <img src="/logo_panoptes.svg" alt="Seal" className="h-16 w-16 opacity-80" />
-                </div>
-             </div>
+          {/* --- RIGHT: VISUAL (Removed on Device-Detected Mobile) --- */}
+          {!isMobileDevice && (
+              <div className="relative hidden md:flex flex-col items-center justify-center bg-zinc-900/20">
+                 <div className="absolute inset-0 opacity-20" 
+                      style={{ backgroundImage: 'radial-gradient(circle at center, #00FF94 1px, transparent 1px)', backgroundSize: '30px 30px' }} 
+                 />
+                 
+                 <div className="relative z-10">
+                    <div className="h-32 w-32 rounded-full border border-sentinel/20 flex items-center justify-center animate-pulse">
+                        <img src="/logo_panoptes.svg" alt="Seal" className="h-16 w-16 opacity-80" />
+                    </div>
+                 </div>
 
-             <div className="absolute bottom-8 left-0 right-0 text-center">
-                 <p className="font-mono text-[9px] text-sentinel/60 animate-pulse">
-                    SECURE_CONNECTION_ESTABLISHED
-                 </p>
-                 <p className="font-mono text-[9px] text-ghost/20 mt-1">
-                    ENCRYPTION: AES-256
-                 </p>
-             </div>
-          </div>
+                 <div className="absolute bottom-8 left-0 right-0 text-center">
+                     <p className="font-mono text-[9px] text-sentinel/60 animate-pulse">
+                        SECURE_CONNECTION_ESTABLISHED
+                     </p>
+                     <p className="font-mono text-[9px] text-ghost/20 mt-1">
+                        ENCRYPTION: AES-256
+                     </p>
+                 </div>
+              </div>
+          )}
 
         </div>
       </motion.div>
