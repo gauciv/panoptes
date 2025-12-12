@@ -34,8 +34,13 @@ export default function ThemeToggle({ isDark: isDarkProp, toggle, compact }: Pro
 
   useEffect(() => {
     const root = document.documentElement;
-    if (isDark) root.classList.add('dark');
-    else root.classList.remove('dark');
+    if (isDark) {
+      root.classList.add('dark');
+      root.classList.remove('light');
+    } else {
+      root.classList.remove('dark');
+      root.classList.add('light');
+    }
     try {
       localStorage.setItem('theme', isDark ? 'dark' : 'light');
     } catch (e) {}

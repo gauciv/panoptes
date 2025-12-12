@@ -6,6 +6,7 @@
 @layer base {
   :root {
     /* Panoptes Design System - Light theme as default */
+    color-scheme: light;
     --background: 0 0% 100%;
     --foreground: 0 0% 3.9%;
     --card: 0 0% 100%;
@@ -35,6 +36,7 @@
 
   .dark {
     /* Panoptes Design System - Dark mode ver */
+    color-scheme: dark;
     --background: 0 0% 2%;          /* Void Black #050505 */
     --foreground: 240 100% 99%;     /* Ghost White #F8F8FF */
     --card: 0 0% 2%;
@@ -103,13 +105,11 @@
   }
 }
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   CYBERPUNK SCROLLBAR SYSTEM - Panoptes Design
-   ═══════════════════════════════════════════════════════════════════════════ */
+/* Scrollbar styles are dynamically injected by useScrollbarTheme hook */
 
-/* Navigation Scrollbar - Compact & Minimal */
+/* Nav Scrollbar - Thinner variant for sidebar navigation */
 .nav-scrollbar::-webkit-scrollbar {
-  width: 4px;
+  width: 6px;
 }
 
 .nav-scrollbar::-webkit-scrollbar-track {
@@ -118,88 +118,13 @@
 
 .nav-scrollbar::-webkit-scrollbar-thumb {
   background: #006A33;
-  border-radius: 2px;
+  border-radius: 3px;
 }
 
 .nav-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #008040;
-  box-shadow: 0 0 8px #006A33;
+  background: #008844;
 }
 
-.nav-scrollbar {
-  scrollbar-width: thin;
-  scrollbar-color: #006A33 transparent;
-}
-
-/* ─────────────────────────────────────────────────────────────────────────────
-   Global Scrollbar - Cyberpunk Neon Style
-   ───────────────────────────────────────────────────────────────────────────── */
-
-::-webkit-scrollbar {
-  width: 12px;
-  height: 12px;
-}
-
-::-webkit-scrollbar-track {
-  background: #0a0a0a;
-  border-left: 1px solid #006A33;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #006A33;
-  border: 2px solid #0a0a0a;
-  border-radius: 6px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #008040;
-  box-shadow: 
-    0 0 10px #006A33,
-    0 0 20px #006A33,
-    inset 0 0 5px rgba(0, 255, 128, 0.3);
-}
-
-::-webkit-scrollbar-thumb:active {
-  background: #00b458;
-  box-shadow: 
-    0 0 15px #00b458,
-    0 0 30px #006A33,
-    0 0 45px rgba(0, 180, 90, 0.5),
-    inset 0 0 10px rgba(0, 255, 128, 0.5);
-}
-
-::-webkit-scrollbar-corner {
-  background: #0a0a0a;
-}
-
-/* Light Mode */
-.light ::-webkit-scrollbar-track,
-:root:not(.dark) ::-webkit-scrollbar-track {
-  background: #f5f5f5;
-  border-left: 1px solid rgba(0, 106, 51, 0.3);
-}
-
-.light ::-webkit-scrollbar-thumb,
-:root:not(.dark) ::-webkit-scrollbar-thumb {
-  background: rgba(0, 106, 51, 0.6);
-  border: 2px solid #f5f5f5;
-}
-
-.light ::-webkit-scrollbar-thumb:hover,
-:root:not(.dark) ::-webkit-scrollbar-thumb:hover {
-  background: #006A33;
-  box-shadow: 0 0 8px rgba(0, 106, 51, 0.5);
-}
-
-/* Firefox Support */
-* {
-  scrollbar-width: thin;
-  scrollbar-color: #006A33 #0a0a0a;
-}
-
-:root:not(.dark) * {
-  scrollbar-color: rgba(0, 106, 51, 0.6) #f5f5f5;
-}
 
 /* ensure common Tailwind classes follow theme variables
   helps switch colors globally without editing every component */
