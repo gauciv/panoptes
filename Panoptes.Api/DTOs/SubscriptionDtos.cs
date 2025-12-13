@@ -6,20 +6,14 @@ namespace Panoptes.Api.DTOs
 {
     public class CreateSubscriptionRequest
     {
-        [Required]
-        public string Name { get; set; } = string.Empty;
-        
-        [Required]
-        [Url]
-        public string TargetUrl { get; set; } = string.Empty;
-        
-        [Required]
-        public string EventType { get; set; } = "Transaction";
+        [Required] public string Name { get; set; } = string.Empty;
+        [Required] [Url] public string TargetUrl { get; set; } = string.Empty;
+        [Required] public string EventType { get; set; } = "Transaction";
         
         public List<string>? WalletAddresses { get; set; }
         public ulong? MinimumLovelace { get; set; }
 
-        // New Pro Features
+        // ✅ NEW FIELDS
         public string? CustomPayloadTemplate { get; set; }
         public Dictionary<string, string>? CustomHeaders { get; set; }
     }
@@ -34,6 +28,7 @@ namespace Panoptes.Api.DTOs
         public List<string>? WalletAddresses { get; set; }
         public ulong? MinimumLovelace { get; set; }
         
+        // ✅ NEW FIELDS
         public string? CustomPayloadTemplate { get; set; }
         public Dictionary<string, string>? CustomHeaders { get; set; }
     }

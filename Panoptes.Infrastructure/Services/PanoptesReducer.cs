@@ -127,7 +127,7 @@ namespace Panoptes.Infrastructure.Services
             // Fetch ALL subscriptions first, then filter based on actual rate limit status
             // Fetch active, non-deleted subscriptions
             var allSubscriptions = await _dbContext.WebhookSubscriptions
-                .Where(s => !s.IsActive && !s.IsDeleted) // <--- FIX HERE
+                .Where(s => s.IsActive && !s.IsDeleted) // <--- FIX HERE
                 .ToListAsync();
             
             // Check actual rate limit status from delivery logs for each subscription
@@ -439,11 +439,9 @@ namespace Panoptes.Infrastructure.Services
 
         private async Task DispatchWebhook(WebhookSubscription sub, object payload)
         {
-            // Skip if subscription is disabled (circuit broken, rate limited, inactive, or disabled during this processing cycle)
-            if ( sub.IsRateLimited || !sub.IsActive || _disabledDuringProcessing.Contains(sub.Id))
+            // ✅ FIX: Removed IsCircuitBroken check
+            if (sub.IsRateLimited || !sub.IsActive || _disabledDuringProcessing.Contains(sub.Id))
             {
-                _logger?.LogDebug("Skipping webhook dispatch for {Name} - subscription is disabled (CircuitBroken={CB}, RateLimited={RL}, Inactive={Inactive}, DisabledDuringProcessing={DDP})", 
-                    sub.Name, sub.IsRateLimited, !sub.IsActive, _disabledDuringProcessing.Contains(sub.Id));
                 return;
             }
 
@@ -455,88 +453,37 @@ namespace Panoptes.Infrastructure.Services
                 if (log.IsSuccess)
                 {
                     log.Status = DeliveryStatus.Success;
-                    
-                    // Reset circuit breaker on success
-                    sub.ConsecutiveFailures = 0;
-                    sub.FirstFailureInWindowAt = null;
-                    sub.LastFailureAt = null;
                 }
                 else if (log.IsRateLimited)
                 {
-                    // Schedule retry with Retry-After header or exponential backoff
                     log.Status = DeliveryStatus.Retrying;
-                    
-                    if (log.RetryAfterSeconds.HasValue)
-                    {
-                        log.NextRetryAt = DateTime.UtcNow.AddSeconds(log.RetryAfterSeconds.Value);
-                        _logger?.LogWarning("Rate limited (429) for {Name}, retrying in {Seconds}s based on Retry-After header", 
-                            sub.Name, log.RetryAfterSeconds.Value);
-                    }
-                    else
-                    {
-                        log.NextRetryAt = DateTime.UtcNow.AddSeconds(30); // First retry: 30 seconds
-                        _logger?.LogWarning("Rate limited (429) for {Name}, retrying in 30s (default)", sub.Name);
-                    }
+                    log.NextRetryAt = log.RetryAfterSeconds.HasValue 
+                        ? DateTime.UtcNow.AddSeconds(log.RetryAfterSeconds.Value) 
+                        : DateTime.UtcNow.AddSeconds(30);
                 }
                 else
                 {
-                    // Other failures: schedule for retry with exponential backoff
+                    // Standard failure (500, 404, etc)
                     log.Status = DeliveryStatus.Retrying;
-                    log.NextRetryAt = DateTime.UtcNow.AddSeconds(30); // First retry in 30 seconds
+                    log.NextRetryAt = DateTime.UtcNow.AddSeconds(30);
                     
-                    // Track failure for circuit breaker
-                    sub.ConsecutiveFailures++;
-                    sub.LastFailureAt = DateTime.UtcNow;
-                    
-                    if (sub.FirstFailureInWindowAt == null)
-                    {
-                        sub.FirstFailureInWindowAt = DateTime.UtcNow;
-                    }
-                    
-                    // Check if URL has become consistently unresponsive
-                    // Status code 0 indicates network/timeout errors (URL unreachable)
-                    if (log.ResponseStatusCode == 0)
-                    {
-                        _logger?.LogWarning("Webhook URL unreachable for {Name}, consecutive failures: {Count}", 
-                            sub.Name, sub.ConsecutiveFailures);
-                        
-                    }
-                    else
-                    {
-                        _logger?.LogWarning("Webhook failed (status {Status}) for {Name}, consecutive failures: {Count}", 
-                            log.ResponseStatusCode, sub.Name, sub.ConsecutiveFailures);
-                        
-                        // Auto-pause after 15 consecutive HTTP error responses
-                        if (sub.ConsecutiveFailures >= 15)
-                        {
-                            sub.IsActive = false;
-                        }
-                    }
-                    
-                    // Time-based circuit breaker: Auto-pause if failing continuously for 12+ hours
-                    if (sub.FirstFailureInWindowAt.HasValue)
-                    {
-                        var failureDuration = DateTime.UtcNow - sub.FirstFailureInWindowAt.Value;
-                        if (failureDuration.TotalHours >= 12)
-                        {
-                            sub.IsActive = false;
-                        }
-                    }
+                    // ✅ Removed all "ConsecutiveFailures" / "IsCircuitBroken" logic here.
+                    // We just log it and let the RetryWorker handle it later.
+                    _logger?.LogWarning("Webhook failed (status {Status}) for {Name}", log.ResponseStatusCode, sub.Name);
                 }
                 
                 _dbContext.DeliveryLogs.Add(log);
                 await _dbContext.SaveChangesAsync();
 
                 _logger?.LogInformation(
-                    "Dispatched webhook to {Name} ({Url}) - Status: {StatusCode}, DeliveryStatus: {Status}", 
-                    sub.Name, sub.TargetUrl, log.ResponseStatusCode, log.Status);
+                    "Dispatched webhook to {Name} - Status: {StatusCode}", 
+                    sub.Name, log.ResponseStatusCode);
             }
             catch (Exception ex)
             {
                 _logger?.LogError(ex, "Error dispatching webhook to {Name}", sub.Name);
             }
         }
-
         /// <summary>
         /// Record an event for a paused subscription without dispatching.
         /// The event will be dispatched when the subscription is resumed.

@@ -7,7 +7,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Panoptes.Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class AddSoftDelete : Migration
+    public partial class SyncCodeWithDB : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -61,21 +61,13 @@ namespace Panoptes.Infrastructure.Migrations
                     PausedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     MinimumLovelace = table.Column<decimal>(type: "numeric(20,0)", nullable: true),
                     IsDeleted = table.Column<bool>(type: "boolean", nullable: false),
+                    CustomHeaders = table.Column<string>(type: "text", nullable: true),
+                    CustomPayloadTemplate = table.Column<string>(type: "text", nullable: true),
                     WalletAddresses = table.Column<string>(type: "jsonb", nullable: true),
                     MaxWebhooksPerMinute = table.Column<int>(type: "integer", nullable: false),
                     MaxWebhooksPerHour = table.Column<int>(type: "integer", nullable: false),
                     EnableBatching = table.Column<bool>(type: "boolean", nullable: false),
-                    BatchWindowSeconds = table.Column<int>(type: "integer", nullable: false),
-                    WebhooksInLastMinute = table.Column<int>(type: "integer", nullable: false),
-                    WebhooksInLastHour = table.Column<int>(type: "integer", nullable: false),
-                    LastWebhookAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    IsRateLimited = table.Column<bool>(type: "boolean", nullable: false),
-                    IsSyncing = table.Column<bool>(type: "boolean", nullable: false),
-                    ConsecutiveFailures = table.Column<int>(type: "integer", nullable: false),
-                    LastFailureAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    FirstFailureInWindowAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    IsCircuitBroken = table.Column<bool>(type: "boolean", nullable: false),
-                    CircuitBrokenReason = table.Column<string>(type: "text", nullable: true)
+                    BatchWindowSeconds = table.Column<int>(type: "integer", nullable: false)
                 },
                 constraints: table =>
                 {

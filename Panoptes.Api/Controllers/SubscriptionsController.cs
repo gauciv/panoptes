@@ -508,13 +508,10 @@ namespace Panoptes.Api.Controllers
 
             sub.IsActive = true;
             sub.IsPaused = false;
-            sub.PausedAt = null;
-            sub.IsCircuitBroken = false;
-            sub.CircuitBrokenReason = null;
-            sub.ConsecutiveFailures = 0;
-            sub.FirstFailureInWindowAt = null;
-            sub.LastFailureAt = null;
             sub.IsRateLimited = false;
+
+            // REMOVED: Circuit breaker fields (ConsecutiveFailures, IsCircuitBroken, etc.)
+            // The subscription is now "clean" just by being Active and not RateLimited.
 
             _logger.LogInformation("🔄 Subscription {Name} (ID: {Id}) reset", sub.Name, sub.Id);
 

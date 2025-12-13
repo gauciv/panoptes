@@ -150,14 +150,14 @@ namespace Panoptes.Infrastructure.Migrations
                     b.Property<int>("BatchWindowSeconds")
                         .HasColumnType("integer");
 
-                    b.Property<string>("CircuitBrokenReason")
-                        .HasColumnType("text");
-
-                    b.Property<int>("ConsecutiveFailures")
-                        .HasColumnType("integer");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CustomHeaders")
+                        .HasColumnType("text");
+
+                    b.Property<string>("CustomPayloadTemplate")
+                        .HasColumnType("text");
 
                     b.Property<bool>("EnableBatching")
                         .HasColumnType("boolean");
@@ -166,13 +166,7 @@ namespace Panoptes.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<DateTime?>("FirstFailureInWindowAt")
-                        .HasColumnType("timestamp with time zone");
-
                     b.Property<bool>("IsActive")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("IsCircuitBroken")
                         .HasColumnType("boolean");
 
                     b.Property<bool>("IsDeleted")
@@ -180,18 +174,6 @@ namespace Panoptes.Infrastructure.Migrations
 
                     b.Property<bool>("IsPaused")
                         .HasColumnType("boolean");
-
-                    b.Property<bool>("IsRateLimited")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("IsSyncing")
-                        .HasColumnType("boolean");
-
-                    b.Property<DateTime?>("LastFailureAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime?>("LastWebhookAt")
-                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("MaxWebhooksPerHour")
                         .HasColumnType("integer");
@@ -225,12 +207,6 @@ namespace Panoptes.Infrastructure.Migrations
 
                     b.Property<string>("WalletAddresses")
                         .HasColumnType("jsonb");
-
-                    b.Property<int>("WebhooksInLastHour")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("WebhooksInLastMinute")
-                        .HasColumnType("integer");
 
                     b.HasKey("Id");
 
