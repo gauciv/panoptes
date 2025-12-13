@@ -7,7 +7,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Panoptes.Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class AddJsonbAndMinAda : Migration
+    public partial class AddSoftDelete : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -60,6 +60,7 @@ namespace Panoptes.Infrastructure.Migrations
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     PausedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     MinimumLovelace = table.Column<decimal>(type: "numeric(20,0)", nullable: true),
+                    IsDeleted = table.Column<bool>(type: "boolean", nullable: false),
                     WalletAddresses = table.Column<string>(type: "jsonb", nullable: true),
                     MaxWebhooksPerMinute = table.Column<int>(type: "integer", nullable: false),
                     MaxWebhooksPerHour = table.Column<int>(type: "integer", nullable: false),

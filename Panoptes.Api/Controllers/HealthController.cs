@@ -52,7 +52,7 @@ namespace Panoptes.Api.Controllers
             // Get metrics
             var metrics = await GetMetricsAsync();
             
-            // Get system info
+            // Get system info (Now includes CPU)
             var systemInfo = GetSystemInfo();
 
             response.Checks = checks;
@@ -83,11 +83,14 @@ namespace Panoptes.Api.Controllers
                 await _dbContext.WebhookSubscriptions.AnyAsync();
                 stopwatch.Stop();
 
+                var time = stopwatch.ElapsedMilliseconds;
+
                 return new DatabaseHealth
                 {
                     Status = "Healthy",
-                    ResponseTimeMs = stopwatch.ElapsedMilliseconds,
-                    Message = "Database connection successful"
+                    ResponseTimeMs = time,
+                    // Improvement: Clarify 0ms readings
+                    Message = time == 0 ? "Database connection successful (<1ms)" : "Database connection successful"
                 };
             }
             catch (Exception ex)
@@ -221,11 +224,19 @@ namespace Panoptes.Api.Controllers
                 var gcMemoryMb = GC.GetTotalMemory(false) / 1024.0 / 1024.0;
                 var workingSetMb = process.WorkingSet64 / 1024.0 / 1024.0;
 
+                // NEW: Calculate CPU Usage (Average over process lifetime)
+                var totalCpuTime = process.TotalProcessorTime.TotalMilliseconds;
+                var totalRunTime = (DateTime.UtcNow - _startTime).TotalMilliseconds;
+                var cpuUsage = totalRunTime > 0 
+                    ? (totalCpuTime / (totalRunTime * Environment.ProcessorCount)) * 100 
+                    : 0;
+
                 return new SystemHealthInfo
                 {
                     MemoryUsageMb = Math.Round(workingSetMb, 2),
                     GcMemoryMb = Math.Round(gcMemoryMb, 2),
                     ThreadCount = process.Threads.Count,
+                    CpuUsagePercent = Math.Round(cpuUsage, 2), // <--- New Metric
                     ProcessStartTime = _startTime
                 };
             }
@@ -344,6 +355,7 @@ namespace Panoptes.Api.Controllers
     {
         public double MemoryUsageMb { get; set; }
         public double GcMemoryMb { get; set; }
+        public double CpuUsagePercent { get; set; } // <--- Added field here
         public int ThreadCount { get; set; }
         public DateTime ProcessStartTime { get; set; }
         public string? Error { get; set; }

@@ -358,9 +358,15 @@ namespace Panoptes.Infrastructure.Services
 
                     if (shouldDispatch)
                     {
-                        // Build payload
+                        // FIX: Ensure we never pass "Unknown" if we can avoid it.
+                        // If sub.EventType is somehow null, default to "Transaction" as it's the safest assumption.
+                        string finalEventType = !string.IsNullOrWhiteSpace(sub.EventType) 
+                            ? sub.EventType 
+                            : "Transaction";
+
+                        // Build payload using the clean Event Type
                         var payload = BuildEnhancedPayload(tx, txIndex, slot, blockHash, blockHeight, 
-                            txHash, inputs, outputs, outputAddresses, policyIds, sub.EventType ?? "Unknown", matchReason);
+                            txHash, inputs, outputs, outputAddresses, policyIds, finalEventType, matchReason);
                         
                         if (sub.IsRateLimited || sub.IsCircuitBroken || _disabledDuringProcessing.Contains(sub.Id)) continue;
                         if (!sub.IsActive) { await RecordPausedEvent(sub, payload); continue; }

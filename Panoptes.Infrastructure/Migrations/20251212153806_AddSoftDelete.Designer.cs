@@ -12,7 +12,7 @@ using Panoptes.Infrastructure.Persistence;
 namespace Panoptes.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20251212063825_AddSoftDelete")]
+    [Migration("20251212153806_AddSoftDelete")]
     partial class AddSoftDelete
     {
         /// <inheritdoc />

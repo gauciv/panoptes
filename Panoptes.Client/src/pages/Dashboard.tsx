@@ -24,7 +24,7 @@ import LogViewer from '../components/LogViewer';
 import CreateSubscriptionModal from '../components/CreateSubscriptionModal';
 import EditSubscriptionModal from '../components/EditSubscriptionModal';
 import ConfirmationModal from '../components/ConfirmationModal';
-import StatsDashboard from '../components/StatsDashboard';
+import AnalyticsPage from './Analytics';
 import { SetupWizard } from '../components/SetupWizard';
 import { EmptyState } from '../components/EmptyState';
 import { OnboardingTour } from '../components/OnboardingTour';
@@ -331,29 +331,6 @@ const Dashboard: React.FC = () => {
     <div className="p-6 max-w-7xl mx-auto">
       {/* Onboarding Tour */}
       <OnboardingTour enabled={true} onFinish={handleTourFinish} />
-      
-      {/* Header with System Info */}
-      {systemInfo && (
-        <div className="mb-6 flex items-center gap-3">
-          <h1 className="text-2xl font-bold text-foreground">Panoptes Mission Control</h1>
-          <div className="flex items-center gap-2">
-            <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-              systemInfo.network === 'Mainnet' 
-                ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' 
-                : systemInfo.network === 'Preprod'
-                ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
-                : 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
-            }`}>
-              {systemInfo.network}
-            </span>
-            {!systemInfo.hasApiKey && (
-              <span className="px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
-                ⚠️ No API Key
-              </span>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* Standardized Error Banner */}
       {error && (
@@ -373,36 +350,54 @@ const Dashboard: React.FC = () => {
         </div>
       )}
 
-      {/* Stats - Shown on both views */}
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-3 mb-8" data-tour="stats-overview">
-        <StatCard
-          title="Active Hooks"
-          value={subscriptions.filter(s => s.isActive).length}
-          icon={<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>}
-        />
-        <StatCard
-          title="Total Events"
-          value={totalLogs}
-          icon={<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>}
-        />
-        <StatCard
-          title="Success Rate"
-          // LOGIC CHANGE: Return "N/A" if there are 0 logs to avoid implying failure
-          value={logs.length > 0 
-            ? `${Math.round((logs.filter(l => l.responseStatusCode >= 200 && l.responseStatusCode < 300).length / logs.length) * 100)}%` 
-            : '—'} 
-          icon={<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
-        />
-      </div>
-
       {/* --- ANALYTICS VIEW --- */}
       {activeView === 'analytics' && (
-        <StatsDashboard subscriptions={subscriptions} />
+        <AnalyticsPage subscriptions={subscriptions} />
       )}
 
       {/* --- OVERVIEW VIEW --- */}
       {activeView === 'overview' && (
         <>
+        {/* Header with System Info */}
+        {systemInfo && (
+          <div className="mb-6 flex items-center gap-3">
+            <h1 className="text-2xl font-bold text-foreground">Panoptes Mission Control</h1>
+            <div className="flex items-center gap-2">
+              <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                systemInfo.network === 'Mainnet' 
+                  ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' 
+                  : systemInfo.network === 'Preprod'
+                  ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+                  : 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
+              }`}>
+                {systemInfo.network}
+              </span>
+              {!systemInfo.hasApiKey && (
+                <span className="px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
+                  ⚠️ No API Key
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+        {/* Stats - Only shown on overview */}
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-3 mb-8" data-tour="stats-overview">
+          <StatCard
+            title="Active Hooks"
+            value={subscriptions.filter(s => s.isActive).length}
+            icon={<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>}
+          />
+          <StatCard
+            title="Total Events"
+            value={totalLogs}
+            icon={<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>}
+          />
+          <StatCard
+            title="Success Rate"
+            value={`${logs.length > 0 ? Math.round((logs.filter(l => l.responseStatusCode >= 200 && l.responseStatusCode < 300).length / logs.length) * 100) : 0}%`}
+            icon={<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
+          />
+        </div>
           {/* LOGIC SWITCH: Detail View vs List View */}
           {viewingSubscription ? (
             // 1. DETAIL VIEW
