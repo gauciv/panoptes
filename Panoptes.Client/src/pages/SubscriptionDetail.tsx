@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, Copy, Edit, Pause, Play, Settings, Terminal, 
-  Eye, EyeOff, Trash2, ExternalLink 
+  Eye, EyeOff
 } from 'lucide-react'; // Ensure you have lucide-react installed
 
 import {
@@ -10,7 +10,6 @@ import {
   getSubscriptionLogs,
   updateSubscription,
   deleteSubscription,
-  resetSubscription,
   toggleSubscriptionActive
 } from '../services/api';
 
@@ -191,17 +190,6 @@ const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: p
       setError(null);
     } catch (err: any) {
       setError(`Toggle Failed: ${err.message}`);
-    }
-  };
-
-  const handleReset = async () => {
-    if (!activeId) return;
-    try {
-      await resetSubscription(activeId);
-      await fetchSubscription(true);
-      setError(null);
-    } catch (error: any) {
-      setError(`Reset Failed: ${error.message}`);
     }
   };
 
