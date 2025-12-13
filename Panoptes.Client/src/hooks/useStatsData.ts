@@ -42,14 +42,10 @@ export function formatTimeRangeLabel(timeRange: TimeRange): string {
   }
   
   switch (timeRange) {
-    case '24h':
-      return '24 hours';
-    case '7d':
-      return '7 days';
-    case '30d':
-      return '30 days';
-    default:
-      return '7 days';
+    case '24h': return '24 hours';
+    case '7d': return '7 days';
+    case '30d': return '30 days';
+    default: return '7 days';
   }
 }
 
@@ -66,13 +62,28 @@ interface DistributionDataPoint {
   fill: string;
 }
 
+// NEW: Interface for Heatmap Data
+interface HeatmapDataPoint {
+  hour: number; // 0-23
+  count: number;
+  intensity: number; // 0.0 - 1.0 for coloring
+}
+
 interface StatsData {
   totalWebhooks: number;
   successRate: number;
   avgLatency: number;
   rateLimitedCount: number;
+
+  // NEW: Value Metrics
+  totalVolumeAda: number;
+  topSourceWallet: string | null;
+  topSourceCount: number;
+  
   volumeData: VolumeDataPoint[];
   distributionData: DistributionDataPoint[];
+  heatmapData: HeatmapDataPoint[]; // NEW
+  
   isLoading: boolean;
   error: string | null;
 }
@@ -319,6 +330,63 @@ function groupLogsByTimeBucket(
   }));
 }
 
+// NEW HELPER: Calculate Hourly Heatmap
+function calculateHourlyHeatmap(logs: DeliveryLog[]): HeatmapDataPoint[] {
+  const hourCounts = new Array(24).fill(0);
+  let maxCount = 0;
+
+  logs.forEach(log => {
+    const hour = new Date(log.attemptedAt).getHours(); // 0-23 Local time
+    hourCounts[hour]++;
+    if (hourCounts[hour] > maxCount) maxCount = hourCounts[hour];
+  });
+
+  return hourCounts.map((count, hour) => ({
+    hour,
+    count,
+    intensity: maxCount > 0 ? count / maxCount : 0
+  }));
+}
+
+// NEW HELPER: Calculate Volume & Top Source
+function calculateValueMetrics(logs: DeliveryLog[]): { totalAda: number, topSource: string | null, topSourceCount: number } {
+  let totalAda = 0;
+  const sourceCounts = new Map<string, number>();
+
+  logs.forEach(log => {
+    // 1. Parse Payload
+    if (log.payloadJson) {
+      try {
+        const payload = JSON.parse(log.payloadJson);
+        
+        // Sum ADA
+        if (payload.Metadata && typeof payload.Metadata.TotalOutputAda === 'number') {
+          totalAda += payload.Metadata.TotalOutputAda;
+        }
+
+        // Identify Source (Wallet Address)
+        // Note: We use Subscription Name as a reliable, readable source identifier
+        if (payload.SubscriptionName) {
+           const source = payload.SubscriptionName;
+           sourceCounts.set(source, (sourceCounts.get(source) || 0) + 1);
+        }
+      } catch (e) {}
+    }
+  });
+
+  let topSource = null;
+  let topSourceCount = 0;
+  
+  sourceCounts.forEach((count, source) => {
+    if (count > topSourceCount) {
+      topSourceCount = count;
+      topSource = source;
+    }
+  });
+
+  return { totalAda, topSource, topSourceCount };
+}
+
 function groupLogsByEventType(
   logs: DeliveryLog[],
   subscriptions: WebhookSubscription[]
@@ -425,11 +493,22 @@ export function useStatsData(
     // Calculate rate-limited subscriptions
     const rateLimitedCount = subscriptions.filter(s => s.isRateLimited).length;
     
+    // NEW: Calculate Value Metrics & Heatmap
+    const valueMetrics = calculateValueMetrics(filteredLogs);
+    const heatmapData = calculateHourlyHeatmap(filteredLogs);
+    
     return {
       totalWebhooks: filteredLogs.length,
       successRate: calculateSuccessRate(filteredLogs),
       avgLatency: calculateAvgLatency(filteredLogs),
       rateLimitedCount,
+      
+      // New Value Fields
+      totalVolumeAda: valueMetrics.totalAda,
+      topSourceWallet: valueMetrics.topSource,
+      topSourceCount: valueMetrics.topSourceCount,
+      heatmapData, // New
+
       volumeData: groupLogsByTimeBucket(filteredLogs, timeRange),
       distributionData: groupLogsByEventType(filteredLogs, subscriptions),
       isLoading,
@@ -444,4 +523,3 @@ export function useStatsData(
     refetch: fetchLogs,
   };
 }
-
