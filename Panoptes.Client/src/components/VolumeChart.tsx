@@ -167,7 +167,7 @@ const VolumeChart: React.FC<VolumeChartProps> = ({
           {typeof setTimeRange === 'function' && (
             <div className="hidden md:block">
               {/* Lazy import avoided; reuse component directly */}
-              <TimeRangeSelector value={timeRange} onChange={setTimeRange} />}
+              <TimeRangeSelector value={timeRange} onChange={setTimeRange} />
             </div>
           )}
           <div className="text-right">
