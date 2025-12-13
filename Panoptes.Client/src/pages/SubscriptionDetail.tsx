@@ -1,9 +1,25 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
-  ArrowLeft, Copy, Edit, Pause, Play, Settings, Terminal, 
-  Eye, EyeOff
-} from 'lucide-react'; // Ensure you have lucide-react installed
+  ArrowLeft, 
+  Copy, 
+  Check, 
+  Play, 
+  Pause, 
+  Edit2, 
+  Trash2, 
+  Zap, 
+  Eye, 
+  EyeOff,
+  Download,
+  Settings,
+  ChevronDown,
+  ChevronUp,
+  Activity,
+  Server,
+  Clock,
+  Terminal
+} from 'lucide-react';
 
 import {
   getSubscription,
@@ -11,6 +27,7 @@ import {
   updateSubscription,
   deleteSubscription,
   toggleSubscriptionActive
+  // !! unused; resetSubscription
 } from '../services/api';
 
 import { WebhookSubscription, DeliveryLog } from '../types';
@@ -19,10 +36,8 @@ import ConfirmationModal from '../components/ConfirmationModal';
 import SubscriptionDetailSkeleton from '../components/SubscriptionDetailSkeleton';
 import Pagination from '../components/Pagination';
 
-import SubscriptionToolsModal from '../components/SubscriptionToolsModal';
 import AdvancedOptionsModal from '../components/AdvancedOptionsModal';
 import WebhookTester from '../components/WebhookTester';
-import DeliveryLogsTable from '../components/DeliveryLogsTable';
 import { convertToCSV, downloadFile, generateFilename } from '../utils/exportUtils';
 
 // --- PROPS INTERFACE ---
@@ -31,12 +46,22 @@ interface SubscriptionDetailProps {
   onBack?: () => void;
 }
 
-// --- HELPER COMPONENT FOR STATS ---
-const StatsCard = ({ label, value, subtext, alertColor }: { label: string, value: string, subtext?: string, alertColor?: string }) => (
-  <div className={`p-5 rounded-xl shadow-sm border ${alertColor ? alertColor : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700'}`}>
-    <p className="text-gray-500 dark:text-gray-400 text-sm mb-1">{label}</p>
-    <p className={`text-2xl font-bold ${alertColor ? 'text-red-700 dark:text-red-400' : 'text-gray-900 dark:text-gray-100'}`}>{value}</p>
-    {subtext && <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{subtext}</p>}
+// --- INDUSTRIAL STATS CARD ---
+const StatsCard = ({ label, value, icon: Icon, alertColor }: { label: string, value: string, icon: any, alertColor?: string }) => (
+  <div className={`
+    p-4 rounded-sm border transition-all
+    ${alertColor 
+        ? alertColor 
+        : 'bg-white dark:bg-zinc-900 border-zinc-300 dark:border-zinc-700 shadow-[3px_3px_0px_0px_rgba(0,0,0,0.05)] dark:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.05)]'
+    }
+  `}>
+    <div className="flex justify-between items-start mb-2">
+        <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">{label}</p>
+        <Icon className="w-4 h-4 text-zinc-400 dark:text-zinc-500" />
+    </div>
+    <p className={`text-2xl font-mono font-bold ${alertColor && !alertColor.includes('bg-white') ? 'text-red-700 dark:text-red-400' : 'text-zinc-900 dark:text-zinc-100'}`}>
+        {value}
+    </p>
   </div>
 );
 
@@ -79,13 +104,16 @@ const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: p
   const [loading, setLoading] = useState(!propSubscription);
   const [error, setError] = useState<string | null>(null);
 
-  // UI State
+  // UI States
+  const [expandedLogId, setExpandedLogId] = useState<string | null>(null);
   const [showTester, setShowTester] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [showSecretKey, setShowSecretKey] = useState(false);
+
+  // Modal States
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [isOptionsModalOpen, setIsOptionsModalOpen] = useState(false);
   const [isAdvancedOptionsOpen, setIsAdvancedOptionsOpen] = useState(false);
-  const [showSecretKey, setShowSecretKey] = useState(false);
 
   // Delivery mode state
   const [deliverLatestOnly, setDeliverLatestOnly] = useState(() => {
@@ -131,10 +159,11 @@ const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: p
     }
   };
 
+  // --- EXPORT HANDLER ---
   const handleExportLogs = async (format: 'csv' | 'json') => {
     if (!activeId || !subscription) return;
     try {
-      const limit = 1000;
+      const limit = 1000; // Fetch larger set for export
       const logsData = await getSubscriptionLogs(activeId, 0, limit);
       const logsToExport = logsData.logs || [];
 
@@ -144,6 +173,7 @@ const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: p
       }
 
       const filename = generateFilename(subscription.name, format);
+
       if (format === 'json') {
         downloadFile(JSON.stringify(logsToExport, null, 2), filename, 'application/json');
       } else {
@@ -163,17 +193,20 @@ const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: p
       setLoading(true);
       fetchSubscription().then(() => setLoading(false));
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeId, propSubscription]);
 
   useEffect(() => {
     fetchLogs();
     const logsInterval = setInterval(fetchLogs, 3000);
     return () => clearInterval(logsInterval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeId, currentPage]);
 
   useEffect(() => {
     const subInterval = setInterval(() => fetchSubscription(true), 3000);
     return () => clearInterval(subInterval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeId]);
 
   // --- HANDLERS ---
@@ -217,18 +250,65 @@ const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: p
     }
   };
 
+  // !! Not used
+  // const handleReset = async () => {
+  //   if (!activeId) return;
+  //   try {
+  //     await resetSubscription(activeId);
+  //     await fetchSubscription(true);
+  //     setError(null);
+  //   } catch (error: any) {
+  //     console.error("Error resetting subscription:", error);
+  //     const errorMsg = error.response?.data || error.message || "Failed to reset subscription.";
+  //     setError(`Reset Failed: ${errorMsg}`);
+  //   }
+  // };
+
+  const handleCopyUrl = () => {
+    if (!subscription) return;
+    navigator.clipboard.writeText(subscription.targetUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const toggleRow = (id: string) => {
+    setExpandedLogId(expandedLogId === id ? null : id);
+  };
+
+  // --- DERIVED METRICS ---
+  const usageLastMinute = logs.filter(l => {
+    const logTime = new Date(l.attemptedAt).getTime();
+    return logTime > Date.now() - 60000;
+  }).length;
+
   const calculateSuccessRate = () => {
-    if (!logs || logs.length === 0) return "-";
-    const total = logs.length;
+    if (totalLogs === 0) return "-";
     const successCount = logs.filter(l => l.responseStatusCode >= 200 && l.responseStatusCode < 300).length;
     if (successCount === 0) return "0%";
-    return Math.round((successCount / total) * 100) + "%";
+    return Math.round((successCount / totalLogs) * 100) + "%";
   };
 
   const calculateAvgLatency = () => {
-    if (!logs || logs.length === 0) return "0ms";
+    if (totalLogs === 0) return "0ms";
     const totalLatency = logs.reduce((sum, log) => sum + log.latencyMs, 0);
     return Math.round(totalLatency / logs.length) + "ms";
+  };
+
+  const renderStatusBadge = (statusCode: number) => {
+    if (statusCode >= 200 && statusCode < 300) {
+      return <span className="inline-flex items-center px-1.5 py-0.5 rounded-sm text-[10px] font-mono font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">200 OK</span>;
+    }
+    if (statusCode === 429) {
+      return <span className="inline-flex items-center px-1.5 py-0.5 rounded-sm text-[10px] font-mono font-bold bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 border border-amber-200 dark:border-amber-800">429 LIMIT</span>;
+    }
+    return <span className="inline-flex items-center px-1.5 py-0.5 rounded-sm text-[10px] font-mono font-bold bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400 border border-red-200 dark:border-red-800">{statusCode} ERR</span>;
+  };
+
+  const formatJson = (data: string | object) => {
+    try {
+      if (typeof data === 'string') return JSON.stringify(JSON.parse(data), null, 2);
+      return JSON.stringify(data, null, 2);
+    } catch (e) { return String(data); }
   };
 
   // --- RENDER ---
@@ -236,195 +316,169 @@ const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: p
 
   if (!subscription) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-red-600">Subscription not found</div>
-        <button onClick={handleBack} className="ml-4 text-blue-600 underline">Go Back</button>
+      <div className="min-h-screen bg-zinc-50 dark:bg-black flex items-center justify-center">
+        <div className="text-red-600 font-mono">ERR: SUBSCRIPTION_NOT_FOUND</div>
+        <button onClick={handleBack} className="ml-4 text-zinc-500 hover:text-zinc-900 underline font-mono">GO_BACK</button>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col gap-6 w-full animate-in fade-in duration-300 relative max-w-7xl mx-auto p-4 sm:px-6 lg:px-8">
+    <div className="flex flex-col gap-6 w-full animate-in fade-in duration-300 relative max-w-7xl mx-auto">
 
-      {/* 1. Header Navigation */}
-      <div className="flex items-center gap-3">
+      {/* 1. HEADER & ACTIONS */}
+      <div>
         <button 
           onClick={handleBack} 
-          className="group px-3 py-2 bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400 rounded-lg transition-all flex items-center gap-2"
+          className="p-2 border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-sm transition-colors text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 shrink-0 shadow-[2px_2px_0px_0px_rgba(0,0,0,0.1)] active:translate-y-[1px] active:shadow-none mb-8"
         >
-          <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
-          <span className="font-medium">Back</span>
+          <ArrowLeft className="w-5 h-5" />
         </button>
-        <div className="h-6 w-px bg-gray-300 dark:bg-gray-700 mx-2"></div>
-        <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 font-mono tracking-tight">{subscription.name}</h2>
+      </div>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex items-center gap-3 w-full md:w-auto">
+          
+          <div className="min-w-0">
+             {/* Header Wrap Fix */}
+             <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 font-mono tracking-tight break-all mr-2">
+                    {subscription.name}
+                </h2>
+                <div className="flex items-center gap-2 shrink-0">
+                    <span className={`px-2 py-0.5 rounded-sm text-[10px] font-mono font-bold uppercase tracking-wide border ${
+                        subscription.isActive
+                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800'
+                        : 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800'
+                    }`}>
+                        {subscription.isActive ? 'OP:RUNNING' : 'OP:PAUSED'}
+                    </span>
+                    <span className="text-[10px] font-mono text-zinc-400 dark:text-zinc-500 border border-zinc-200 dark:border-zinc-800 px-1.5 rounded-sm">
+                        {subscription.id}
+                    </span>
+                </div>
+             </div>
+          </div>
+        </div>
+
+        {/* INDUSTRIAL TOOLS GRID: 2x2 on Mobile, Flex on Desktop */}
+        <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 w-full sm:w-auto">
+            <button 
+                onClick={() => setShowTester(!showTester)}
+                className="flex items-center justify-center gap-2 px-3 py-2 bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 rounded-sm hover:bg-zinc-50 dark:hover:bg-zinc-800 text-xs font-mono font-bold uppercase tracking-wider shadow-[2px_2px_0px_0px_rgba(0,0,0,0.1)] active:translate-y-[1px] active:shadow-none transition-all"
+            >
+                <Zap className="w-3.5 h-3.5 text-indigo-500" />
+                Test
+            </button>
+            
+            <button 
+                onClick={() => setIsEditModalOpen(true)}
+                className="flex items-center justify-center gap-2 px-3 py-2 bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 rounded-sm hover:bg-zinc-50 dark:hover:bg-zinc-800 text-xs font-mono font-bold uppercase tracking-wider shadow-[2px_2px_0px_0px_rgba(0,0,0,0.1)] active:translate-y-[1px] active:shadow-none transition-all"
+            >
+                <Edit2 className="w-3.5 h-3.5" />
+                Edit
+            </button>
+            
+            <button 
+                onClick={handleToggleActive}
+                className="flex items-center justify-center gap-2 px-3 py-2 bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 rounded-sm hover:bg-zinc-50 dark:hover:bg-zinc-800 text-xs font-mono font-bold uppercase tracking-wider shadow-[2px_2px_0px_0px_rgba(0,0,0,0.1)] active:translate-y-[1px] active:shadow-none transition-all"
+            >
+                {subscription.isActive ? <Pause className="w-3.5 h-3.5 text-amber-500" /> : <Play className="w-3.5 h-3.5 text-emerald-500" />}
+                {subscription.isActive ? 'Pause' : 'Resume'}
+            </button>
+            
+            <button 
+                onClick={() => setIsAdvancedOptionsOpen(true)}
+                className="flex items-center justify-center gap-2 px-3 py-2 bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 rounded-sm hover:bg-zinc-50 dark:hover:bg-zinc-800 text-xs font-mono font-bold uppercase tracking-wider shadow-[2px_2px_0px_0px_rgba(0,0,0,0.1)] active:translate-y-[1px] active:shadow-none transition-all"
+            >
+                <Settings className="w-3.5 h-3.5" />
+                Config
+            </button>
+            
+            {/* Delete spans full width on mobile */}
+            <button 
+                onClick={() => setIsDeleteModalOpen(true)}
+                className="col-span-2 sm:col-span-1 flex items-center justify-center gap-2 px-3 py-2 bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-rose-600 dark:text-rose-400 rounded-sm hover:bg-rose-50 dark:hover:bg-rose-900/20 text-xs font-mono font-bold uppercase tracking-wider shadow-[2px_2px_0px_0px_rgba(0,0,0,0.1)] active:translate-y-[1px] active:shadow-none transition-all"
+            >
+                <Trash2 className="w-3.5 h-3.5" />
+                Delete
+            </button>
+        </div>
       </div>
 
-      {/* Error/Warning Banners */}
+      {/* ERROR/WARNING BANNERS (Industrial Style) */}
       {error && (
-        <div className="bg-red-50 dark:bg-red-900/20 border border-red-300 dark:border-red-800 rounded-lg p-4 flex gap-3">
-          <span className="text-xl">❌</span>
-          <div>
-            <p className="font-bold text-red-900 dark:text-red-400 text-sm">System Error</p>
-            <p className="text-sm text-red-800 dark:text-red-300">{error}</p>
+        <div className="bg-red-50 dark:bg-red-950/30 border-l-4 border-red-500 p-4 font-mono text-sm shadow-sm">
+          <div className="flex items-start">
+            <span className="mr-3 font-bold text-red-600">ERR:</span>
+            <span className="text-red-800 dark:text-red-300">{error}</span>
           </div>
         </div>
       )}
 
-      {/* 2. Main Detail Card */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 relative overflow-hidden">
-        
-        {/* Header Row */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
-          <div className="flex items-center gap-3">
-            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Configuration</h3>
-            <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider ${
-              subscription.isActive 
-                ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800' 
-                : 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800'
-            }`}>
-              {subscription.isActive ? 'Active' : 'Paused'}
+      {/* 2. CONFIGURATION CARD */}
+      <div className="bg-white dark:bg-zinc-900 rounded-sm border border-zinc-300 dark:border-zinc-700 shadow-[3px_3px_0px_0px_rgba(0,0,0,0.05)] dark:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.05)]">
+        {/* Header */}
+        <div className="px-6 py-3 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50 flex flex-col sm:flex-row justify-between sm:items-center gap-3">
+            <h3 className="text-xs font-mono font-bold text-zinc-500 uppercase tracking-widest">System Configuration</h3>
+            
+            {/* Secret Key Toggle - FIXED FOR MOBILE */}
+            <div className="flex items-center gap-3 self-start sm:self-auto bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 px-3 py-1.5 rounded-sm">
+                <span className="text-[10px] text-zinc-400 font-mono font-bold uppercase tracking-wider">Secret:</span>
+                <code className="text-xs font-mono text-zinc-700 dark:text-zinc-300 tracking-wide">
+                    {showSecretKey ? subscription.secretKey : "••••••••••••••••"}
+                </code>
+                {/* Touch Target Increased & Event Propagation Stopped */}
+                <button 
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        setShowSecretKey(!showSecretKey);
+                    }} 
+                    className="p-2 -mr-2 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors relative z-10"
+                    aria-label="Toggle Secret Visibility"
+                >
+                    {showSecretKey ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                </button>
+            </div>
+        </div>
+
+        <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="lg:col-span-2">
+            <p className="text-[10px] font-mono font-bold text-zinc-400 uppercase tracking-wider mb-2">Target Endpoint</p>
+            <div className="flex items-center gap-2">
+              <div className="flex-1 font-mono text-xs text-zinc-700 dark:text-zinc-200 bg-zinc-50 dark:bg-zinc-950 p-2.5 rounded-sm border border-zinc-200 dark:border-zinc-700 truncate">
+                {subscription.targetUrl}
+              </div>
+              <button 
+                onClick={handleCopyUrl}
+                className="p-2.5 bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-sm hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-500 transition-colors shadow-sm"
+                title="Copy URL"
+              >
+                {copied ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <p className="text-[10px] font-mono font-bold text-zinc-400 uppercase tracking-wider mb-2">Event Type</p>
+            <span className="inline-flex items-center px-2 py-1 rounded-sm text-xs font-mono font-bold bg-zinc-100 text-zinc-700 border border-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:border-zinc-700">
+                {subscription.eventType}
             </span>
           </div>
 
-          {/* Action Buttons (Spaced out properly) */}
-          <div className="flex flex-wrap gap-3">
-            <button
-              onClick={() => setIsEditModalOpen(true)}
-              className="px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-colors"
-            >
-              <Edit className="w-3.5 h-3.5" /> Edit
-            </button>
-            
-            <button
-              onClick={handleToggleActive}
-              className={`px-3 py-2 rounded-lg text-xs font-bold uppercase tracking-wider flex items-center gap-2 text-white transition-colors shadow-sm ${
-                subscription.isActive 
-                  ? 'bg-amber-600 hover:bg-amber-700' 
-                  : 'bg-green-600 hover:bg-green-700'
-              }`}
-            >
-              {subscription.isActive ? <><Pause className="w-3.5 h-3.5" /> Pause</> : <><Play className="w-3.5 h-3.5" /> Resume</>}
-            </button>
-
-            <button
-              onClick={() => setIsOptionsModalOpen(true)}
-              className="px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-colors"
-            >
-              <Settings className="w-3.5 h-3.5" /> Tools
-            </button>
-
-            <button
-              onClick={() => setShowTester(!showTester)}
-              className="px-3 py-2 bg-[#006A33] border border-[#006A33] text-white hover:bg-[#005a2b] rounded-lg text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-colors shadow-md shadow-green-900/20"
-            >
-              <Terminal className="w-3.5 h-3.5" /> {showTester ? 'Hide Tester' : 'Test Webhook'}
-            </button>
-          </div>
-        </div>
-
-        {/* Info Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-y-8 gap-x-12 text-sm">
-          
-          {/* Target URL */}
-          <div className="col-span-1 md:col-span-2">
-            <p className="text-gray-500 dark:text-gray-400 mb-1.5 font-medium flex items-center gap-2">Target Endpoint</p>
-            <div className="flex items-center gap-2">
-              <code className="flex-1 block bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg p-2.5 font-mono text-xs text-gray-800 dark:text-gray-200 break-all">
-                {subscription.targetUrl}
-              </code>
-              <button
-                onClick={() => navigator.clipboard.writeText(subscription.targetUrl)}
-                className="p-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400 transition-colors"
-                title="Copy URL"
-              >
-                <Copy className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-
-          {/* Event Type */}
           <div>
-            <p className="text-gray-500 dark:text-gray-400 mb-1 font-medium">Trigger Event</p>
-            <div className="flex items-center gap-2">
-              <span className="font-bold text-gray-900 dark:text-white text-base">{subscription.eventType}</span>
-              {subscription.minimumLovelace ? (
-                <span className="text-xs bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded text-gray-600 dark:text-gray-400">
-                  Min: {subscription.minimumLovelace / 1000000} ADA
-                </span>
-              ) : null}
+            <p className="text-[10px] font-mono font-bold text-zinc-400 uppercase tracking-wider mb-2">Throughput Limits</p>
+            <div className="text-sm font-mono text-zinc-800 dark:text-zinc-200 flex flex-col">
+              <span>{subscription.maxWebhooksPerMinute} <span className="text-zinc-400 text-[10px]">/ min</span></span>
+              <span>{subscription.maxWebhooksPerHour} <span className="text-zinc-400 text-[10px]">/ hour</span></span>
             </div>
-          </div>
-
-          {/* Rate Limits */}
-          <div>
-            <p className="text-gray-500 dark:text-gray-400 mb-1 font-medium">Rate Limits</p>
-            <p className="font-mono text-gray-900 dark:text-white">
-              {subscription.maxWebhooksPerMinute}/min &bull; {subscription.maxWebhooksPerHour}/hour
-            </p>
-          </div>
-
-          {/* Wallet Filters (New Chips Section) */}
-          <div className="col-span-1 md:col-span-2">
-            <p className="text-gray-500 dark:text-gray-400 mb-2 font-medium flex justify-between">
-              <span>Filter Targets</span>
-              <span className="text-xs font-normal opacity-70">
-                {subscription.walletAddresses?.length || 0} active filters
-              </span>
-            </p>
-            <div className="bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-800 rounded-lg p-3 min-h-[50px]">
-              {subscription.walletAddresses && subscription.walletAddresses.length > 0 ? (
-                <div className="flex flex-wrap gap-2">
-                  {subscription.walletAddresses.map((addr, i) => (
-                    <span key={i} className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-mono bg-white dark:bg-black border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 shadow-sm" title={addr}>
-                      <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 dark:bg-green-500 mr-2"></span>
-                      {addr.length > 20 ? `${addr.substring(0, 8)}...${addr.substring(addr.length - 6)}` : addr}
-                    </span>
-                  ))}
-                </div>
-              ) : (
-                <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 text-sm italic">
-                  <span className="w-2 h-2 rounded-full bg-yellow-500"></span>
-                  Listening to ALL events (Firehose Mode)
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Secret Key (Moved Here) */}
-          <div className="col-span-1 md:col-span-2 pt-4 border-t border-gray-100 dark:border-gray-800">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-gray-500 dark:text-gray-400 font-medium text-xs uppercase tracking-wide">
-                HMAC Secret Key
-              </p>
-              <button 
-                onClick={() => setShowSecretKey(!showSecretKey)}
-                className="text-xs text-indigo-600 dark:text-green-400 hover:underline flex items-center gap-1"
-              >
-                {showSecretKey ? <><EyeOff className="w-3 h-3"/> Hide</> : <><Eye className="w-3 h-3"/> Reveal</>}
-              </button>
-            </div>
-            <div className="flex items-center gap-2">
-              <code className="flex-1 block bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded px-3 py-2 font-mono text-xs text-gray-600 dark:text-gray-400">
-                {showSecretKey ? subscription.secretKey : '•'.repeat(48)}
-              </code>
-              <button
-                onClick={() => navigator.clipboard.writeText(subscription.secretKey || '')}
-                className="text-xs text-gray-500 hover:text-gray-900 dark:hover:text-gray-100 px-2"
-                title="Copy Secret"
-              >
-                <Copy className="w-4 h-4" />
-              </button>
-            </div>
-            <p className="text-[10px] text-gray-400 mt-1">
-              Use this key to verify the <code>X-Panoptes-Signature</code> header in your backend for security.
-            </p>
           </div>
 
         </div>
       </div>
 
-      <TestWebhookModal isOpen={showTester} onClose={() => setShowTester(false)}>
-        {activeId && (
+      {/* Webhook Tester Section */}
+      {showTester && activeId && (
+        <div className="animate-in fade-in slide-in-from-top-4 duration-300">
           <WebhookTester
             subscriptionId={activeId}
             targetUrl={subscription.targetUrl}
@@ -432,44 +486,172 @@ const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: p
               event: "test_event",
               timestamp: new Date().toISOString(),
               subscriptionId: activeId,
-              data: { message: "Manual test from dashboard" }
+              data: {
+                message: "Manual test initiated via control panel.",
+                user: "admin"
+              }
             }}
           />
-        )}
-      </TestWebhookModal>
+        </div>
+      )}
+      <TestWebhookModal isOpen={false} onClose={() => {}} children={null}/>
 
-      {/* 3. Stats Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatsCard label="Total Deliveries" value={String(totalLogs)} />
+      {/* 3. STATS ROW */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatsCard label="Total Deliveries" value={String(totalLogs)} icon={Server} />
         <StatsCard 
           label="Success Rate" 
           value={calculateSuccessRate()} 
-          alertColor={totalLogs > 0 && calculateSuccessRate() === '0%' ? 'border border-red-300 bg-red-50 dark:bg-red-900/20' : undefined}
+          icon={Check}
+          alertColor={totalLogs > 0 && calculateSuccessRate() === '0%' ? 'bg-red-50 dark:bg-red-950/20 border-red-300 dark:border-red-800' : undefined}
         />
-        <StatsCard label="Avg Latency" value={calculateAvgLatency()} />
-        <div className="p-5 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-          <p className="text-gray-500 dark:text-gray-400 text-sm mb-1">Rate Usage</p>
-          <div className="text-2xl font-bold text-green-600 dark:text-green-400 flex items-baseline gap-1">
-            {subscription.webhooksInLastMinute || 0}<span className="text-gray-400 dark:text-gray-500 text-base font-normal">/{subscription.maxWebhooksPerMinute} min</span>
-          </div>
+        <StatsCard label="Avg Latency" value={calculateAvgLatency()} icon={Clock} />
+        
+        {/* Synced Rate Usage */}
+        <div className="p-4 rounded-sm border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-[3px_3px_0px_0px_rgba(0,0,0,0.05)] dark:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.05)]">
+            <div className="flex justify-between items-start mb-2">
+                <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Rate Usage (1m)</p>
+                <Activity className="w-4 h-4 text-zinc-400" />
+            </div>
+            <div className="flex items-baseline gap-1 mb-2">
+                <span className="text-2xl font-mono font-bold text-zinc-900 dark:text-zinc-100">{usageLastMinute}</span>
+                <span className="text-xs font-mono text-zinc-400">/ {subscription.maxWebhooksPerMinute}</span>
+            </div>
+            {/* Industrial Progress Bar */}
+            <div className="w-full bg-zinc-100 dark:bg-zinc-800 h-1.5 rounded-sm overflow-hidden border border-zinc-200 dark:border-zinc-700">
+                <div 
+                    className={`h-full ${usageLastMinute >= subscription.maxWebhooksPerMinute ? 'bg-amber-500' : 'bg-emerald-500'}`} 
+                    style={{ width: `${Math.min(100, (usageLastMinute / subscription.maxWebhooksPerMinute) * 100)}%` }}
+                />
+            </div>
         </div>
       </div>
 
-      {/* 4. Delivery Logs */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden mb-10">
-        <div className="p-6 pb-2">
-          <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Delivery Logs</h3>
+      {/* 4. DELIVERY LOGS */}
+      <div className="bg-white dark:bg-zinc-900 rounded-sm border border-zinc-300 dark:border-zinc-700 overflow-hidden mb-10 shadow-[3px_3px_0px_0px_rgba(0,0,0,0.05)] dark:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.05)]">
+        <div className="px-6 py-3 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50 flex flex-col sm:flex-row justify-between sm:items-center gap-3">
+            <div>
+                <h3 className="text-xs font-mono font-bold text-zinc-500 uppercase tracking-widest">Delivery Logs</h3>
+            </div>
+            
+            {/* Export Actions */}
+            <div className="flex gap-2 self-start sm:self-auto">
+                <button 
+                  onClick={() => handleExportLogs('json')}
+                  className="px-3 py-1.5 text-[10px] font-mono font-bold uppercase tracking-wider border border-zinc-300 dark:border-zinc-600 rounded-sm bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800 flex items-center gap-1.5 transition-colors"
+                >
+                  <Download className="w-3 h-3" />
+                  JSON
+                </button>
+                <button 
+                  onClick={() => handleExportLogs('csv')}
+                  className="px-3 py-1.5 text-[10px] font-mono font-bold uppercase tracking-wider border border-zinc-300 dark:border-zinc-600 rounded-sm bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800 flex items-center gap-1.5 transition-colors"
+                >
+                  <Download className="w-3 h-3" />
+                  CSV
+                </button>
+            </div>
         </div>
 
-        <DeliveryLogsTable
-          logs={logs}
-          totalCount={totalLogs}
-          currentPage={currentPage}
-          pageSize={itemsPerPage}
-          isLoading={loading}
-        />
+        {loading ? (
+            <div className="p-12 text-center font-mono text-xs text-zinc-500">INITIALIZING_LOG_STREAM...</div>
+        ) : totalLogs === 0 ? (
+            <div className="p-12 text-center text-zinc-500 dark:text-zinc-400 font-mono text-xs">NO_DATA_AVAILABLE</div>
+        ) : (
+            <div>
+                {/* Responsive Log Header (Hidden on Mobile) */}
+                <div className="hidden md:grid grid-cols-12 gap-4 px-6 py-2 text-[10px] font-mono font-bold text-zinc-400 uppercase tracking-wider border-b border-zinc-100 dark:border-zinc-800">
+                    <div className="col-span-3">Timestamp</div>
+                    <div className="col-span-2">Status</div>
+                    <div className="col-span-2">Duration</div>
+                    <div className="col-span-5">Result</div>
+                </div>
 
-        <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/30">
+                <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                    {logs.map((log) => {
+                        const timeValue = (log as any).timestamp || (log as any).createdAt || new Date();
+                        const isExpanded = expandedLogId === log.id;
+                        const isThrottled = log.responseStatusCode === 429;
+                        
+                        return (
+                            <div key={log.id} className={`group transition-colors ${isExpanded ? 'bg-zinc-50 dark:bg-zinc-900/50' : 'hover:bg-zinc-50 dark:hover:bg-zinc-900/30'}`}>
+                                {/* Log Row: Flex on Mobile, Grid on Desktop */}
+                                <div 
+                                    onClick={() => toggleRow(log.id)}
+                                    className="px-6 py-3 cursor-pointer flex flex-col md:grid md:grid-cols-12 gap-2 md:gap-4 items-start md:items-center"
+                                >
+                                    {/* Mobile Top Row: Status + Time */}
+                                    <div className="flex md:hidden w-full justify-between items-center mb-1">
+                                        <div>{renderStatusBadge(log.responseStatusCode)}</div>
+                                        <div className="text-xs text-zinc-500 font-mono">
+                                            {new Date(timeValue).toLocaleTimeString()}
+                                        </div>
+                                    </div>
+
+                                    {/* Desktop Time Column */}
+                                    <div className="hidden md:block col-span-3 text-zinc-600 dark:text-zinc-300 font-mono text-xs">
+                                        {new Date(timeValue).toLocaleTimeString()} <span className="text-zinc-400 text-[10px]">{new Date(timeValue).toLocaleDateString()}</span>
+                                    </div>
+
+                                    {/* Desktop Status Column */}
+                                    <div className="hidden md:block col-span-2 font-mono">
+                                        {renderStatusBadge(log.responseStatusCode)}
+                                    </div>
+
+                                    {/* Latency Column */}
+                                    <div className="col-span-2 font-mono text-xs text-zinc-500 dark:text-zinc-400 flex items-center gap-1">
+                                        <span className="md:hidden font-bold">Latency:</span> {log.latencyMs}ms
+                                    </div>
+
+                                    {/* Result Column */}
+                                    <div className="col-span-5 w-full font-mono text-xs text-zinc-500 dark:text-zinc-400 truncate flex items-center gap-2">
+                                        {/* Mobile Expand Icon */}
+                                        <div className="md:hidden mr-1">
+                                            {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                                        </div>
+                                        {isThrottled && (
+                                            <span className="text-[10px] font-bold text-amber-600 dark:text-amber-500 uppercase tracking-tight whitespace-nowrap">[Rate Limit]</span>
+                                        )}
+                                        <span className={`truncate ${isThrottled ? 'opacity-75' : ''}`}>
+                                            {(log as any).responseBody || 'No Content'}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                {/* Expanded Details */}
+                                {isExpanded && (
+                                    <div className="px-6 py-4 border-t border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 animate-in slide-in-from-top-1">
+                                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                            {/* Request Payload */}
+                                            <div>
+                                                <h4 className="text-[10px] font-mono font-bold text-zinc-400 uppercase tracking-wider mb-2">Request Payload</h4>
+                                                <div className="bg-zinc-50 dark:bg-zinc-900 rounded-sm border border-zinc-200 dark:border-zinc-800 p-3 overflow-x-auto max-h-60 custom-scrollbar max-w-[calc(100vw-4rem)]">
+                                                    <pre className="text-xs font-mono text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap break-all">
+                                                        {(log as any).requestPayload ? formatJson((log as any).requestPayload) : "null"}
+                                                    </pre>
+                                                </div>
+                                            </div>
+                                            {/* Server Response */}
+                                            <div>
+                                                <h4 className="text-[10px] font-mono font-bold text-zinc-400 uppercase tracking-wider mb-2">Server Response</h4>
+                                                <div className="bg-zinc-50 dark:bg-zinc-900 rounded-sm border border-zinc-200 dark:border-zinc-800 p-3 overflow-x-auto max-h-60 custom-scrollbar max-w-[calc(100vw-4rem)]">
+                                                    <pre className="text-xs font-mono text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap break-all">
+                                                        {(log as any).responseBody ? formatJson((log as any).responseBody) : "null"}
+                                                    </pre>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+        )}
+
+        {/* Pagination */}
+        <div className="p-4 border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50">
           <Pagination
             currentPage={currentPage}
             totalItems={totalLogs}
@@ -482,14 +664,6 @@ const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: p
       {/* MODALS */}
       {subscription && (
         <>
-          <SubscriptionToolsModal
-            isOpen={isOptionsModalOpen}
-            onClose={() => setIsOptionsModalOpen(false)}
-            onExport={handleExportLogs}
-            onEdit={() => setIsEditModalOpen(true)}
-            onDelete={() => setIsDeleteModalOpen(true)}
-            hasLogs={totalLogs > 0}
-          />
           <EditSubscriptionModal
             isOpen={isEditModalOpen}
             subscription={subscription}
@@ -498,10 +672,10 @@ const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: p
           />
           <ConfirmationModal
             isOpen={isDeleteModalOpen}
-            title="Delete Subscription"
-            message={`Are you sure you want to delete "${subscription.name}"?`}
-            confirmLabel="Delete"
-            cancelLabel="Cancel"
+            title="TERMINATE SUBSCRIPTION"
+            message={`Confirm deletion for "${subscription.name}". This action cannot be undone.`}
+            confirmLabel="TERMINATE"
+            cancelLabel="CANCEL"
             confirmVariant="danger"
             onConfirm={handleDeleteConfirm}
             onCancel={() => setIsDeleteModalOpen(false)}

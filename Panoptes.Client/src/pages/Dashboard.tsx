@@ -12,7 +12,19 @@ import {
   resetSubscription 
 } from '../services/api';
 import { WebhookSubscription, DeliveryLog } from '../types';
-import { Inbox, AlertCircle, ChevronLeft, ChevronRight, FilterX } from 'lucide-react'; // Added icons
+import { 
+  Inbox, 
+  AlertCircle, 
+  ChevronLeft, 
+  ChevronRight, 
+  FilterX, 
+  Activity, 
+  ChevronUp, 
+  ChevronDown,
+  Plus,
+  RefreshCw,
+  Terminal
+} from 'lucide-react';
 
 // --- COMPONENTS ---
 import StatCard from '../components/StatCard';
@@ -327,26 +339,35 @@ const Dashboard: React.FC = () => {
   const hasSubscriptions = subscriptions.length > 0;
   const hasFilteredResults = filteredSubscriptions.length > 0;
 
+  const [isStatsOpen, setIsStatsOpen] = useState(true);
+
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <div className="min-h-screen bg-zinc-50 dark:bg-black font-sans text-zinc-900 dark:text-zinc-100 pb-20">
       {/* Onboarding Tour */}
       <OnboardingTour enabled={true} onFinish={handleTourFinish} />
 
-      {/* Standardized Error Banner */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+      
+      { /* Standardized Error Banner */ }
       {error && (
-        <div className="mb-6 bg-red-950/20 border border-red-900/50 rounded-lg p-4 flex items-start gap-3">
-          <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
-          <div>
-            <h3 className="text-sm font-bold text-red-400">Connection Error</h3>
-            <p className="mt-1 text-sm text-red-300/80">{error}</p>
+        <div className="mb-6 bg-red-50 dark:bg-red-950/20 border-l-4 border-red-500 p-4 shadow-sm animate-in fade-in slide-in-from-top-2">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-500 mt-0.5" />
+            <div>
+              <h3 className="text-sm font-bold font-mono uppercase tracking-wider text-red-800 dark:text-red-400">Connection Error</h3>
+              <p className="mt-1 text-sm font-mono text-red-700 dark:text-red-300">{error}</p>
+            </div>
           </div>
         </div>
       )}
 
       {/* Offline Banner */}
       {!isConnected && (
-        <div className="mb-6 bg-yellow-950/20 border border-yellow-900/50 rounded-lg p-4">
-           <span className="text-sm font-medium text-yellow-500">Backend Disconnected - Displaying cached data</span>
+        <div className="mb-6 bg-amber-50 dark:bg-amber-950/20 border-l-4 border-amber-500 p-4 shadow-sm">
+           <div className="flex items-center gap-3">
+              <RefreshCw className="w-4 h-4 text-amber-600 animate-spin" />
+              <span className="text-sm font-mono font-bold uppercase text-amber-700 dark:text-amber-400">Backend Disconnected - Displaying Cached Data</span>
+           </div>
         </div>
       )}
 
@@ -359,45 +380,78 @@ const Dashboard: React.FC = () => {
       {activeView === 'overview' && (
         <>
         {/* Header with System Info */}
-        {systemInfo && (
-          <div className="mb-6 flex items-center gap-3">
-            <h1 className="text-2xl font-bold text-foreground">Panoptes Mission Control</h1>
-            <div className="flex items-center gap-2">
-              <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-200 dark:border-zinc-800 pb-6">
+          <div>
+            <h1 className="text-xl font-bold font-mono uppercase tracking-tight flex items-center gap-3">
+              <Terminal className="w-6 h-6 text-zinc-500" />
+              Mission_Control
+            </h1>
+            <p className="text-xs font-mono text-zinc-500 mt-1">SYSTEM_VERSION: v1.2.0 | BUILD_8821</p>
+          </div>
+          
+          {systemInfo && (
+            <div className="flex items-center gap-3">
+              <div className={`flex items-center gap-2 px-3 py-1.5 rounded-sm border ${
                 systemInfo.network === 'Mainnet' 
-                  ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' 
-                  : systemInfo.network === 'Preprod'
-                  ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
-                  : 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
+                  ? 'bg-emerald-50 border-emerald-200 text-emerald-700 dark:bg-emerald-900/20 dark:border-emerald-800 dark:text-emerald-400' 
+                  : 'bg-indigo-50 border-indigo-200 text-indigo-700 dark:bg-indigo-900/20 dark:border-indigo-800 dark:text-indigo-400'
               }`}>
-                {systemInfo.network}
-              </span>
+                <div className={`w-2 h-2 rounded-full ${systemInfo.network === 'Mainnet' ? 'bg-emerald-500' : 'bg-indigo-500'} animate-pulse`} />
+                <span className="text-xs font-mono font-bold uppercase tracking-wider">{systemInfo.network}</span>
+              </div>
+              
               {!systemInfo.hasApiKey && (
-                <span className="px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
-                  ⚠️ No API Key
-                </span>
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-sm border bg-red-50 border-red-200 text-red-700 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400">
+                   <AlertCircle className="w-3 h-3" />
+                   <span className="text-xs font-mono font-bold uppercase tracking-wider">NO_API_KEY</span>
+                </div>
               )}
             </div>
-          </div>
-        )}
-        {/* Stats - Only shown on overview */}
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-3 mb-8" data-tour="stats-overview">
-          <StatCard
-            title="Active Hooks"
-            value={subscriptions.filter(s => s.isActive).length}
-            icon={<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>}
-          />
-          <StatCard
-            title="Total Events"
-            value={totalLogs}
-            icon={<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>}
-          />
-          <StatCard
-            title="Success Rate"
-            value={`${logs.length > 0 ? Math.round((logs.filter(l => l.responseStatusCode >= 200 && l.responseStatusCode < 300).length / logs.length) * 100) : 0}%`}
-            icon={<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
-          />
+          )}
         </div>
+
+        {/* Stats - Only shown on overview */}
+        <div className="space-y-4" data-tour="stats-overview">
+    
+        {/* 1. CONTROL HEADER (Visible only on Mobile) */}
+          <div className="flex md:hidden items-center justify-between">
+              <div className="flex items-center gap-2">
+                  <Activity className="w-4 h-4 text-zinc-500" />
+                  <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-zinc-500">System Telemetry</h3>
+              </div>
+              <button 
+                  onClick={() => setIsStatsOpen(!isStatsOpen)}
+                  className="flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-sm text-xs font-mono font-bold text-zinc-600 dark:text-zinc-300 uppercase tracking-wider shadow-sm active:translate-y-px transition-all"
+              >
+                  {isStatsOpen ? 'Hide' : 'Show'}
+                  {isStatsOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+              </button>
+          </div>
+          
+          <div className={`
+              ${isStatsOpen ? 'flex' : 'hidden'} 
+              flex-col gap-4
+              sm:grid sm:grid-cols-3
+              transition-all duration-300 ease-in-out
+          `}>
+            <StatCard
+              title="Active Hooks"
+              value={subscriptions.filter(s => s.isActive).length.toString()}
+              icon={<Activity className="w-5 h-5" />}
+            />
+            <StatCard
+              title="Total Events"
+              value={totalLogs.toString()}
+              icon={<Inbox className="w-5 h-5" />}
+            />
+            <StatCard
+              title="Success Rate"
+              value={`${logs.length > 0 ? Math.round((logs.filter(l => l.responseStatusCode >= 200 && l.responseStatusCode < 300).length / logs.length) * 100) : 0}%`}
+              icon={<RefreshCw className="w-5 h-5" />}
+            />
+          </div>
+        </div>
+        
           {/* LOGIC SWITCH: Detail View vs List View */}
           {viewingSubscription ? (
             // 1. DETAIL VIEW
@@ -410,11 +464,12 @@ const Dashboard: React.FC = () => {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
               {/* Left Column: Subscriptions (2/3 width) */}
-              <div className="lg:col-span-2 space-y-6 bg-white dark:bg-[#050505] border border-gray-200 dark:border-white/10 rounded-xl shadow p-6"> 
+              <div className="lg:col-span-2 space-y-6 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg shadow-sm p-6"> 
                 {/* Header */}
-                <div className="flex justify-between items-center">
-                  <h2 className="text-lg font-bold text-gray-900 dark:text-white">
-                    Subscriptions
+                <div className="flex justify-between items-center pb-4 border-b border-zinc-100 dark:border-zinc-800">
+                  <h2 className="text-sm font-bold font-mono uppercase tracking-widest text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+                    <Terminal className="w-4 h-4 text-zinc-400" />
+                    Active_Subscriptions
                   </h2>
 
                   {/* Hide New Subscription Button if truly empty (Zero State) to focus on center CTA */}
@@ -428,15 +483,17 @@ const Dashboard: React.FC = () => {
                         }
                         }}
                         data-tour="create-subscription"
-                        className={`px-4 py-2 rounded-tech text-sm font-medium transition-colors ${
-                        setupStatus?.isConfigured
-                            ? 'bg-sentinel hover:bg-sentinel-hover'
-                            : 'bg-gray-400 hover:bg-gray-500'
-                        } text-white`}
-                        style={{ color: '#ffffff' }}
+                        className={`
+                            flex items-center gap-2 px-4 py-2 rounded-sm text-xs font-mono font-bold uppercase tracking-wider transition-all shadow-sm
+                            ${setupStatus?.isConfigured
+                                ? 'bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200'
+                                : 'bg-zinc-200 text-zinc-500 cursor-not-allowed dark:bg-zinc-800'
+                            }
+                        `}
                         title={!setupStatus?.isConfigured ? 'Click to configure API' : ''}
                     >
-                        {setupStatus?.isConfigured ? 'New Subscription' : 'Configure API'}
+                        <Plus className="w-3.5 h-3.5" />
+                        {setupStatus?.isConfigured ? 'New_Subscription' : 'Configure_API'}
                     </button>
                   )}
                 </div>
@@ -462,9 +519,8 @@ const Dashboard: React.FC = () => {
 
                 {/* Filter Counter */}
                 {hasSubscriptions && !loading && (
-                  <div className="text-sm text-gray-500 dark:text-gray-400">
-                    Showing {filteredSubscriptions.length} of {subscriptions.length} subscription
-                    {subscriptions.length !== 1 ? 's' : ''}
+                  <div className="text-[10px] font-mono uppercase tracking-widest text-zinc-400">
+                    Showing {filteredSubscriptions.length} of {subscriptions.length} node{subscriptions.length !== 1 ? 's' : ''}
                     {activeFilterCount > 0 && ' (filtered)'}
                   </div>
                 )}
@@ -492,23 +548,23 @@ const Dashboard: React.FC = () => {
                   />
                 ) : !hasFilteredResults ? (
                   // ✅ NO RESULTS: Data exists, but filters hide it
-                  <div className="flex flex-col items-center justify-center p-12 border border-dashed border-gray-300 dark:border-gray-700 rounded-lg">
-                    <div className="bg-gray-100 dark:bg-gray-800 p-4 rounded-full mb-4">
-                        <FilterX className="w-8 h-8 text-gray-400" />
+                  <div className="flex flex-col items-center justify-center p-12 border border-dashed border-zinc-300 dark:border-zinc-700 rounded-sm bg-zinc-50/50 dark:bg-black/20">
+                    <div className="bg-zinc-100 dark:bg-zinc-800 p-4 rounded-full mb-4">
+                        <FilterX className="w-8 h-8 text-zinc-400" />
                     </div>
-                    <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">No matching subscriptions</h3>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 mb-6 text-center max-w-sm">
-                        We couldn't find any subscriptions matching your current filters. Try adjusting your search or status.
+                    <h3 className="text-sm font-bold font-mono text-zinc-900 dark:text-zinc-100 uppercase tracking-wide">No matching nodes</h3>
+                    <p className="text-xs font-mono text-zinc-500 dark:text-zinc-400 mt-2 mb-6 text-center max-w-sm">
+                        ADJUST_SEARCH_PARAMETERS_OR_RESET_FILTERS
                     </p>
                     <button 
                         onClick={clearFilters}
-                        className="text-sm font-medium text-sentinel hover:text-sentinel-hover underline"
+                        className="text-xs font-mono font-bold uppercase tracking-wider text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 underline decoration-dotted underline-offset-4"
                     >
-                        Clear all filters
+                        RESET_ALL_FILTERS
                     </button>
                   </div>
                 ) : (
-                  <div className=" rounded-lg  bg-white/5">
+                  <div className="bg-zinc-50 dark:bg-black border border-zinc-200 dark:border-zinc-800 rounded-sm p-4">
                       <SubscriptionGrid
                         subscriptions={filteredSubscriptions}
                         loading={loading}
@@ -531,42 +587,39 @@ const Dashboard: React.FC = () => {
 
               {/* Right Column: Recent Logs (1/3 width) */}
               <div className="lg:col-span-1" data-tour="recent-logs">
-                <div className="bg-card shadow rounded-lg border flex flex-col h-full max-h-[700px]">
-                  <div className="px-6 py-5 border-b border-border flex justify-between items-center shrink-0">
-                    <h2 className="text-lg font-medium text-foreground">Recent Logs</h2>
-                    <span className="text-xs text-muted-foreground bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">
-                        Live
-                    </span>
+                <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg shadow-sm flex flex-col h-full max-h-[700px]">
+                  <div className="px-6 py-4 border-b border-zinc-100 dark:border-zinc-800 flex justify-between items-center shrink-0">
+                    <h2 className="text-sm font-bold font-mono uppercase tracking-widest text-zinc-900 dark:text-zinc-100">Live_Logs</h2>
+                    <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+                        <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400">Realtime</span>
+                    </div>
                   </div>
                   
                   {/* Logs Container */}
-                  <div className="px-6 py-5 overflow-y-auto flex-1 custom-scrollbar">
-                    {/* Note: LogViewer handles internal rendering. Pass pagination data down if component supported it, 
-                        or rely on the parent slicing done in fetchLogs via getLogs(offset, limit) */}
+                  <div className="flex-1 overflow-y-auto custom-scrollbar bg-zinc-50/50 dark:bg-black/20">
                     <LogViewer logs={logs || []} subscriptions={subscriptions || []} />
                   </div>
 
                   {/* Pagination Footer */}
-                  <div className="px-6 py-4 border-t border-border flex items-center justify-between shrink-0 bg-gray-50 dark:bg-black/20 rounded-b-lg">
-                    <span className="text-xs text-gray-500 dark:text-gray-400">
-                        Page {logPage + 1} of {Math.ceil(totalLogs / LOGS_PER_PAGE)}
+                  <div className="px-4 py-3 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between shrink-0 bg-white dark:bg-zinc-900 rounded-b-lg">
+                    <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider">
+                        Page {logPage + 1} / {Math.ceil(totalLogs / LOGS_PER_PAGE)}
                     </span>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1">
                         <button 
                             onClick={() => handlePageChange(logPage - 1)}
                             disabled={logPage === 0}
-                            className="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                            title="Previous Page"
+                            className="p-1 rounded-sm hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                         >
-                            <ChevronLeft className="w-4 h-4" />
+                            <ChevronLeft className="w-4 h-4 text-zinc-600 dark:text-zinc-400" />
                         </button>
                         <button 
                             onClick={() => handlePageChange(logPage + 1)}
                             disabled={(logPage + 1) * LOGS_PER_PAGE >= totalLogs}
-                            className="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                            title="Next Page"
+                            className="p-1 rounded-sm hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                         >
-                            <ChevronRight className="w-4 h-4" />
+                            <ChevronRight className="w-4 h-4 text-zinc-600 dark:text-zinc-400" />
                         </button>
                     </div>
                   </div>
@@ -576,6 +629,8 @@ const Dashboard: React.FC = () => {
           )}
         </>
       )}
+      </div>
+      
 
       {/* Create Subscription Modal */}
       <CreateSubscriptionModal

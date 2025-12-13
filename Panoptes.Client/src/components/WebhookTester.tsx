@@ -1,32 +1,15 @@
 import React, { useState } from 'react';
-import { triggerDirectWebhookTest } from '../services/api'; // <--- Imports your fixed API call
-
-// --- Inline SVG Icons (No external dependencies) ---
-const Icons = {
-  Play: ({ className }: { className?: string }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-  ),
-  Copy: ({ className }: { className?: string }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-  ),
-  Check: ({ className }: { className?: string }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polyline points="20 6 9 17 4 12"></polyline></svg>
-  ),
-  Clock: ({ className }: { className?: string }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-  ),
-  ShieldCheck: ({ className }: { className?: string }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><path d="m9 12 2 2 4-4"></path></svg>
-  ),
-  AlertCircle: ({ className }: { className?: string }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
-  ),
-  Spinner: ({ className }: { className?: string }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg>
-  ),
-};
-
-// --- Main Component ---
+import { 
+  Play, 
+  Terminal, 
+  Copy, 
+  Check, 
+  Clock, 
+  Loader2, 
+  CheckCircle, 
+  XCircle, 
+} from 'lucide-react';
+import { triggerDirectWebhookTest } from '../services/api';
 
 interface WebhookTesterProps {
   subscriptionId: string;
@@ -39,7 +22,6 @@ interface TestResult {
   statusText: string;
   durationMs: number;
   responseBody: any;
-  signature?: string;
   timestamp: string;
 }
 
@@ -50,230 +32,212 @@ const WebhookTester: React.FC<WebhookTesterProps> = ({
 }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<TestResult | null>(null);
-  const [copiedSection, setCopiedSection] = useState<string | null>(null);
-  
-  // Tab State
   const [activeTab, setActiveTab] = useState<'request' | 'response'>('request');
+  const [copiedState, setCopiedState] = useState<string | null>(null);
 
-  const handleTestWebhook = async () => {
+  const handleTest = async () => {
     setIsLoading(true);
     setResult(null);
-    
-    // Auto-switch to response tab to show loading state
-    setActiveTab('response'); 
+    setActiveTab('response'); // Auto-switch to view execution
     
     const startTime = Date.now();
-
     try {
-      // ✅ Using the centralized API function to ensure correct URL path
       const data = await triggerDirectWebhookTest(subscriptionId, samplePayload);
-      const endTime = Date.now();
-
       setResult({
-        status: 200, // Axios throws on non-2xx, so if we are here, it is success
+        status: 200,
         statusText: "OK",
-        durationMs: endTime - startTime,
+        durationMs: Date.now() - startTime,
         responseBody: data,
-        signature: 'HMAC-SHA256', // Placeholder if backend doesn't return headers in body
-        timestamp: new Date().toISOString(),
+        timestamp: new Date().toISOString()
       });
-      
     } catch (error: any) {
-      const endTime = Date.now();
-      // Handle Axios Errors (e.g., 404, 500)
       setResult({
         status: error.response?.status || 0,
-        statusText: error.response?.statusText || 'Network Error',
-        durationMs: endTime - startTime,
+        statusText: error.response?.statusText || 'NETWORK_ERROR',
+        durationMs: Date.now() - startTime,
         responseBody: error.response?.data || { error: error.message },
-        timestamp: new Date().toISOString(),
+        timestamp: new Date().toISOString()
       });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const copyToClipboard = (text: string, section: string) => {
+  const copyToClipboard = (text: string, id: string) => {
     navigator.clipboard.writeText(text);
-    setCopiedSection(section);
-    setTimeout(() => setCopiedSection(null), 2000);
+    setCopiedState(id);
+    setTimeout(() => setCopiedState(null), 2000);
   };
 
+  // Industrial Color Logic
   const getStatusColor = (status: number) => {
-    if (status === 0) return 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/50 border-red-200 dark:border-red-500/50';
-    if (status >= 200 && status < 300) return 'text-[#006A33] dark:text-[#00ff66] bg-[#006A33]/10 dark:bg-[#006A33]/20 border-[#006A33]';
-    return 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/50 border-amber-200 dark:border-amber-500/50';
+    if (status === 0) return 'text-red-600 border-red-200 bg-red-50 dark:bg-red-900/20 dark:border-red-900 dark:text-red-400';
+    if (status >= 200 && status < 300) return 'text-emerald-600 border-emerald-200 bg-emerald-50 dark:bg-emerald-900/20 dark:border-emerald-900 dark:text-emerald-400';
+    if (status >= 400 && status < 500) return 'text-amber-600 border-amber-200 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-900 dark:text-amber-400';
+    return 'text-red-600 border-red-200 bg-red-50 dark:bg-red-900/20 dark:border-red-900 dark:text-red-400';
   };
 
   return (
-    <div className="bg-white dark:bg-[#0a0a0a] border border-[#006A33]/30 shadow-sm dark:shadow-[0_0_15px_rgba(0,106,51,0.1)] overflow-hidden mt-6">
+    <div className="mt-8 border border-zinc-300 dark:border-zinc-700 rounded-sm overflow-hidden bg-white dark:bg-zinc-950 shadow-[3px_3px_0px_0px_rgba(0,0,0,0.05)] dark:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.05)]">
       
-      {/* 1. Header with Target URL and Send Button */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-[#006A33]/30 bg-gray-50 dark:bg-[#050505]">
-        <div>
-          <h3 className="text-lg font-medium text-[#006A33] dark:text-[#00ff66]">Webhook Tester</h3>
-          <p className="text-sm text-gray-600 dark:text-gray-400">
-            Send a test payload to <span className="font-mono text-xs bg-[#006A33]/10 dark:bg-[#006A33]/20 text-[#006A33] dark:text-[#00ff66] px-2 py-0.5 border border-[#006A33]/30 dark:border-[#006A33]/50">{targetUrl}</span>
-          </p>
+      {/* 1. CONTROL BAR */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-900/50 border-b border-zinc-200 dark:border-zinc-800 gap-4">
+        
+        {/* URL Display */}
+        <div className="flex items-center gap-3 overflow-hidden w-full sm:w-auto">
+          <div className="p-2 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-sm shrink-0">
+             <Terminal className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <h3 className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Target Endpoint</h3>
+            <div className="flex items-center gap-2 text-xs font-mono mt-0.5 text-zinc-800 dark:text-zinc-200">
+               <span className="font-bold text-indigo-600 dark:text-indigo-400">POST</span>
+               <span className="truncate" title={targetUrl}>{targetUrl}</span>
+            </div>
+          </div>
         </div>
+        
+        {/* Action Button - High Contrast & Dark Mode Friendly */}
         <button
-          onClick={handleTestWebhook}
+          onClick={handleTest}
           disabled={isLoading}
-          className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold uppercase tracking-wide text-white bg-[#006A33] border border-[#006A33] hover:bg-[#008844] hover:shadow-[0_0_15px_rgba(0,106,51,0.5)] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+          className={`
+            w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2 
+            bg-zinc-900 text-white hover:bg-zinc-800 
+            dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white 
+            text-xs font-mono font-bold uppercase tracking-wider 
+            rounded-sm 
+            disabled:opacity-50 disabled:cursor-not-allowed 
+            transition-all shadow-sm active:translate-y-px
+          `}
         >
           {isLoading ? (
-            <Icons.Spinner className="w-4 h-4 animate-spin" />
+            <Loader2 className="w-3.5 h-3.5 animate-spin" />
           ) : (
-            <Icons.Play className="w-4 h-4" />
+             <Play className="w-3.5 h-3.5 fill-current" />
           )}
-          {isLoading ? 'Sending...' : 'SEND_TEST_WEBHOOK'}
+          {isLoading ? 'EXECUTING...' : 'TEST_EVENT'}
         </button>
       </div>
 
-      {/* 2. Tab Navigation */}
-      <div className="flex border-b border-[#006A33]/30">
-        <button
-          onClick={() => setActiveTab('request')}
-          className={`flex-1 py-3 text-sm font-medium text-center transition-all duration-200 border-b-2 ${
-            activeTab === 'request'
-              ? 'border-[#006A33] text-[#006A33] dark:text-[#00ff66] bg-[#006A33]/10'
-              : 'border-transparent text-gray-500 hover:text-[#006A33] dark:hover:text-[#00ff66] hover:bg-[#006A33]/5'
-          }`}
-        >
-          Request Payload
-        </button>
-        <button
-          onClick={() => setActiveTab('response')}
-          className={`flex-1 py-3 text-sm font-medium text-center transition-all duration-200 border-b-2 flex items-center justify-center gap-2 ${
-            activeTab === 'response'
-              ? 'border-[#006A33] text-[#006A33] dark:text-[#00ff66] bg-[#006A33]/10'
-              : 'border-transparent text-gray-500 hover:text-[#006A33] dark:hover:text-[#00ff66] hover:bg-[#006A33]/5'
-          }`}
-        >
-          Response
-          {/* Status Indicator Dot */}
-          {result && (
-            <span className={`w-2 h-2 ${result.status >= 200 && result.status < 300 ? 'bg-[#006A33] dark:bg-[#00ff66] dark:shadow-[0_0_6px_#00ff66]' : 'bg-red-500 dark:shadow-[0_0_6px_#ef4444]'}`} />
-          )}
-        </button>
-      </div>
-
-      {/* 3. Content Area */}
-      <div className="min-h-[300px] bg-white dark:bg-[#0a0a0a]">
+      {/* 2. CONSOLE INTERFACE (Split View) */}
+      <div className="flex flex-col md:flex-row min-h-[400px]">
         
-        {/* --- REQUEST TAB --- */}
-        {activeTab === 'request' && (
-          <div className="p-6 animate-in fade-in duration-200">
-            <div className="flex items-center justify-between mb-4">
-              <span className="text-xs font-semibold uppercase tracking-wider text-[#006A33]">JSON Payload</span>
-              <button 
-                onClick={() => copyToClipboard(JSON.stringify(samplePayload, null, 2), 'req')}
-                className="text-gray-500 hover:text-[#006A33] dark:hover:text-[#00ff66] transition-colors"
-                title="Copy JSON"
-              >
-                {copiedSection === 'req' ? (
-                  <Icons.Check className="w-4 h-4 text-[#006A33] dark:text-[#00ff66]" />
-                ) : (
-                  <Icons.Copy className="w-4 h-4" />
-                )}
-              </button>
-            </div>
-            <div className="bg-gray-50 dark:bg-[#050505] border border-[#006A33]/30 overflow-hidden">
-              <pre className="p-4 text-xs font-mono text-gray-800 dark:text-white overflow-auto max-h-[400px]">
-                {JSON.stringify(samplePayload, null, 2)}
-              </pre>
-            </div>
-          </div>
-        )}
-
-        {/* --- RESPONSE TAB --- */}
-        {activeTab === 'response' && (
-          <div className="p-6 animate-in fade-in duration-200">
+        {/* Left Panel: Navigation/Tabs */}
+        <div className="w-full md:w-48 border-b md:border-b-0 md:border-r border-zinc-200 dark:border-zinc-800 bg-zinc-50/30 dark:bg-zinc-900/30">
+          <nav className="flex md:flex-col h-full">
             
-            {/* Empty State */}
-            {!result && !isLoading && (
-              <div className="h-full flex flex-col items-center justify-center text-gray-500 py-12">
-                <div className="w-12 h-12 bg-[#006A33]/10 border border-[#006A33]/30 flex items-center justify-center mb-3">
-                  <Icons.Play className="w-5 h-5 ml-1 text-[#006A33] opacity-50" />
-                </div>
-                <p className="text-sm text-gray-500">Click "SEND_TEST_WEBHOOK" to trigger a request.</p>
+            {/* Request Tab */}
+            <button
+              onClick={() => setActiveTab('request')}
+              className={`
+                flex-1 md:flex-none text-left px-4 py-3 text-xs font-mono font-bold uppercase tracking-wider 
+                border-b-2 md:border-b-0 md:border-l-2 transition-colors 
+                ${activeTab === 'request'
+                  ? 'border-zinc-900 dark:border-zinc-100 text-zinc-900 dark:text-zinc-100 bg-white dark:bg-zinc-900'
+                  : 'border-transparent text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                }
+              `}
+            >
+              Payload_Body
+            </button>
+
+            {/* Response Tab */}
+            <button
+              onClick={() => setActiveTab('response')}
+              className={`
+                flex-1 md:flex-none text-left px-4 py-3 text-xs font-mono font-bold uppercase tracking-wider 
+                border-b-2 md:border-b-0 md:border-l-2 transition-colors flex items-center justify-between
+                ${activeTab === 'response'
+                  ? 'border-zinc-900 dark:border-zinc-100 text-zinc-900 dark:text-zinc-100 bg-white dark:bg-zinc-900'
+                  : 'border-transparent text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                }
+              `}
+            >
+              Result
+              {result && (
+                <span className={`ml-2 w-2 h-2 rounded-full ${result.status >= 200 && result.status < 300 ? 'bg-emerald-500' : 'bg-red-500'}`} />
+              )}
+            </button>
+          </nav>
+        </div>
+
+        {/* Right Panel: Output Area */}
+        <div className="flex-1 bg-white dark:bg-zinc-950 relative flex flex-col h-[400px] md:h-auto">
+          
+          {/* --- REQUEST VIEW --- */}
+          {activeTab === 'request' && (
+            <>
+              <div className="flex items-center justify-between px-4 py-2 border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/50">
+                <span className="text-[10px] font-mono font-bold text-zinc-400 uppercase">JSON Input</span>
+                <button 
+                  onClick={() => copyToClipboard(JSON.stringify(samplePayload, null, 2), 'req')}
+                  className="flex items-center gap-1.5 text-[10px] font-mono font-bold uppercase text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors"
+                >
+                   {copiedState === 'req' ? <Check className="w-3 h-3 text-emerald-600"/> : <Copy className="w-3 h-3"/>}
+                   Copy
+                </button>
               </div>
-            )}
-
-            {/* Loading State */}
-            {isLoading && (
-              <div className="h-full flex flex-col items-center justify-center text-gray-400 py-12">
-                <Icons.Spinner className="w-8 h-8 animate-spin text-[#006A33] mb-3" />
-                <p className="text-sm text-[#006A33]">Waiting for response...</p>
+              <div className="flex-1 overflow-auto p-4 custom-scrollbar">
+                <pre className="text-xs font-mono text-zinc-600 dark:text-zinc-300 whitespace-pre-wrap break-all w-full h-full">
+                  {JSON.stringify(samplePayload, null, 2)}
+                </pre>
               </div>
-            )}
+            </>
+          )}
 
-            {/* Result State */}
-            {result && !isLoading && (
-              <div className="space-y-4">
-                {/* Metrics Row */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div className={`flex flex-col p-3 border ${getStatusColor(result.status)}`}>
-                    <span className="text-xs font-medium opacity-80 uppercase">Status</span>
-                    <div className="flex items-center gap-2 mt-1">
-                      {result.status >= 400 ? (
-                        <Icons.AlertCircle className="w-5 h-5" />
-                      ) : (
-                        <Icons.Check className="w-5 h-5" />
-                      )}
-                      <span className="text-xl font-bold">{result.status}</span>
-                      <span className="text-sm opacity-90">{result.statusText}</span>
-                    </div>
+          {/* --- RESPONSE VIEW --- */}
+          {activeTab === 'response' && (
+            <>
+              {!result && !isLoading ? (
+                <div className="flex-1 flex flex-col items-center justify-center text-zinc-400 p-8 text-center bg-zinc-50/30 dark:bg-black/20">
+                  <div className="w-12 h-12 border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 rounded-sm flex items-center justify-center mb-3 shadow-sm">
+                    <Terminal className="w-5 h-5 opacity-50" />
                   </div>
-                  
-                  <div className="flex flex-col p-3 border border-[#006A33]/30 bg-gray-50 dark:bg-[#050505]">
-                    <span className="text-xs font-medium text-[#006A33] uppercase">Latency</span>
-                    <div className="flex items-center gap-2 mt-1 text-gray-700 dark:text-gray-200">
-                      <Icons.Clock className="w-5 h-5 text-[#006A33]" />
-                      <span className="text-xl font-bold text-[#006A33] dark:text-[#00ff66]">{result.durationMs}</span>
-                      <span className="text-sm text-gray-500">ms</span>
-                    </div>
-                  </div>
+                  <p className="text-xs font-mono uppercase tracking-wide">Awaiting Execution</p>
                 </div>
-
-                {/* Signature Header */}
-                {result.signature && (
-                  <div className="bg-gray-50 dark:bg-[#050505] p-3 border border-[#006A33]/30 flex items-center gap-3">
-                    <Icons.ShieldCheck className="w-5 h-5 text-[#006A33] flex-shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs text-[#006A33] uppercase">HMAC Signature</p>
-                      <p className="text-xs font-mono text-[#006A33] dark:text-[#00ff66] truncate" title={result.signature}>
-                        {result.signature}
-                      </p>
+              ) : isLoading ? (
+                 <div className="flex-1 flex flex-col items-center justify-center text-zinc-500 p-8">
+                    <div className="animate-spin mb-4 text-zinc-300 dark:text-zinc-700">
+                        <Loader2 className="w-8 h-8" />
                     </div>
-                  </div>
-                )}
-
-                {/* Response Body */}
-                <div className="relative pt-2">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-semibold uppercase tracking-wider text-[#006A33]">Response Body</span>
-                    <button 
-                      onClick={() => copyToClipboard(JSON.stringify(result.responseBody, null, 2), 'res')}
-                      className="text-gray-500 hover:text-[#006A33] dark:hover:text-[#00ff66] transition-colors"
+                    <p className="text-xs font-mono font-bold uppercase animate-pulse">Transmitting Payload...</p>
+                 </div>
+              ) : (
+                <div className="flex flex-col h-full absolute inset-0">
+                  {/* Result Header Stats */}
+                  <div className="px-4 py-3 border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/50 flex flex-wrap gap-4 items-center justify-between shrink-0">
+                     <div className="flex items-center gap-4">
+                        <span className={`flex items-center gap-1.5 px-2 py-1 rounded-sm text-[10px] font-mono font-bold border ${getStatusColor(result!.status)}`}>
+                            {result!.status >= 200 && result!.status < 300 ? <CheckCircle className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
+                            {result!.status} {result!.statusText}
+                        </span>
+                        <div className="flex items-center gap-1.5 text-xs text-zinc-500 font-mono">
+                            <Clock className="w-3.5 h-3.5 text-zinc-400" />
+                            {result!.durationMs}ms
+                        </div>
+                     </div>
+                     
+                     <button 
+                        onClick={() => copyToClipboard(JSON.stringify(result!.responseBody, null, 2), 'res')}
+                        className="flex items-center gap-1.5 text-[10px] font-mono font-bold uppercase text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors"
                     >
-                       {copiedSection === 'res' ? (
-                          <Icons.Check className="w-3 h-3 text-[#006A33] dark:text-[#00ff66]" />
-                       ) : (
-                          <Icons.Copy className="w-3 h-3" />
-                       )}
+                        {copiedState === 'res' ? <Check className="w-3 h-3 text-emerald-600"/> : <Copy className="w-3 h-3"/>}
+                        <span className="hidden sm:inline">Copy Output</span>
                     </button>
                   </div>
-                  <div className="bg-gray-50 dark:bg-[#050505] border border-[#006A33]/30 overflow-hidden">
-                    <pre className="p-4 text-xs font-mono text-gray-800 dark:text-white overflow-auto max-h-[300px]">
-                      {JSON.stringify(result.responseBody, null, 2)}
-                    </pre>
+
+                  {/* Result Body (JSON) - Full Height & Scrolling */}
+                  <div className="flex-1 overflow-auto p-4 custom-scrollbar bg-white dark:bg-black w-full">
+                     <pre className={`text-xs font-mono whitespace-pre-wrap break-all w-full h-full ${result!.status >= 400 ? 'text-amber-700 dark:text-amber-500' : 'text-zinc-700 dark:text-zinc-300'}`}>
+                        {JSON.stringify(result!.responseBody, null, 2)}
+                     </pre>
                   </div>
                 </div>
-              </div>
-            )}
-          </div>
-        )}
+              )}
+            </>
+          )}
+        </div>
       </div>
     </div>
   );

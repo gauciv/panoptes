@@ -292,7 +292,7 @@ const CreateSubscriptionModal: React.FC<CreateSubscriptionModalProps> = ({
                         </div>
                     ) : (
                         <div className="space-y-3">
-                            {headers.map((h, idx) => (
+                            {headers.map((h) => (
                                 <div key={h.id} className="flex items-center gap-3 animate-in slide-in-from-bottom-2 duration-200">
                                     <div className="flex-1 flex gap-3">
                                       <input 
