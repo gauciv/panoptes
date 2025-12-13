@@ -346,12 +346,14 @@ function groupLogsByEventType(
 
 function calculateSuccessRate(logs: DeliveryLog[]): number {
   if (logs.length === 0) return 0;
-  
-  const successfulLogs = logs.filter(
+  // Exclude 429s from failure denominator to avoid
+  // implying system failure when only throttled
+  const nonThrottleLogs = logs.filter(log => log.responseStatusCode !== 429);
+  if (nonThrottleLogs.length === 0) return 0;
+  const successfulLogs = nonThrottleLogs.filter(
     log => log.responseStatusCode >= 200 && log.responseStatusCode < 300
   );
-  
-  return Math.round((successfulLogs.length / logs.length) * 100);
+  return Math.round((successfulLogs.length / nonThrottleLogs.length) * 100);
 }
 
 function calculateAvgLatency(logs: DeliveryLog[]): number {
@@ -395,8 +397,8 @@ export function useStatsData(
   const statsData = useMemo((): StatsData => {
     const filteredLogs = filterLogsByTimeRange(allLogs, timeRange);
     
-    // Calculate rate-limited subscriptions
-    const rateLimitedCount = subscriptions.filter(s => s.isRateLimited).length;
+    // Calculate rate-limited events (count 429s)
+    const rateLimitedCount = filteredLogs.filter(l => l.responseStatusCode === 429).length;
     
     return {
       totalWebhooks: filteredLogs.length,

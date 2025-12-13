@@ -45,7 +45,7 @@ const StatsDashboard: React.FC<StatsDashboardProps> = ({ subscriptions }) => {
 
   return (
     <div className="space-y-6">
-      {/* Header with Time Range Selector */}
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h2 className="text-lg font-medium text-gray-900">Analytics Overview</h2>
@@ -53,10 +53,10 @@ const StatsDashboard: React.FC<StatsDashboardProps> = ({ subscriptions }) => {
             Webhook performance metrics and trends
           </p>
         </div>
-        <TimeRangeSelector value={timeRange} onChange={setTimeRange} />
       </div>
 
-      {/* Stat Cards Grid */}
+      {/* Global System Health */}
+      <h3 className="text-xs font-mono uppercase tracking-wider text-gray-500">Global System Health</h3>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           title="Total Webhooks"
@@ -71,7 +71,7 @@ const StatsDashboard: React.FC<StatsDashboardProps> = ({ subscriptions }) => {
         <StatCard
           title="Success Rate"
           value={isLoading ? '—' : `${successRate}%`}
-          subtitle="HTTP 2xx responses"
+          subtitle="Success = HTTP 2xx (429 excluded)"
           trend={successRate >= 95 ? 'up' : successRate >= 80 ? 'neutral' : 'down'}
           icon={
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -103,11 +103,13 @@ const StatsDashboard: React.FC<StatsDashboardProps> = ({ subscriptions }) => {
         />
       </div>
 
-      {/* Charts Grid */}
+      {/* Performance Metrics */}
+      <h3 className="text-xs font-mono uppercase tracking-wider text-gray-500">Performance Metrics</h3>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <VolumeChart
           data={volumeData}
           timeRange={timeRange}
+          setTimeRange={setTimeRange}
           isLoading={isLoading}
         />
         <DistributionChart

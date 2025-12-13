@@ -76,6 +76,14 @@ const DistributionChart: React.FC<DistributionChartProps> = ({
         <div className="h-[300px] flex items-center justify-center text-gray-400">
           <p>No data available</p>
         </div>
+      ) : data.length === 1 ? (
+        <div className="h-[250px] flex items-center justify-center">
+          <div className="text-center">
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Only one event type</p>
+            <p className="text-4xl font-mono font-semibold text-gray-900 dark:text-gray-100">{data[0].eventType}</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{data[0].count.toLocaleString()} events</p>
+          </div>
+        </div>
       ) : (
         <div className="flex flex-col lg:flex-row items-center gap-6">
           <ChartContainer config={chartConfig} className="h-[250px] w-full lg:w-1/2">

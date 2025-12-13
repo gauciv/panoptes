@@ -23,6 +23,7 @@ interface VolumeDataPoint {
 interface VolumeChartProps {
   data: VolumeDataPoint[];
   timeRange: TimeRange;
+  setTimeRange?: (value: TimeRange) => void;
   isLoading?: boolean;
 }
 
@@ -158,11 +159,20 @@ const VolumeChart: React.FC<VolumeChartProps> = ({
             )}
           </p>
         </div>
-        <div className="text-right">
+        <div className="flex items-center gap-3">
+          {/* Localized Time Range Selector specific to this chart */}
+          {typeof setTimeRange === 'function' && (
+            <div className="hidden md:block">
+              {/* Lazy import avoided; reuse component directly */}
+              {React.createElement(require('./TimeRangeSelector').default, { value: timeRange, onChange: setTimeRange })}
+            </div>
+          )}
+          <div className="text-right">
           <p className="text-2xl font-mono font-semibold text-gray-900 dark:text-gray-100">
             {data.reduce((sum, d) => sum + d.count, 0).toLocaleString()}
           </p>
           <p className="text-xs text-gray-500 dark:text-gray-400">total webhooks</p>
+          </div>
         </div>
       </div>
 
@@ -197,7 +207,7 @@ const VolumeChart: React.FC<VolumeChartProps> = ({
                 dataKey="label"
                 tickLine={false}
                 axisLine={false}
-                tick={{ fontSize: 11, fill: '#9ca3af', fontFamily: 'Space Mono, monospace' }}
+                tick={{ fontSize: 12, fill: '#6b7280', fontFamily: 'Space Mono, monospace' }}
                 tickMargin={8}
                 interval={getXAxisInterval(timeRange, data.length)}
               />
@@ -205,7 +215,7 @@ const VolumeChart: React.FC<VolumeChartProps> = ({
                 domain={[0, yAxisMax]}
                 tickLine={false}
                 axisLine={false}
-                tick={{ fontSize: 11, fill: '#9ca3af', fontFamily: 'Space Mono, monospace' }}
+                tick={{ fontSize: 12, fill: '#6b7280', fontFamily: 'Space Mono, monospace' }}
                 tickMargin={8}
                 width={40}
               />
