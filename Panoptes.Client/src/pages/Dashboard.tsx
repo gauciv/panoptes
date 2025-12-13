@@ -12,12 +12,12 @@ import {
   resetSubscription 
 } from '../services/api';
 import { WebhookSubscription, DeliveryLog } from '../types';
-import { Inbox } from 'lucide-react';
+import { Inbox, AlertCircle, ChevronLeft, ChevronRight, FilterX } from 'lucide-react'; // Added icons
 
 // --- COMPONENTS ---
 import StatCard from '../components/StatCard';
 import { SubscriptionGrid } from '../components/SubscriptionGrid';
-import { SubscriptionCardSkeleton } from '../components/skeletons/SubscriptionCardSkeleton'; // Import Skeleton
+import { SubscriptionCardSkeleton } from '../components/skeletons/SubscriptionCardSkeleton';
 import SubscriptionDetail from '../pages/SubscriptionDetail';
 import SubscriptionFilters from '../components/SubscriptionFilters';
 import LogViewer from '../components/LogViewer';
@@ -58,6 +58,10 @@ const Dashboard: React.FC = () => {
   const [totalLogs, setTotalLogs] = useState<number>(0);
   const [isConnected, setIsConnected] = useState<boolean>(true);
   const [loading, setLoading] = useState<boolean>(true); 
+
+  // Pagination State for Logs
+  const [logPage, setLogPage] = useState(0);
+  const LOGS_PER_PAGE = 10;
 
   // Modals
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -113,7 +117,8 @@ const Dashboard: React.FC = () => {
 
   const fetchLogs = async () => {
     try {
-      const logsData = await getLogs(0, 10);
+      // Use state for pagination
+      const logsData = await getLogs(logPage * LOGS_PER_PAGE, LOGS_PER_PAGE);
       setLogs(logsData.logs);
       setTotalLogs(logsData.totalCount);
       setError(null);
@@ -153,14 +158,15 @@ const Dashboard: React.FC = () => {
     fetchLogs();
     fetchSystemInfo();
 
-    const logInterval = setInterval(fetchLogs, 2000);
+    // Fetch logs more frequently, subs less frequently
+    const logInterval = setInterval(fetchLogs, 3000); 
     const subInterval = setInterval(fetchSubscriptions, 10000);
 
     return () => {
       clearInterval(logInterval);
       clearInterval(subInterval);
     };
-  }, []);
+  }, [logPage]); // Re-fetch logs when page changes
 
   // --- HANDLERS ---
 
@@ -298,6 +304,12 @@ const Dashboard: React.FC = () => {
     setIsModalOpen(true);
   };
 
+  const handlePageChange = (newPage: number) => {
+    if (newPage >= 0 && newPage * LOGS_PER_PAGE < totalLogs) {
+      setLogPage(newPage);
+    }
+  };
+
   // Onboarding Logic
   const SETUP_WIZARD_SHOWN_KEY = 'panoptes_setup_wizard_shown';
 
@@ -311,23 +323,30 @@ const Dashboard: React.FC = () => {
     }
   };
 
+  // Derived state for Empty State vs No Results
+  const hasSubscriptions = subscriptions.length > 0;
+  const hasFilteredResults = filteredSubscriptions.length > 0;
+
   return (
     <div className="p-6 max-w-7xl mx-auto">
       {/* Onboarding Tour */}
       <OnboardingTour enabled={true} onFinish={handleTourFinish} />
 
-      {/* Error Banner */}
+      {/* Standardized Error Banner */}
       {error && (
-        <div className="mb-6 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-md p-4">
-          <h3 className="text-sm font-medium text-red-800 dark:text-red-200">Connection Error</h3>
-          <p className="mt-1 text-sm text-red-700 dark:text-red-300">{error}</p>
+        <div className="mb-6 bg-red-950/20 border border-red-900/50 rounded-lg p-4 flex items-start gap-3">
+          <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+          <div>
+            <h3 className="text-sm font-bold text-red-400">Connection Error</h3>
+            <p className="mt-1 text-sm text-red-300/80">{error}</p>
+          </div>
         </div>
       )}
 
       {/* Offline Banner */}
       {!isConnected && (
-        <div className="mb-6 bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 rounded-md p-4">
-           <span className="text-sm font-medium text-yellow-800 dark:text-yellow-200">Backend Disconnected - Displaying cached data</span>
+        <div className="mb-6 bg-yellow-950/20 border border-yellow-900/50 rounded-lg p-4">
+           <span className="text-sm font-medium text-yellow-500">Backend Disconnected - Displaying cached data</span>
         </div>
       )}
 
@@ -391,54 +410,58 @@ const Dashboard: React.FC = () => {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
               {/* Left Column: Subscriptions (2/3 width) */}
-              <div className="lg:col-span-2 space-y-6">
-
+              <div className="lg:col-span-2 space-y-6 bg-white dark:bg-[#050505] border border-gray-200 dark:border-white/10 rounded-xl shadow p-6"> 
                 {/* Header */}
                 <div className="flex justify-between items-center">
-                  <h2 className="text-lg font-medium text-gray-900 dark:text-white">
+                  <h2 className="text-lg font-bold text-gray-900 dark:text-white">
                     Subscriptions
                   </h2>
 
-                  <button
-                    onClick={() => {
-                      if (!setupStatus?.isConfigured) {
-                        setShowSetupWizard(true);
-                      } else {
-                        setIsModalOpen(true);
-                      }
-                    }}
-                    data-tour="create-subscription"
-                    className={`px-4 py-2 rounded-tech text-sm font-medium transition-colors ${
-                      setupStatus?.isConfigured
-                        ? 'bg-sentinel hover:bg-sentinel-hover'
-                        : 'bg-gray-400 hover:bg-gray-500'
-                    } text-white`}
-                    style={{ color: '#ffffff' }}
-                    title={!setupStatus?.isConfigured ? 'Click to configure API' : ''}
-                  >
-                    {setupStatus?.isConfigured ? 'New Subscription' : 'Configure API'}
-                  </button>
+                  {/* Hide New Subscription Button if truly empty (Zero State) to focus on center CTA */}
+                  {(hasSubscriptions || loading) && (
+                    <button
+                        onClick={() => {
+                        if (!setupStatus?.isConfigured) {
+                            setShowSetupWizard(true);
+                        } else {
+                            setIsModalOpen(true);
+                        }
+                        }}
+                        data-tour="create-subscription"
+                        className={`px-4 py-2 rounded-tech text-sm font-medium transition-colors ${
+                        setupStatus?.isConfigured
+                            ? 'bg-sentinel hover:bg-sentinel-hover'
+                            : 'bg-gray-400 hover:bg-gray-500'
+                        } text-white`}
+                        style={{ color: '#ffffff' }}
+                        title={!setupStatus?.isConfigured ? 'Click to configure API' : ''}
+                    >
+                        {setupStatus?.isConfigured ? 'New Subscription' : 'Configure API'}
+                    </button>
+                  )}
                 </div>
 
-                {/* Filters */}
-                <div data-tour="filters">
-                  <SubscriptionFilters
-                    searchQuery={searchQuery}
-                    statusFilter={statusFilter}
-                    eventTypeFilter={eventTypeFilter}
-                    sortBy={sortBy}
-                    activeFilterCount={activeFilterCount}
-                    availableEventTypes={availableEventTypes}
-                    onSearchChange={setSearchQuery}
-                    onStatusChange={setStatusFilter}
-                    onEventTypeChange={setEventTypeFilter}
-                    onSortChange={setSortBy}
-                    onClearFilters={clearFilters}
-                  />
-                </div>
+                {/* Filters - Only show if we actually have subscriptions (Zero State Logic) */}
+                {hasSubscriptions && (
+                    <div data-tour="filters">
+                    <SubscriptionFilters
+                        searchQuery={searchQuery}
+                        statusFilter={statusFilter}
+                        eventTypeFilter={eventTypeFilter}
+                        sortBy={sortBy}
+                        activeFilterCount={activeFilterCount}
+                        availableEventTypes={availableEventTypes}
+                        onSearchChange={setSearchQuery}
+                        onStatusChange={setStatusFilter}
+                        onEventTypeChange={setEventTypeFilter}
+                        onSortChange={setSortBy}
+                        onClearFilters={clearFilters}
+                    />
+                    </div>
+                )}
 
                 {/* Filter Counter */}
-                {subscriptions.length > 0 && !loading && (
+                {hasSubscriptions && !loading && (
                   <div className="text-sm text-gray-500 dark:text-gray-400">
                     Showing {filteredSubscriptions.length} of {subscriptions.length} subscription
                     {subscriptions.length !== 1 ? 's' : ''}
@@ -446,13 +469,14 @@ const Dashboard: React.FC = () => {
                   </div>
                 )}
 
-                {/* Grid or Empty State */}
+                {/* Grid vs Empty States Logic */}
                 {loading ? (
-                  // ✅ LOAD SKELETONS WHILE LOADING
+                  // ✅ LOADING: Show Skeletons
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {[1, 2, 3, 4].map(i => <SubscriptionCardSkeleton key={i} />)}
                   </div>
-                ) : subscriptions.length === 0 ? (
+                ) : !hasSubscriptions ? (
+                  // ✅ ZERO STATE: User has never created a subscription
                   <EmptyState
                     icon={Inbox}
                     title="No Subscriptions Yet"
@@ -466,39 +490,85 @@ const Dashboard: React.FC = () => {
                       onClick: () => handleTemplateSelect(t)
                     }))}
                   />
+                ) : !hasFilteredResults ? (
+                  // ✅ NO RESULTS: Data exists, but filters hide it
+                  <div className="flex flex-col items-center justify-center p-12 border border-dashed border-gray-300 dark:border-gray-700 rounded-lg">
+                    <div className="bg-gray-100 dark:bg-gray-800 p-4 rounded-full mb-4">
+                        <FilterX className="w-8 h-8 text-gray-400" />
+                    </div>
+                    <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">No matching subscriptions</h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 mb-6 text-center max-w-sm">
+                        We couldn't find any subscriptions matching your current filters. Try adjusting your search or status.
+                    </p>
+                    <button 
+                        onClick={clearFilters}
+                        className="text-sm font-medium text-sentinel hover:text-sentinel-hover underline"
+                    >
+                        Clear all filters
+                    </button>
+                  </div>
                 ) : (
-                  <SubscriptionGrid
-                    subscriptions={filteredSubscriptions}
-                    loading={loading}
-                    onSelectSubscription={setViewingSubscription}
-                    onTest={handleTest}
-                    onEdit={(id) => {
-                      const sub = subscriptions.find(s => s.id === id);
-                      if (sub) handleEdit(sub);
-                    }}
-                    onDelete={(id) => {
-                      const sub = subscriptions.find(s => s.id === id);
-                      if (sub) handleDeleteClick(sub);
-                    }}
-                    onToggleActive={handleToggleActive}
-                    onReset={handleReset}
-                  />
+                  <div className="border border-white/10 rounded-lg p-4 bg-white/5">
+                      <SubscriptionGrid
+                        subscriptions={filteredSubscriptions}
+                        loading={loading}
+                        onSelectSubscription={setViewingSubscription}
+                        onTest={handleTest}
+                        onEdit={(id) => {
+                          const sub = subscriptions.find(s => s.id === id);
+                          if (sub) handleEdit(sub);
+                        }}
+                        onDelete={(id) => {
+                          const sub = subscriptions.find(s => s.id === id);
+                          if (sub) handleDeleteClick(sub);
+                        }}
+                        onToggleActive={handleToggleActive}
+                        onReset={handleReset}
+                      />
+                  </div>
                 )}
               </div>
 
               {/* Right Column: Recent Logs (1/3 width) */}
               <div className="lg:col-span-1" data-tour="recent-logs">
-                <div className="bg-card shadow rounded-lg">
-                  <div className="px-6 py-5 border-b border-border flex justify-between items-center">
+                <div className="bg-card shadow rounded-lg border flex flex-col h-full max-h-[700px]">
+                  <div className="px-6 py-5 border-b border-border flex justify-between items-center shrink-0">
                     <h2 className="text-lg font-medium text-foreground">Recent Logs</h2>
-                    {totalLogs > 0 && (
-                      <span className="text-xs text-muted-foreground">
-                        Showing {Math.min(10, logs.length)} of {totalLogs}
-                      </span>
-                    )}
+                    <span className="text-xs text-muted-foreground bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">
+                        Live
+                    </span>
                   </div>
-                  <div className="px-6 py-5 max-h-[600px] overflow-y-auto">
+                  
+                  {/* Logs Container */}
+                  <div className="px-6 py-5 overflow-y-auto flex-1 custom-scrollbar">
+                    {/* Note: LogViewer handles internal rendering. Pass pagination data down if component supported it, 
+                        or rely on the parent slicing done in fetchLogs via getLogs(offset, limit) */}
                     <LogViewer logs={logs || []} subscriptions={subscriptions || []} />
+                  </div>
+
+                  {/* Pagination Footer */}
+                  <div className="px-6 py-4 border-t border-border flex items-center justify-between shrink-0 bg-gray-50 dark:bg-black/20 rounded-b-lg">
+                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                        Page {logPage + 1} of {Math.ceil(totalLogs / LOGS_PER_PAGE)}
+                    </span>
+                    <div className="flex items-center gap-2">
+                        <button 
+                            onClick={() => handlePageChange(logPage - 1)}
+                            disabled={logPage === 0}
+                            className="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                            title="Previous Page"
+                        >
+                            <ChevronLeft className="w-4 h-4" />
+                        </button>
+                        <button 
+                            onClick={() => handlePageChange(logPage + 1)}
+                            disabled={(logPage + 1) * LOGS_PER_PAGE >= totalLogs}
+                            className="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                            title="Next Page"
+                        >
+                            <ChevronRight className="w-4 h-4" />
+                        </button>
+                    </div>
                   </div>
                 </div>
               </div>
