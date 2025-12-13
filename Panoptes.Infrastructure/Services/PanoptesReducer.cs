@@ -368,8 +368,8 @@ namespace Panoptes.Infrastructure.Services
                         var payload = BuildEnhancedPayload(tx, txIndex, slot, blockHash, blockHeight, 
                             txHash, inputs, outputs, outputAddresses, policyIds, finalEventType, matchReason);
                         
+                        // Skip disabled subscriptions (rate limited, circuit broken, or disabled during processing)
                         if (sub.IsRateLimited || sub.IsCircuitBroken || _disabledDuringProcessing.Contains(sub.Id)) continue;
-                        if (!sub.IsActive) { await RecordPausedEvent(sub, payload); continue; }
                         
                         // Handle paused (inactive) subscriptions: record the event but don't dispatch
                         if (!sub.IsActive)
@@ -428,9 +428,6 @@ namespace Panoptes.Infrastructure.Services
                             
                             await DispatchWebhook(sub, payload);
                         }
-                        // Force Real-Time (Catch-up Disabled)
-                        var rlCheck = await CheckRateLimitAsync(sub);
-                        if (rlCheck.Allowed) await DispatchWebhook(sub, payload);
                     }
                 }
             }
