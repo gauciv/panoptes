@@ -1,5 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { 
+  ArrowLeft, Copy, Edit, Pause, Play, Settings, Terminal, 
+  Eye, EyeOff, Trash2, ExternalLink 
+} from 'lucide-react'; // Ensure you have lucide-react installed
 
 import {
   getSubscription,
@@ -21,7 +25,6 @@ import AdvancedOptionsModal from '../components/AdvancedOptionsModal';
 import WebhookTester from '../components/WebhookTester';
 import DeliveryLogsTable from '../components/DeliveryLogsTable';
 import { convertToCSV, downloadFile, generateFilename } from '../utils/exportUtils';
-
 
 // --- PROPS INTERFACE ---
 interface SubscriptionDetailProps {
@@ -53,20 +56,15 @@ const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: p
   const [loading, setLoading] = useState(!propSubscription);
   const [error, setError] = useState<string | null>(null);
 
-  // New State for Webhook Tester Visibility
+  // UI State
   const [showTester, setShowTester] = useState(false);
-
-  // Modal States
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isOptionsModalOpen, setIsOptionsModalOpen] = useState(false);
   const [isAdvancedOptionsOpen, setIsAdvancedOptionsOpen] = useState(false);
   const [showSecretKey, setShowSecretKey] = useState(false);
 
-  // Note: We removed expandedLogId state because DeliveryLogsTable now handles that internally
-
-  // Delivery mode when resuming - if true, only deliver the latest halted event
-  // Persisted to localStorage per subscription
+  // Delivery mode state
   const [deliverLatestOnly, setDeliverLatestOnly] = useState(() => {
     if (activeId) {
       const stored = localStorage.getItem(`deliverLatestOnly_${activeId}`);
@@ -75,12 +73,9 @@ const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: p
     return false;
   });
 
-  // Persist deliverLatestOnly to localStorage when it changes
   const handleDeliverLatestOnlyChange = (value: boolean) => {
     setDeliverLatestOnly(value);
-    if (activeId) {
-      localStorage.setItem(`deliverLatestOnly_${activeId}`, String(value));
-    }
+    if (activeId) localStorage.setItem(`deliverLatestOnly_${activeId}`, String(value));
   };
 
   // --- API CALLS ---
@@ -96,8 +91,7 @@ const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: p
       setError(null);
     } catch (error: any) {
       console.error("Error fetching subscription:", error);
-      const errorMsg = error.response?.data || error.message || "Failed to fetch subscription details.";
-      setError(`API Error: ${errorMsg}`);
+      setError(`API Error: ${error.response?.data || error.message}`);
     }
   };
 
@@ -106,22 +100,17 @@ const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: p
     try {
       const skip = (currentPage - 1) * itemsPerPage;
       const logsData = await getSubscriptionLogs(activeId, skip, itemsPerPage);
-      // Ensure logs is always an array
       setLogs(logsData.logs || []);
       setTotalLogs(logsData.totalCount || 0);
     } catch (error: any) {
       console.error("Error fetching logs:", error);
       setLogs([]);
-      setTotalLogs(0);
     }
   };
 
-  // --- NEW: EXPORT HANDLER ---
   const handleExportLogs = async (format: 'csv' | 'json') => {
     if (!activeId || !subscription) return;
-
     try {
-      // 1. Fetch ALL logs (or a reasonable large limit like 1000) so we export more than just page 1
       const limit = 1000;
       const logsData = await getSubscriptionLogs(activeId, 0, limit);
       const logsToExport = logsData.logs || [];
@@ -131,21 +120,14 @@ const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: p
         return;
       }
 
-      // 2. Generate Filename
       const filename = generateFilename(subscription.name, format);
-
-      // 3. Convert and Download
       if (format === 'json') {
-        const jsonContent = JSON.stringify(logsToExport, null, 2);
-        downloadFile(jsonContent, filename, 'application/json');
+        downloadFile(JSON.stringify(logsToExport, null, 2), filename, 'application/json');
       } else {
-        const csvContent = convertToCSV(logsToExport);
-        downloadFile(csvContent, filename, 'text/csv');
+        downloadFile(convertToCSV(logsToExport), filename, 'text/csv');
       }
-
     } catch (err) {
-      console.error("Export failed", err);
-      alert("Failed to export logs. Please try again.");
+      alert("Failed to export logs.");
     }
   };
 
@@ -166,13 +148,12 @@ const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: p
     return () => clearInterval(logsInterval);
   }, [activeId, currentPage]);
 
-  // Keep subscription counters (Rate Usage) in sync with log activity
   useEffect(() => {
     const subInterval = setInterval(() => fetchSubscription(true), 3000);
     return () => clearInterval(subInterval);
   }, [activeId]);
 
-  // --- ACTIONS ---
+  // --- HANDLERS ---
   const handleBack = () => {
     if (onBack) onBack();
     else navigate('/');
@@ -209,7 +190,6 @@ const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: p
       await fetchSubscription(true);
       setError(null);
     } catch (err: any) {
-      console.error("Error toggling subscription:", err);
       setError(`Toggle Failed: ${err.message}`);
     }
   };
@@ -221,9 +201,7 @@ const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: p
       await fetchSubscription(true);
       setError(null);
     } catch (error: any) {
-      console.error("Error resetting subscription:", error);
-      const errorMsg = error.response?.data || error.message || "Failed to reset subscription.";
-      setError(`Reset Failed: ${errorMsg}`);
+      setError(`Reset Failed: ${error.message}`);
     }
   };
 
@@ -260,189 +238,180 @@ const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: p
       <div className="flex items-center gap-3">
         <button 
           onClick={handleBack} 
-          className="px-3 py-2 border border-[#006A33] bg-[#006A33]/10 hover:bg-[#006A33] text-[#006A33] hover:text-white transition-all font-mono font-bold text-sm uppercase tracking-wider shadow-[0_0_10px_rgba(0,106,51,0.3)] hover:shadow-[0_0_15px_rgba(0,106,51,0.6)] flex items-center gap-1.5"
+          className="group px-3 py-2 bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400 rounded-lg transition-all flex items-center gap-2"
         >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-          </svg>
-          Back
+          <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
+          <span className="font-medium">Back</span>
         </button>
-        <div className="border-l border-[#006A33]/30 h-8"></div>
-        <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 font-mono uppercase tracking-wider">{subscription.name}</h2>
+        <div className="h-6 w-px bg-gray-300 dark:bg-gray-700 mx-2"></div>
+        <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 font-mono tracking-tight">{subscription.name}</h2>
       </div>
 
-      {/* Error Banner */}
+      {/* Error/Warning Banners */}
       {error && (
-        <div className="bg-red-50 dark:bg-red-900/20 border border-red-300 dark:border-red-800 rounded-md p-4 animate-in slide-in-from-top-2">
-          <div className="flex items-start">
-            <span className="text-2xl mr-3">❌</span>
-            <div className="flex-1">
-              <span className="text-sm font-semibold text-red-900 dark:text-red-400">Error</span>
-              <p className="text-sm text-red-800 dark:text-red-300 mt-1">{error}</p>
-            </div>
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-300 dark:border-red-800 rounded-lg p-4 flex gap-3">
+          <span className="text-xl">❌</span>
+          <div>
+            <p className="font-bold text-red-900 dark:text-red-400 text-sm">System Error</p>
+            <p className="text-sm text-red-800 dark:text-red-300">{error}</p>
           </div>
         </div>
       )}
 
-      {/* Warning Banners */}
-      {subscription.isCircuitBroken && (
-        <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-300 dark:border-orange-800 rounded-md p-4 animate-in slide-in-from-top-2">
-          <div className="flex items-start justify-between">
-            <div className="flex items-start">
-              <span className="text-2xl mr-3">⚡</span>
-              <div className="flex-1">
-                <span className="text-sm font-semibold text-orange-900 dark:text-orange-400">Circuit Breaker Triggered</span>
-                <p className="text-sm text-orange-800 dark:text-orange-300 mt-1">{subscription.circuitBrokenReason}</p>
-              </div>
-            </div>
-            <button onClick={handleReset} className="ml-4 px-4 py-2 bg-orange-600 dark:bg-orange-500 text-white text-sm font-medium rounded-md hover:bg-orange-700 dark:hover:bg-orange-600">
-              Reset
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Paused Banner */}
-      {!subscription.isActive && !subscription.isCircuitBroken && !subscription.isRateLimited && (
-        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-800 rounded-md p-4 animate-in slide-in-from-top-2">
-          <div className="flex items-start justify-between">
-            <div className="flex items-start">
-              <svg className="h-6 w-6 text-amber-600 dark:text-amber-400 mr-3 mt-0.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                <rect x="6" y="4" width="4" height="16" /><rect x="14" y="4" width="4" height="16" />
-              </svg>
-              <div className="flex-1">
-                <span className="text-sm font-semibold text-amber-900 dark:text-amber-400">⏸️ Subscription Paused - Webhook Deliveries Halted</span>
-                <p className="text-sm text-amber-800 dark:text-amber-300 mt-2">
-                  {deliverLatestOnly
-                    ? "When you resume, only the most recent halted event will be delivered. All other queued events will be discarded."
-                    : "When you resume, all halted events will be delivered to your endpoint in order."}
-                </p>
-                <p className="text-xs text-amber-600 dark:text-amber-400 mt-1 italic">
-                  Use the "Latest Only" toggle in Options to change delivery behavior.
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={handleToggleActive}
-              className="ml-4 px-4 py-2 bg-amber-600 dark:bg-amber-500 text-white text-sm font-medium rounded-md hover:bg-amber-700 dark:hover:bg-amber-600 focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-gray-800 focus:ring-amber-500 whitespace-nowrap"
-            >
-              Resume Subscription
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* 2. Subscription Details Card */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-        <div className="flex justify-between items-start mb-6">
+      {/* 2. Main Detail Card */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 relative overflow-hidden">
+        
+        {/* Header Row */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
           <div className="flex items-center gap-3">
-            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Subscription Details</h3>
-            <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${
+            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Configuration</h3>
+            <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider ${
               subscription.isActive 
                 ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800' 
-                : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600'
+                : 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800'
             }`}>
-              {subscription.isActive ? 'Active' : 'Inactive'}
+              {subscription.isActive ? 'Active' : 'Paused'}
             </span>
-            {subscription.isRateLimited && (
-              <span className="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800">
-                Throttled
-              </span>
-            )}
           </div>
-          <div className="flex gap-2 items-center">
-            <div className="hidden md:flex items-center gap-2 mr-2">
-              <span className="text-xs text-gray-500 dark:text-gray-400">Secret Key:</span>
-              <span className="font-mono text-xs px-2 py-1 rounded bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-600">
-                {showSecretKey ? subscription.secretKey : '•••••••••••••••••••••••••••'}
-              </span>
-              <button
-                title={showSecretKey ? 'Hide Secret' : 'Show Secret'}
-                onClick={() => setShowSecretKey(!showSecretKey)}
-                className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700"
-              >
-                {showSecretKey ? (
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-5.523 0-10-4.477-10-10 0-1.12.186-2.195.525-3.2M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                ) : (
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3l18 18M10.58 10.58A3 3 0 0015 12m4.42 4.42A10.05 10.05 0 0112 19c-5.523 0-10-4.477-10-10a9.96 9.96 0 012.458-6.458"/></svg>
-                )}
-              </button>
-            </div>
+
+          {/* Action Buttons (Spaced out properly) */}
+          <div className="flex flex-wrap gap-3">
             <button
               onClick={() => setIsEditModalOpen(true)}
-              className="px-4 py-2 bg-[#006A33] text-white font-mono text-xs font-bold uppercase tracking-wider hover:bg-[#008040] shadow-[0_0_10px_rgba(0,106,51,0.5)] transition-all flex items-center gap-2 border border-[#006A33]"
+              className="px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-colors"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5h2m-2 14h2m2-7H9" />
-              </svg>
-              Edit
+              <Edit className="w-3.5 h-3.5" /> Edit
             </button>
+            
             <button
               onClick={handleToggleActive}
-              className={`${subscription.isActive ? 'bg-amber-600 hover:bg-amber-700' : 'bg-green-600 hover:bg-green-700'} px-4 py-2 text-white font-mono text-xs font-bold uppercase tracking-wider shadow-[0_0_10px_rgba(0,106,51,0.5)] transition-all flex items-center gap-2 border border-transparent`}
+              className={`px-3 py-2 rounded-lg text-xs font-bold uppercase tracking-wider flex items-center gap-2 text-white transition-colors shadow-sm ${
+                subscription.isActive 
+                  ? 'bg-amber-600 hover:bg-amber-700' 
+                  : 'bg-green-600 hover:bg-green-700'
+              }`}
             >
-              {subscription.isActive ? 'Pause' : 'Resume'}
+              {subscription.isActive ? <><Pause className="w-3.5 h-3.5" /> Pause</> : <><Play className="w-3.5 h-3.5" /> Resume</>}
             </button>
+
             <button
-              onClick={() => setIsAdvancedOptionsOpen(true)}
-              className="px-4 py-2 bg-[#006A33] text-white font-mono text-xs font-bold uppercase tracking-wider hover:bg-[#008040] shadow-[0_0_10px_rgba(0,106,51,0.5)] transition-all flex items-center gap-2 border border-[#006A33]"
+              onClick={() => setIsOptionsModalOpen(true)}
+              className="px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-colors"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
-              </svg>
-              Settings
+              <Settings className="w-3.5 h-3.5" /> Tools
             </button>
+
             <button
               onClick={() => setShowTester(!showTester)}
-              className="px-4 py-2 bg-[#006A33] border border-[#006A33] text-white hover:bg-[#008040] font-mono text-xs font-bold uppercase tracking-wider shadow-[0_0_10px_rgba(0,106,51,0.5)] transition-all flex items-center gap-2"
+              className="px-3 py-2 bg-[#006A33] border border-[#006A33] text-white hover:bg-[#005a2b] rounded-lg text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-colors shadow-md shadow-green-900/20"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
-              Test_Webhook
+              <Terminal className="w-3.5 h-3.5" /> {showTester ? 'Hide Tester' : 'Test Webhook'}
             </button>
           </div>
         </div>
 
+        {/* Info Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-y-8 gap-x-12 text-sm">
-          <div>
-            <p className="text-gray-500 dark:text-gray-400 mb-1 font-medium">Target URL</p>
+          
+          {/* Target URL */}
+          <div className="col-span-1 md:col-span-2">
+            <p className="text-gray-500 dark:text-gray-400 mb-1.5 font-medium flex items-center gap-2">Target Endpoint</p>
             <div className="flex items-center gap-2">
-              <div className="font-mono flex-1 text-gray-900 dark:text-gray-100 break-all bg-gray-50 dark:bg-gray-900 p-2 rounded border border-gray-200 dark:border-gray-600 text-xs">
+              <code className="flex-1 block bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg p-2.5 font-mono text-xs text-gray-800 dark:text-gray-200 break-all">
                 {subscription.targetUrl}
-              </div>
+              </code>
               <button
-                title="Copy URL"
                 onClick={() => navigator.clipboard.writeText(subscription.targetUrl)}
-                className="px-2 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700"
+                className="p-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400 transition-colors"
+                title="Copy URL"
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h11a2 2 0 012 2v8a2 2 0 01-2 2H8a2 2 0 01-2-2V9a2 2 0 012-2z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 3H5a2 2 0 00-2 2v8" />
-                </svg>
+                <Copy className="w-4 h-4" />
               </button>
             </div>
           </div>
+
+          {/* Event Type */}
           <div>
-            <p className="text-gray-500 dark:text-gray-400 mb-1 font-medium">Event Type</p>
-            <p className="font-bold text-gray-900 dark:text-gray-100 text-base">{subscription.eventType}</p>
-          </div>
-          {subscription.targetAddress && (
-            <div>
-              <p className="text-gray-500 dark:text-gray-400 mb-1 font-medium">Target Address</p>
-              <p className="font-mono text-gray-900 dark:text-gray-100 text-xs break-all">{subscription.targetAddress}</p>
+            <p className="text-gray-500 dark:text-gray-400 mb-1 font-medium">Trigger Event</p>
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-gray-900 dark:text-white text-base">{subscription.eventType}</span>
+              {subscription.minimumLovelace ? (
+                <span className="text-xs bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded text-gray-600 dark:text-gray-400">
+                  Min: {subscription.minimumLovelace / 1000000} ADA
+                </span>
+              ) : null}
             </div>
-          )}
+          </div>
+
+          {/* Rate Limits */}
           <div>
             <p className="text-gray-500 dark:text-gray-400 mb-1 font-medium">Rate Limits</p>
-            <p className="font-medium text-gray-900 dark:text-gray-100">
-              {subscription.maxWebhooksPerMinute}/min, {subscription.maxWebhooksPerHour}/hour
+            <p className="font-mono text-gray-900 dark:text-white">
+              {subscription.maxWebhooksPerMinute}/min &bull; {subscription.maxWebhooksPerHour}/hour
             </p>
           </div>
+
+          {/* Wallet Filters (New Chips Section) */}
+          <div className="col-span-1 md:col-span-2">
+            <p className="text-gray-500 dark:text-gray-400 mb-2 font-medium flex justify-between">
+              <span>Filter Targets</span>
+              <span className="text-xs font-normal opacity-70">
+                {subscription.walletAddresses?.length || 0} active filters
+              </span>
+            </p>
+            <div className="bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-800 rounded-lg p-3 min-h-[50px]">
+              {subscription.walletAddresses && subscription.walletAddresses.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {subscription.walletAddresses.map((addr, i) => (
+                    <span key={i} className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-mono bg-white dark:bg-black border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 shadow-sm" title={addr}>
+                      <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 dark:bg-green-500 mr-2"></span>
+                      {addr.length > 20 ? `${addr.substring(0, 8)}...${addr.substring(addr.length - 6)}` : addr}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 text-sm italic">
+                  <span className="w-2 h-2 rounded-full bg-yellow-500"></span>
+                  Listening to ALL events (Firehose Mode)
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Secret Key (Moved Here) */}
+          <div className="col-span-1 md:col-span-2 pt-4 border-t border-gray-100 dark:border-gray-800">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-gray-500 dark:text-gray-400 font-medium text-xs uppercase tracking-wide">
+                HMAC Secret Key
+              </p>
+              <button 
+                onClick={() => setShowSecretKey(!showSecretKey)}
+                className="text-xs text-indigo-600 dark:text-green-400 hover:underline flex items-center gap-1"
+              >
+                {showSecretKey ? <><EyeOff className="w-3 h-3"/> Hide</> : <><Eye className="w-3 h-3"/> Reveal</>}
+              </button>
+            </div>
+            <div className="flex items-center gap-2">
+              <code className="flex-1 block bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded px-3 py-2 font-mono text-xs text-gray-600 dark:text-gray-400">
+                {showSecretKey ? subscription.secretKey : '•'.repeat(48)}
+              </code>
+              <button
+                onClick={() => navigator.clipboard.writeText(subscription.secretKey || '')}
+                className="text-xs text-gray-500 hover:text-gray-900 dark:hover:text-gray-100 px-2"
+                title="Copy Secret"
+              >
+                <Copy className="w-4 h-4" />
+              </button>
+            </div>
+            <p className="text-[10px] text-gray-400 mt-1">
+              Use this key to verify the <code>X-Panoptes-Signature</code> header in your backend for security.
+            </p>
+          </div>
+
         </div>
       </div>
 
-      {/* --- NEW: WEBHOOK TESTER SECTION --- */}
+      {/* Tester Component */}
       {showTester && activeId && (
         <div className="animate-in fade-in slide-in-from-top-4 duration-300">
           <WebhookTester
@@ -452,10 +421,7 @@ const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: p
               event: "test_event",
               timestamp: new Date().toISOString(),
               subscriptionId: activeId,
-              data: {
-                message: "This is a manual test from the dashboard.",
-                user: "admin"
-              }
+              data: { message: "Manual test from dashboard" }
             }}
           />
         </div>
@@ -478,13 +444,12 @@ const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: p
         </div>
       </div>
 
-      {/* 4. Delivery Logs (NOW USING THE COMPONENT) */}
+      {/* 4. Delivery Logs */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden mb-10">
         <div className="p-6 pb-2">
           <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Delivery Logs</h3>
         </div>
 
-        {/* Replaced manual table with the component */}
         <DeliveryLogsTable
           logs={logs}
           totalCount={totalLogs}
@@ -493,8 +458,7 @@ const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: p
           isLoading={loading}
         />
 
-        {/* Kept Pagination since DeliveryLogsTable doesn't handle page changing */}
-        <div className="p-4 border-t border-gray-200 dark:border-gray-700">
+        <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/30">
           <Pagination
             currentPage={currentPage}
             totalItems={totalLogs}
