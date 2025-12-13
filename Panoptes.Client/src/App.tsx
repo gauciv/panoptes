@@ -5,15 +5,12 @@ import Dashboard from './pages/Dashboard';
 import SubscriptionDetail from './pages/SubscriptionDetail';
 import Settings from './pages/Settings';
 import Health from './pages/Health';
-import Profile from './pages/Profile'; // <--- 1. Import Profile Page
+import Profile from './pages/Profile'; 
 import { DashboardLayout } from './layouts/DashboardLayout';
 import Landing from './pages/Landing';
-
-import { useAuth, AuthProvider } from './context/AuthContext';
 import { useScrollbarTheme } from './hooks/useScrollbarTheme';
-import { useAuth, AuthProvider } from './context/AuthContext'; // 1. Import AuthProvider
+import { useAuth, AuthProvider } from './context/AuthContext';
 import { CustomCursor } from './pages/landing/components/Cursor';
-
 
 export const ThemeContext = createContext<{
   isDark: boolean;
@@ -81,14 +78,10 @@ function App() {
 
   return (
     <ThemeContext.Provider value={{ isDark, setIsDark }}>
-
       <AuthProvider>
+        {/* Customized Toaster for Cyberpunk Theme */}
         <Toaster
-          position="top-right"
-
-      <Toaster
           position="bottom-right"
-
           toastOptions={{
             className: 'font-mono text-sm', 
             style: {
@@ -98,7 +91,6 @@ function App() {
               backgroundColor: '#050505', 
               borderRadius: '2px', 
             },
-            
             success: {
               iconTheme: {
                 primary: '#00FF94', 
@@ -108,7 +100,6 @@ function App() {
                 border: '1px solid rgba(0, 255, 148, 0.2)',
               },
             },
-
             error: {
               iconTheme: {
                 primary: '#EF4444', 
@@ -122,10 +113,7 @@ function App() {
           }}
         />
 
-
-      <CustomCursor/>
-      <AuthProvider>
-        
+        <CustomCursor/>
 
         <Router>
           <Routes>
@@ -149,23 +137,13 @@ function App() {
               }
             >
               <Route index element={<Dashboard />} />
-              <Route path="analytics" element={<Dashboard />} />
+              {/* Note: /dashboard/analytics points to Dashboard component as well */}
+              <Route path="analytics" element={<Dashboard />} /> 
               <Route path="health" element={<Health />} />
               <Route path="subscriptions/:id" element={<SubscriptionDetail />} />
               <Route path="settings" element={<Settings />} />
-            </Route>
-
-            {/* --- NEW ROUTE: Profile --- */}
-            {/* Using DashboardLayout so the sidebar persists */}
-            <Route
-              path="/profile"
-              element={
-                <RequireAuth>
-                  <DashboardLayout />
-                </RequireAuth>
-              }
-            >
-              <Route index element={<Profile />} />
+              {/* Profile Page nested inside Dashboard */}
+              <Route path="profile" element={<Profile />} />
             </Route>
 
             {/* Fallback */}
