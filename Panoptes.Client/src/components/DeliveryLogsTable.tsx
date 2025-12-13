@@ -42,6 +42,12 @@ const DeliveryLogsTable: React.FC<DeliveryLogsTableProps> = ({
   const getStatusBadge = (statusCode: number) => {
     if (statusCode >= 200 && statusCode < 300) {
       return <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">{statusCode}</span>;
+    } else if (statusCode === 429) {
+      return (
+        <span className="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800" title="Endpoint Rate Limited">
+          429 (Endpoint Rate Limited)
+        </span>
+      );
     } else if (statusCode >= 400 && statusCode < 500) {
       return <span className="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">{statusCode}</span>;
     } else {
