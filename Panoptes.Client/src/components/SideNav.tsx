@@ -4,6 +4,7 @@ import { PRIMARY_NAV_ITEMS, SECONDARY_NAV_ITEMS } from '../config/navigation';
 import { SideNavItem } from './SideNavItem';
 import { SideNavFooter } from './SideNavFooter';
 import { ThemeContext } from '../App';
+import { UserDetails } from './UserDetails';
 import ThemeToggle from '../ThemeToggle';
 import { cn } from '../lib/utils';
 
@@ -57,6 +58,11 @@ export function SideNav() {
             )}
           </div>
         </div>
+      </div>
+      {/* User Details when authenticated (shows Google info) */}
+      {!isCollapsed && (
+        <UserDetails />
+      )}
 
         {/* Primary Navigation */}
         <div className="flex-1 overflow-y-auto overflow-x-hidden py-4 px-2 min-h-0 nav-scrollbar">
