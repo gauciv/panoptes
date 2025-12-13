@@ -42,14 +42,10 @@ export function formatTimeRangeLabel(timeRange: TimeRange): string {
   }
   
   switch (timeRange) {
-    case '24h':
-      return '24 hours';
-    case '7d':
-      return '7 days';
-    case '30d':
-      return '30 days';
-    default:
-      return '7 days';
+    case '24h': return '24 hours';
+    case '7d': return '7 days';
+    case '30d': return '30 days';
+    default: return '7 days';
   }
 }
 
@@ -66,13 +62,28 @@ interface DistributionDataPoint {
   fill: string;
 }
 
+// NEW: Interface for Heatmap Data
+interface HeatmapDataPoint {
+  hour: number; // 0-23
+  count: number;
+  intensity: number; // 0.0 - 1.0 for coloring
+}
+
 interface StatsData {
   totalWebhooks: number;
   successRate: number;
   avgLatency: number;
   rateLimitedCount: number;
+
+  // NEW: Value Metrics
+  totalVolumeAda: number;
+  topSourceWallet: string | null;
+  topSourceCount: number;
+  
   volumeData: VolumeDataPoint[];
   distributionData: DistributionDataPoint[];
+  heatmapData: HeatmapDataPoint[]; // NEW
+  
   isLoading: boolean;
   error: string | null;
 }
@@ -319,20 +330,104 @@ function groupLogsByTimeBucket(
   }));
 }
 
+// NEW HELPER: Calculate Hourly Heatmap
+function calculateHourlyHeatmap(logs: DeliveryLog[]): HeatmapDataPoint[] {
+  const hourCounts = new Array(24).fill(0);
+  let maxCount = 0;
+
+  logs.forEach(log => {
+    const hour = new Date(log.attemptedAt).getHours(); // 0-23 Local time
+    hourCounts[hour]++;
+    if (hourCounts[hour] > maxCount) maxCount = hourCounts[hour];
+  });
+
+  return hourCounts.map((count, hour) => ({
+    hour,
+    count,
+    intensity: maxCount > 0 ? count / maxCount : 0
+  }));
+}
+
+// NEW HELPER: Calculate Volume & Top Source
+function calculateValueMetrics(logs: DeliveryLog[]): { totalAda: number, topSource: string | null, topSourceCount: number } {
+  let totalAda = 0;
+  const sourceCounts = new Map<string, number>();
+
+  logs.forEach(log => {
+    // 1. Parse Payload
+    if (log.payloadJson) {
+      try {
+        const payload = JSON.parse(log.payloadJson);
+        
+        // Sum ADA
+        if (payload.Metadata && typeof payload.Metadata.TotalOutputAda === 'number') {
+          totalAda += payload.Metadata.TotalOutputAda;
+        }
+
+        // Identify Source (Wallet Address)
+        // Note: We use Subscription Name as a reliable, readable source identifier
+        if (payload.SubscriptionName) {
+           const source = payload.SubscriptionName;
+           sourceCounts.set(source, (sourceCounts.get(source) || 0) + 1);
+        }
+      } catch (e) {}
+    }
+  });
+
+  let topSource = null;
+  let topSourceCount = 0;
+  
+  sourceCounts.forEach((count, source) => {
+    if (count > topSourceCount) {
+      topSourceCount = count;
+      topSource = source;
+    }
+  });
+
+  return { totalAda, topSource, topSourceCount };
+}
+
 function groupLogsByEventType(
   logs: DeliveryLog[],
   subscriptions: WebhookSubscription[]
 ): DistributionDataPoint[] {
+  // Create a map for fallback lookup
   const subscriptionMap = new Map(subscriptions.map(s => [s.id, s]));
   const eventTypeCounts: Map<string, number> = new Map();
   
   logs.forEach(log => {
-    const subscription = subscriptionMap.get(log.subscriptionId);
-    const eventType = subscription?.eventType || 'Unknown';
+    let eventType = 'Unknown';
+
+    // 1. Try to extract the real event type snapshot from the payload JSON
+    if (log.payloadJson) {
+      try {
+        const payload = JSON.parse(log.payloadJson);
+        if (payload.Event) {
+          eventType = payload.Event;
+        }
+      } catch (e) {
+        // JSON parse failed, ignore
+      }
+    }
+
+    // 2. If JSON parsing failed or didn't have Event, try the current subscription list
+    if (eventType === 'Unknown' || !eventType) {
+       const subscription = subscriptionMap.get(log.subscriptionId);
+       if (subscription && subscription.eventType) {
+         eventType = subscription.eventType;
+       }
+    }
+
+    // 3. Fallback for capitalization consistency (Backend sends 'Transaction', UI might use 'transaction')
+    // Capitalize first letter to merge them
+    if (eventType && eventType !== 'Unknown') {
+        eventType = eventType.charAt(0).toUpperCase() + eventType.slice(1);
+    }
+
     eventTypeCounts.set(eventType, (eventTypeCounts.get(eventType) || 0) + 1);
   });
   
-  const total = logs.length || 1; // Avoid division by zero
+  const total = logs.length || 1; 
   
   return Array.from(eventTypeCounts.entries())
     .map(([eventType, count], index) => ({
@@ -398,11 +493,22 @@ export function useStatsData(
     // Calculate rate-limited subscriptions
     const rateLimitedCount = subscriptions.filter(s => s.isRateLimited).length;
     
+    // NEW: Calculate Value Metrics & Heatmap
+    const valueMetrics = calculateValueMetrics(filteredLogs);
+    const heatmapData = calculateHourlyHeatmap(filteredLogs);
+    
     return {
       totalWebhooks: filteredLogs.length,
       successRate: calculateSuccessRate(filteredLogs),
       avgLatency: calculateAvgLatency(filteredLogs),
       rateLimitedCount,
+      
+      // New Value Fields
+      totalVolumeAda: valueMetrics.totalAda,
+      topSourceWallet: valueMetrics.topSource,
+      topSourceCount: valueMetrics.topSourceCount,
+      heatmapData, // New
+
       volumeData: groupLogsByTimeBucket(filteredLogs, timeRange),
       distributionData: groupLogsByEventType(filteredLogs, subscriptions),
       isLoading,
@@ -417,4 +523,3 @@ export function useStatsData(
     refetch: fetchLogs,
   };
 }
-

@@ -1,7 +1,8 @@
-import { useState } from 'react';
-import { BookOpen, ExternalLink, User, Power } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { BookOpen, ExternalLink, User, Power, ChevronRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { cn } from '../lib/utils';
+import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { LogoutModal } from './LogoutModal';
 
@@ -11,10 +12,23 @@ interface SideNavFooterProps {
 
 export function SideNavFooter({ isCollapsed }: SideNavFooterProps) {
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  
+  // Modal State
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-  const handleLogoutClick = () => {
+  // User Identifiers
+  // Get identifiers safely
+  const userId = user?.username || user?.signInDetails?.loginId || 'guest';
+  const userEmail = user?.signInDetails?.loginId || "Unknown Operator";
+
+  // Display Name State
+  const [displayName, setDisplayName] = useState(userEmail);
+
+  // Logout Handlers
+  const handleLogoutClick = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent triggering parent click events
     setShowLogoutModal(true);
   };
 
@@ -23,6 +37,7 @@ export function SideNavFooter({ isCollapsed }: SideNavFooterProps) {
     try {
       await logout();
       toast.success("TERMINAL_SESSION_CLOSED");
+      navigate('/');
     } catch (error) {
       console.error("Logout failed", error);
       toast.error("Logout failed");
@@ -36,13 +51,35 @@ export function SideNavFooter({ isCollapsed }: SideNavFooterProps) {
     setShowLogoutModal(false);
   };
 
-  // Get email safely from Cognito user attributes
-  const userEmail = user?.signInDetails?.loginId || "Unknown Operator";
+  // Name Resolution Effect
+  useEffect(() => {
+    const updateDisplayName = () => {
+      if (userId === 'guest') {
+        setDisplayName("Guest");
+        return;
+      }
+
+      // Look up keys with the userId prefix
+      const first = localStorage.getItem(`panoptes_user_${userId}_first_name`);
+      const last = localStorage.getItem(`panoptes_user_${userId}_last_name`);
+
+      if (first || last) {
+        setDisplayName(`${first || ''} ${last || ''}`.trim());
+      } else {
+        setDisplayName(userEmail);
+      }
+    };
+
+    updateDisplayName();
+    window.addEventListener('user_profile_updated', updateDisplayName);
+    return () => {
+      window.removeEventListener('user_profile_updated', updateDisplayName);
+    };
+  }, [userId, userEmail]);
 
   return (
     <div className="mt-auto">
-      
-      {/* 1. Documentation Promo (Only visible when expanded) */}
+      {/* 1. Documentation Promo (Only when expanded) */}
       {!isCollapsed && (
         <div className="p-3 m-2 mb-2 bg-gradient-to-br from-sentinel/10 to-sentinel/5 border border-sentinel/20 rounded-lg">
           <div className="flex items-start gap-3">
@@ -56,8 +93,8 @@ export function SideNavFooter({ isCollapsed }: SideNavFooterProps) {
               <p className="text-xs text-muted-foreground mb-3">
                 Learn how to integrate and use Panoptes
               </p>
-              <a 
-                href="#" 
+              <a
+                href="#"
                 className="inline-flex items-center gap-2 px-3 py-1.5 bg-sentinel hover:bg-sentinel-hover text-white rounded-tech text-xs font-mono transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sentinel focus-visible:ring-offset-2"
               >
                 Read Docs
@@ -68,46 +105,52 @@ export function SideNavFooter({ isCollapsed }: SideNavFooterProps) {
         </div>
       )}
 
-      {/* 2. User Profile & Logout Section */}
+      {/* 2. User Profile Strip */}
       <div className={cn(
         "border-t border-border p-2",
         isCollapsed ? "flex justify-center" : ""
       )}>
         {isCollapsed ? (
-          // Collapsed: Show only Logout Icon
+          // Collapsed: Show Logout Button
           <button
             onClick={handleLogoutClick}
-            className="p-2 text-muted-foreground hover:text-red-400 transition-colors"
+            className="p-2 text-muted-foreground hover:text-red-400 hover:bg-red-400/10 rounded-tech transition-colors"
             title="Sign Out"
           >
             <Power className="w-5 h-5" />
           </button>
         ) : (
-          // Expanded: Show User Info + Logout Button
-          <div className="flex items-center gap-3 px-2 py-2">
-            {/* Square Avatar with subtle border */}
-            <div className="flex-shrink-0 w-9 h-9 bg-sentinel/10 border border-sentinel/30 flex items-center justify-center text-sentinel">
+          // Expanded: Interactive Profile Strip
+          <div 
+            className="flex items-center gap-3 px-2 py-2 rounded-tech hover:bg-accent/50 cursor-pointer group transition-colors"
+            onClick={() => navigate('/profile')}
+            title="View Profile"
+          >
+            {/* Avatar */}
+            <div className="flex-shrink-0 w-9 h-9 bg-sentinel/10 border border-sentinel/30 flex items-center justify-center text-sentinel rounded-sm">
               <User className="w-4 h-4" />
             </div>
-            
+
             {/* User Info */}
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-foreground truncate" title={userEmail}>
-                {userEmail}
+              <p className="text-xs font-mono font-medium text-foreground truncate">
+                {displayName}
               </p>
               <div className="flex items-center gap-1.5 mt-0.5">
                 <span className="relative flex h-1.5 w-1.5">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
                 </span>
-                <span className="text-[10px] text-muted-foreground">Active</span>
+                <span className="text-[10px] text-muted-foreground truncate max-w-[120px]">
+                  {userEmail}
+                </span>
               </div>
             </div>
 
-            {/* Logout Button */}
+            {/* Actions: Logout Button (stops propagation to profile nav) */}
             <button
               onClick={handleLogoutClick}
-              className="p-1.5 text-muted-foreground hover:text-red-400 hover:bg-red-400/10 rounded transition-colors"
+              className="p-1.5 text-muted-foreground hover:text-red-400 hover:bg-red-400/10 rounded transition-colors opacity-0 group-hover:opacity-100"
               title="Sign Out"
             >
               <Power className="w-4 h-4" />
@@ -116,7 +159,7 @@ export function SideNavFooter({ isCollapsed }: SideNavFooterProps) {
         )}
       </div>
 
-      {/* Logout Confirmation Modal */}
+      {/* Logout Modal */}
       <LogoutModal
         isOpen={showLogoutModal}
         onConfirm={handleLogoutConfirm}
