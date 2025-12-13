@@ -160,7 +160,7 @@ const CreateSubscriptionModal: React.FC<CreateSubscriptionModalProps> = ({
       targetUrl: targetUrl.trim(),
       eventType,
       walletAddresses: walletAddresses.length > 0 ? walletAddresses : undefined,
-      minimumLovelace: lovelace ?? null
+      minimumLovelace: lovelace
     });
 
     handleClose();
