@@ -4,7 +4,6 @@ import { PRIMARY_NAV_ITEMS, SECONDARY_NAV_ITEMS } from '../config/navigation';
 import { SideNavItem } from './SideNavItem';
 import { SideNavFooter } from './SideNavFooter';
 import { ThemeContext } from '../App';
-import { UserDetails } from './UserDetails';
 import ThemeToggle from '../ThemeToggle';
 import { cn } from '../lib/utils';
 
