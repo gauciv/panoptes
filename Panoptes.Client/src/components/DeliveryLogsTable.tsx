@@ -39,9 +39,17 @@ const DeliveryLogsTable: React.FC<DeliveryLogsTableProps> = ({
     return <DeliveryLogsTableSkeleton showSubscriptionId={showSubscriptionId} />;
   }
 
-  const getStatusBadge = (statusCode: number) => {
+  const getStatusBadge = (log: DeliveryLog) => {
+    const statusCode = log.responseStatusCode;
     if (statusCode >= 200 && statusCode < 300) {
       return <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">{statusCode}</span>;
+    } else if (statusCode === 429) {
+      const isInternalThrottle = (log.responseBody || '').toLowerCase().includes('throttled: internal rate limit');
+      return (
+        <span className="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800" title={isInternalThrottle ? 'Internal Throttled' : 'Endpoint Rate Limited'}>
+          {isInternalThrottle ? '429 (Internal Throttled)' : '429 (Endpoint Rate Limited)'}
+        </span>
+      );
     } else if (statusCode >= 400 && statusCode < 500) {
       return <span className="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">{statusCode}</span>;
     } else {
@@ -124,7 +132,7 @@ const DeliveryLogsTable: React.FC<DeliveryLogsTableProps> = ({
                         </div>
                       </td>
                       <td className="px-4 py-3 text-sm">
-                        {getStatusBadge(log.responseStatusCode)}
+                        {getStatusBadge(log)}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100">
                         {log.latencyMs.toFixed(0)}ms

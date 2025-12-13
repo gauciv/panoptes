@@ -371,8 +371,66 @@ namespace Panoptes.Infrastructure.Services
                         if (sub.IsRateLimited || sub.IsCircuitBroken || _disabledDuringProcessing.Contains(sub.Id)) continue;
                         if (!sub.IsActive) { await RecordPausedEvent(sub, payload); continue; }
                         
+                        // Handle paused (inactive) subscriptions: record the event but don't dispatch
+                        if (!sub.IsActive)
+                        {
+                            _logger?.LogInformation("⏸️ Subscription {Name} is paused - recording event without dispatching", sub.Name);
+                            await RecordPausedEvent(sub, payload);
+                            continue;
+                        }
+                        
+                        // During catch-up, batch webhooks instead of dispatching immediately
+                        if (_isCatchingUp)
+                        {
+                            // Add to batch
+                            if (!_pendingWebhooks.ContainsKey(sub.Id))
+                            {
+                                _pendingWebhooks[sub.Id] = new List<object>();
+                            }
+                            
+                            _pendingWebhooks[sub.Id].Add(payload);
+                            
+                            // If batch is full, send the most recent one and clear
+                            if (_pendingWebhooks[sub.Id].Count >= BATCH_SIZE_DURING_CATCHUP)
+                            {
+                                var mostRecentPayload = _pendingWebhooks[sub.Id].Last();
+                                _pendingWebhooks[sub.Id].Clear();
+                                
+                                _logger?.LogInformation("📦 [BATCH] Sending 1 of {Count} webhooks for {Name} (keeping most recent)", 
+                                    BATCH_SIZE_DURING_CATCHUP, sub.Name);
+                                
+                                // Check rate limits before dispatching
+                                var rl2 = await CheckRateLimitAsync(sub);
+                                if (rl2.Allowed)
+                                {
+                                    await DispatchWebhook(sub, mostRecentPayload);
+                                }
+                                else
+                                {
+                                    _logger?.LogWarning("⚠️ Rate limit exceeded for {Name} (catch-up batch), skipping (window={Window}, retry in ~{Retry}s)", sub.Name, rl2.Window, rl2.RetryInSeconds);
+                                    await RecordThrottledEvent(sub, mostRecentPayload, rl2);
+                                }
+                            }
+                        }
+                        else
+                        {
+                            // Real-time mode: dispatch immediately with rate limiting
+                            var rl = await CheckRateLimitAsync(sub);
+                            if (!rl.Allowed)
+                            {
+                                _logger?.LogWarning("⚠️ Rate limit exceeded for {Name}, skipping webhook (window={Window}, retry in ~{Retry}s)", sub.Name, rl.Window, rl.RetryInSeconds);
+                                await RecordThrottledEvent(sub, payload, rl);
+                                continue;
+                            }
+                            
+                            _logger?.LogInformation("🔔 Dispatching webhook to {Name} for {EventType}: {Reason}", 
+                                sub.Name, sub.EventType, matchReason);
+                            
+                            await DispatchWebhook(sub, payload);
+                        }
                         // Force Real-Time (Catch-up Disabled)
-                        if (await CheckRateLimitAsync(sub)) await DispatchWebhook(sub, payload);
+                        var rlCheck = await CheckRateLimitAsync(sub);
+                        if (rlCheck.Allowed) await DispatchWebhook(sub, payload);
                     }
                 }
             }
@@ -616,13 +674,15 @@ namespace Panoptes.Infrastructure.Services
                     sub.Name, payloads.Count);
                 
                 // Check rate limit and dispatch
-                if (await CheckRateLimitAsync(sub))
+                var rl = await CheckRateLimitAsync(sub);
+                if (rl.Allowed)
                 {
                     await DispatchWebhook(sub, mostRecentPayload);
                 }
                 else
                 {
-                    _logger?.LogWarning("⚠️ Rate limit exceeded for {Name} during batch flush, skipping", sub.Name);
+                    _logger?.LogWarning("⚠️ Rate limit exceeded for {Name} during batch flush, skipping (window={Window}, retry in ~{Retry}s)", sub.Name, rl.Window, rl.RetryInSeconds);
+                    await RecordThrottledEvent(sub, mostRecentPayload, rl);
                 }
             }
             
@@ -630,12 +690,14 @@ namespace Panoptes.Infrastructure.Services
             _pendingWebhooks.Clear();
         }
         
-        private async Task<bool> CheckRateLimitAsync(WebhookSubscription sub)
+        private record RateLimitCheckResult(bool Allowed, string? Window, int? RetryInSeconds);
+
+        private async Task<RateLimitCheckResult> CheckRateLimitAsync(WebhookSubscription sub)
         {
             // If rate limits disabled (0), allow all
             if (sub.MaxWebhooksPerMinute == 0 && sub.MaxWebhooksPerHour == 0)
             {
-                return true;
+                return new RateLimitCheckResult(true, null, null);
             }
 
             var now = DateTime.UtcNow;
@@ -666,9 +728,12 @@ namespace Panoptes.Infrastructure.Services
                 sub.IsRateLimited = true;
                 _disabledDuringProcessing.Add(sub.Id); // Track locally to skip immediately
                 await _dbContext.SaveChangesAsync();
-                _logger?.LogWarning("🚫 Rate limit exceeded for {Name}: {Count}/{Max} per minute - subscription disabled", 
-                    sub.Name, minuteWindow.Count, sub.MaxWebhooksPerMinute);
-                return false;
+                var oldest = minuteWindow.Count > 0 ? minuteWindow.Peek() : now;
+                var elapsed = (int)Math.Max((now - oldest).TotalSeconds, 0);
+                var retryIn = Math.Max(60 - elapsed, 1);
+                _logger?.LogWarning("🚫 Rate limit exceeded for {Name}: {Count}/{Max} per minute - subscription disabled (retry in ~{Retry}s)", 
+                    sub.Name, minuteWindow.Count, sub.MaxWebhooksPerMinute, retryIn);
+                return new RateLimitCheckResult(false, "minute", retryIn);
             }
 
             if (sub.MaxWebhooksPerHour > 0 && hourWindow.Count >= sub.MaxWebhooksPerHour)
@@ -676,16 +741,58 @@ namespace Panoptes.Infrastructure.Services
                 sub.IsRateLimited = true;
                 _disabledDuringProcessing.Add(sub.Id); // Track locally to skip immediately
                 await _dbContext.SaveChangesAsync();
-                _logger?.LogWarning("🚫 Rate limit exceeded for {Name}: {Count}/{Max} per hour - subscription disabled", 
-                    sub.Name, hourWindow.Count, sub.MaxWebhooksPerHour);
-                return false;
+                var oldestH = hourWindow.Count > 0 ? hourWindow.Peek() : now;
+                var elapsedH = (int)Math.Max((now - oldestH).TotalSeconds, 0);
+                var retryInH = Math.Max(3600 - elapsedH, 60);
+                _logger?.LogWarning("🚫 Rate limit exceeded for {Name}: {Count}/{Max} per hour - subscription disabled (retry in ~{Retry}s)", 
+                    sub.Name, hourWindow.Count, sub.MaxWebhooksPerHour, retryInH);
+                return new RateLimitCheckResult(false, "hour", retryInH);
             }
 
             // Record this webhook
             minuteWindow.Enqueue(now);
             hourWindow.Enqueue(now);
 
-            return await Task.FromResult(true);
+            return await Task.FromResult(new RateLimitCheckResult(true, null, null));
+        }
+
+        /// <summary>
+        /// Record an internal throttled event with 429 to distinguish from endpoint 429
+        /// </summary>
+        private async Task RecordThrottledEvent(WebhookSubscription sub, object payload, RateLimitCheckResult rl)
+        {
+            try
+            {
+                var payloadJson = System.Text.Json.JsonSerializer.Serialize(payload);
+                var reason = rl.Window == "hour" ? "THROTTLED: Internal rate limit exceeded (per-hour)" : "THROTTLED: Internal rate limit exceeded (per-minute)";
+                if (rl.RetryInSeconds.HasValue)
+                {
+                    reason += $". Retry in ~{rl.RetryInSeconds.Value}s";
+                }
+
+                var log = new DeliveryLog
+                {
+                    Id = Guid.NewGuid(),
+                    SubscriptionId = sub.Id,
+                    PayloadJson = payloadJson,
+                    AttemptedAt = DateTime.UtcNow,
+                    ResponseStatusCode = 429,
+                    ResponseBody = reason,
+                    LatencyMs = 0,
+                    Status = DeliveryStatus.Retrying,
+                    RetryCount = 0,
+                    MaxRetries = 3,
+                    NextRetryAt = rl.RetryInSeconds.HasValue ? DateTime.UtcNow.AddSeconds(rl.RetryInSeconds.Value) : DateTime.UtcNow.AddSeconds(60),
+                    IsRateLimitRetry = false
+                };
+
+                _dbContext.DeliveryLogs.Add(log);
+                await _dbContext.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Error recording throttled event for {Name}", sub.Name);
+            }
         }
 
         /// <summary>

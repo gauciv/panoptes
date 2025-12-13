@@ -61,6 +61,7 @@ const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: p
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isOptionsModalOpen, setIsOptionsModalOpen] = useState(false);
   const [isAdvancedOptionsOpen, setIsAdvancedOptionsOpen] = useState(false);
+  const [showSecretKey, setShowSecretKey] = useState(false);
 
   // Note: We removed expandedLogId state because DeliveryLogsTable now handles that internally
 
@@ -161,9 +162,15 @@ const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: p
 
   useEffect(() => {
     fetchLogs();
-    const interval = setInterval(fetchLogs, 3000);
-    return () => clearInterval(interval);
+    const logsInterval = setInterval(fetchLogs, 3000);
+    return () => clearInterval(logsInterval);
   }, [activeId, currentPage]);
+
+  // Keep subscription counters (Rate Usage) in sync with log activity
+  useEffect(() => {
+    const subInterval = setInterval(() => fetchSubscription(true), 3000);
+    return () => clearInterval(subInterval);
+  }, [activeId]);
 
   // --- ACTIONS ---
   const handleBack = () => {
@@ -222,10 +229,10 @@ const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: p
 
   const calculateSuccessRate = () => {
     if (!logs || logs.length === 0) return "-";
-    const relevantLogs = logs.filter(l => l.responseStatusCode !== 429);
-    if (relevantLogs.length === 0) return "-";
-    const successCount = relevantLogs.filter(l => l.responseStatusCode >= 200 && l.responseStatusCode < 300).length;
-    return Math.round((successCount / relevantLogs.length) * 100) + "%";
+    const total = logs.length;
+    const successCount = logs.filter(l => l.responseStatusCode >= 200 && l.responseStatusCode < 300).length;
+    if (successCount === 0) return "0%";
+    return Math.round((successCount / total) * 100) + "%";
   };
 
   const calculateAvgLatency = () => {
@@ -337,17 +344,44 @@ const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: p
             }`}>
               {subscription.isActive ? 'Active' : 'Inactive'}
             </span>
+            {subscription.isRateLimited && (
+              <span className="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800">
+                Throttled
+              </span>
+            )}
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 items-center">
+            <div className="hidden md:flex items-center gap-2 mr-2">
+              <span className="text-xs text-gray-500 dark:text-gray-400">Secret Key:</span>
+              <span className="font-mono text-xs px-2 py-1 rounded bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-600">
+                {showSecretKey ? subscription.secretKey : '•••••••••••••••••••••••••••'}
+              </span>
+              <button
+                title={showSecretKey ? 'Hide Secret' : 'Show Secret'}
+                onClick={() => setShowSecretKey(!showSecretKey)}
+                className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700"
+              >
+                {showSecretKey ? (
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-5.523 0-10-4.477-10-10 0-1.12.186-2.195.525-3.2M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                ) : (
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3l18 18M10.58 10.58A3 3 0 0015 12m4.42 4.42A10.05 10.05 0 0112 19c-5.523 0-10-4.477-10-10a9.96 9.96 0 012.458-6.458"/></svg>
+                )}
+              </button>
+            </div>
             <button
-              onClick={() => setIsOptionsModalOpen(true)}
+              onClick={() => setIsEditModalOpen(true)}
               className="px-4 py-2 bg-[#006A33] text-white font-mono text-xs font-bold uppercase tracking-wider hover:bg-[#008040] shadow-[0_0_10px_rgba(0,106,51,0.5)] transition-all flex items-center gap-2 border border-[#006A33]"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5h2m-2 14h2m2-7H9" />
               </svg>
-              Tools &gt;
+              Edit
+            </button>
+            <button
+              onClick={handleToggleActive}
+              className={`${subscription.isActive ? 'bg-amber-600 hover:bg-amber-700' : 'bg-green-600 hover:bg-green-700'} px-4 py-2 text-white font-mono text-xs font-bold uppercase tracking-wider shadow-[0_0_10px_rgba(0,106,51,0.5)] transition-all flex items-center gap-2 border border-transparent`}
+            >
+              {subscription.isActive ? 'Pause' : 'Resume'}
             </button>
             <button
               onClick={() => setIsAdvancedOptionsOpen(true)}
@@ -356,7 +390,7 @@ const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: p
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
               </svg>
-              Advanced &gt;
+              Settings
             </button>
             <button
               onClick={() => setShowTester(!showTester)}
@@ -373,8 +407,20 @@ const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: p
         <div className="grid grid-cols-1 md:grid-cols-2 gap-y-8 gap-x-12 text-sm">
           <div>
             <p className="text-gray-500 dark:text-gray-400 mb-1 font-medium">Target URL</p>
-            <div className="font-mono text-gray-900 dark:text-gray-100 break-all bg-gray-50 dark:bg-gray-900 p-2 rounded border border-gray-200 dark:border-gray-600 text-xs">
-              {subscription.targetUrl}
+            <div className="flex items-center gap-2">
+              <div className="font-mono flex-1 text-gray-900 dark:text-gray-100 break-all bg-gray-50 dark:bg-gray-900 p-2 rounded border border-gray-200 dark:border-gray-600 text-xs">
+                {subscription.targetUrl}
+              </div>
+              <button
+                title="Copy URL"
+                onClick={() => navigator.clipboard.writeText(subscription.targetUrl)}
+                className="px-2 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h11a2 2 0 012 2v8a2 2 0 01-2 2H8a2 2 0 01-2-2V9a2 2 0 012-2z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 3H5a2 2 0 00-2 2v8" />
+                </svg>
+              </button>
             </div>
           </div>
           <div>
@@ -418,7 +464,11 @@ const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: p
       {/* 3. Stats Row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatsCard label="Total Deliveries" value={String(totalLogs)} />
-        <StatsCard label="Success Rate" value={calculateSuccessRate()} />
+        <StatsCard 
+          label="Success Rate" 
+          value={calculateSuccessRate()} 
+          alertColor={totalLogs > 0 && calculateSuccessRate() === '0%' ? 'border border-red-300 bg-red-50 dark:bg-red-900/20' : undefined}
+        />
         <StatsCard label="Avg Latency" value={calculateAvgLatency()} />
         <div className="p-5 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
           <p className="text-gray-500 dark:text-gray-400 text-sm mb-1">Rate Usage</p>

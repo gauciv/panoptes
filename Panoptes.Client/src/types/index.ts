@@ -36,6 +36,10 @@ export interface DeliveryLog {
     responseBody: string;
     latencyMs: number;
     attemptedAt: string;
+  // Optional fields from backend for rate limit context
+  retryAfterSeconds?: number;
+  isRateLimitRetry?: boolean;
+  status?: 'Pending' | 'Success' | 'Failed' | 'Retrying' | 'Paused';
 }
 
 // In src/types.ts
