@@ -484,11 +484,12 @@ const Dashboard: React.FC = () => {
                         }}
                         data-tour="create-subscription"
                         className={`
-                            flex items-center gap-2 px-4 py-2 rounded-sm text-xs font-mono font-bold uppercase tracking-wider transition-all shadow-sm
-                            ${setupStatus?.isConfigured
-                                ? 'bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200'
-                                : 'bg-zinc-200 text-zinc-500 cursor-not-allowed dark:bg-zinc-800'
-                            }
+                          flex items-center gap-2 px-4 py-2 rounded-sm text-xs font-mono font-bold uppercase tracking-wider transition-all shadow-sm
+                          ${setupStatus?.isConfigured
+                              // CHANGED: Switched from White/Black to Emerald (Brand Color) for Dark Mode
+                              ? 'bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-emerald-600 dark:hover:bg-emerald-500 dark:text-white dark:border dark:border-emerald-500'
+                              : 'bg-zinc-200 text-zinc-500 cursor-not-allowed dark:bg-zinc-800'
+                          }
                         `}
                         title={!setupStatus?.isConfigured ? 'Click to configure API' : ''}
                     >
