@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, ArrowLeft, CheckCircle2, XCircle } from 'lucide-react';
+import { Loader2, ArrowLeft, CheckCircle2, XCircle, HelpCircle, Github } from 'lucide-react';
 
 interface SetupStatus {
   isConfigured: boolean;
@@ -242,20 +242,6 @@ export default function Settings() {
               </>
             )}
           </div>
-          
-          {/* Onboarding Tutorial Button */}
-          <div className="mt-4 pt-4 border-t border-gray-200">
-            <Button
-              onClick={() => {
-                localStorage.removeItem('panoptes_onboarding_completed');
-                navigate('/dashboard');
-              }}
-              variant="outline"
-              className="w-full"
-            >
-              Launch Tutorial
-            </Button>
-          </div>
         </div>
 
         {/* Success/Error Messages */}
@@ -404,6 +390,56 @@ export default function Settings() {
                 ) : (
                   'Save & Apply'
                 )}
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* Help & Tutorial */}
+        <div className="bg-white rounded-lg shadow p-6 mb-6">
+          <h2 className="text-lg font-medium text-gray-900 mb-4">Help & Tutorial</h2>
+          
+          <div className="space-y-3">
+            {/* Launch Tutorial */}
+            <div className="flex items-center justify-between py-3 border-b border-gray-100">
+              <div className="flex items-center gap-3">
+                <HelpCircle className="w-5 h-5 text-gray-400" />
+                <div>
+                  <h3 className="font-medium text-gray-900">Product Tour</h3>
+                  <p className="text-sm text-gray-600">
+                    Take a guided walkthrough of Panoptes features
+                  </p>
+                </div>
+              </div>
+              <Button
+                onClick={() => {
+                  localStorage.removeItem('panoptes_onboarding_completed');
+                  navigate('/dashboard');
+                }}
+                variant="outline"
+                className="whitespace-nowrap"
+              >
+                Launch Tutorial
+              </Button>
+            </div>
+
+            {/* GitHub Issues */}
+            <div className="flex items-center justify-between py-3">
+              <div className="flex items-center gap-3">
+                <Github className="w-5 h-5 text-gray-400" />
+                <div>
+                  <h3 className="font-medium text-gray-900">Report Issues</h3>
+                  <p className="text-sm text-gray-600">
+                    Report bugs or request features
+                  </p>
+                </div>
+              </div>
+              <Button
+                onClick={() => window.open('https://github.com/gauciv/panoptes/issues', '_blank')}
+                variant="outline"
+                className="whitespace-nowrap"
+              >
+                Open Issue
               </Button>
             </div>
           </div>
