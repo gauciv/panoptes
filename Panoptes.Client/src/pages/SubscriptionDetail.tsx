@@ -40,6 +40,30 @@ const StatsCard = ({ label, value, subtext, alertColor }: { label: string, value
   </div>
 );
 
+const TestWebhookModal = ({ isOpen, onClose, children }: { isOpen: boolean; onClose: () => void; children: React.ReactNode }) => {
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 z-50 overflow-y-auto">
+      <div className="fixed inset-0 bg-gray-900/75 dark:bg-black/80 backdrop-blur-sm transition-opacity" onClick={onClose} />
+      <div className="flex min-h-full items-center justify-center p-4">
+        <div className="relative w-full max-w-4xl bg-white dark:bg-gray-900 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-800 overflow-hidden animate-in zoom-in-95 duration-200">
+          <div className="flex justify-between items-center px-6 py-4 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
+            <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+              <Terminal className="w-5 h-5" /> Webhook Tester
+            </h3>
+            <button onClick={onClose} className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+          </div>
+          <div className="p-0">
+            {children}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: propSubscription, onBack }) => {
   const { id: paramId } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -399,9 +423,8 @@ const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: p
         </div>
       </div>
 
-      {/* Tester Component */}
-      {showTester && activeId && (
-        <div className="animate-in fade-in slide-in-from-top-4 duration-300">
+      <TestWebhookModal isOpen={showTester} onClose={() => setShowTester(false)}>
+        {activeId && (
           <WebhookTester
             subscriptionId={activeId}
             targetUrl={subscription.targetUrl}
@@ -412,8 +435,8 @@ const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: p
               data: { message: "Manual test from dashboard" }
             }}
           />
-        </div>
-      )}
+        )}
+      </TestWebhookModal>
 
       {/* 3. Stats Row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { EventTypeSelector } from './subscription/EventTypeSelector';
 import { WalletAddressInput } from './subscription/WalletAddressInput';
-import { triggerDirectWebhookTest } from '../services/api'; 
+import { Plus, Trash2, ArrowRight, ArrowLeft, Check, Info, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 interface CreateSubscriptionModalProps {
@@ -13,6 +13,7 @@ interface CreateSubscriptionModalProps {
     eventType: string; 
     walletAddresses?: string[];
     minimumLovelace?: number;
+    customHeaders?: Record<string, string>;
   }) => void;
   initialValues?: {
     name?: string;
@@ -20,114 +21,123 @@ interface CreateSubscriptionModalProps {
   };
 }
 
+type HeaderPair = { id: string; key: string; value: string };
+
+const DEFAULT_HEADERS = [
+  { key: 'Content-Type', value: 'application/json' },
+  { key: 'User-Agent', value: 'Panoptes-Webhook/1.0' },
+  { key: 'X-Panoptes-Signature', value: '<hmac-sha256>' },
+  { key: 'X-Panoptes-Event', value: '<event-type>' },
+  { key: 'X-Panoptes-Delivery', value: '<uuid>' },
+];
+
 const CreateSubscriptionModal: React.FC<CreateSubscriptionModalProps> = ({
   isOpen,
   onClose,
   onCreate,
   initialValues,
 }) => {
+  const [step, setStep] = useState(1);
+
   // --- Form State ---
   const [name, setName] = useState('');
   const [targetUrl, setTargetUrl] = useState('');
   const [eventType, setEventType] = useState('Transaction');
   const [minAda, setMinAda] = useState('');
   const [filterTargets, setFilterTargets] = useState<string[]>([]);
+  const [headers, setHeaders] = useState<HeaderPair[]>([]);
 
   // --- UI State ---
   const [isValidatingUrl, setIsValidatingUrl] = useState(false);
-  const [isTestingConnection, setIsTestingConnection] = useState(false);
   const [showFirehoseWarning, setShowFirehoseWarning] = useState(false);
+  const [showDefaultHeaders, setShowDefaultHeaders] = useState(false); // Toggle for default headers view
   
   useEffect(() => {
     if (isOpen) {
-      if (initialValues) {
-        setName(initialValues.name || '');
-        setEventType(initialValues.eventType || 'Transaction');
-      } else {
-        setName('');
-        setEventType('Transaction');
-      }
+      setStep(1);
+      setName(initialValues?.name || '');
+      setEventType(initialValues?.eventType || 'Transaction');
       setTargetUrl('');
       setMinAda('');
       setFilterTargets([]);
+      setHeaders([]);
       setIsValidatingUrl(false);
       setShowFirehoseWarning(false);
+      setShowDefaultHeaders(false);
     }
   }, [isOpen, initialValues]);
 
-  // --- Helpers for Dynamic UI ---
+  // --- Header Helpers ---
+  const addHeader = () => setHeaders([...headers, { id: crypto.randomUUID(), key: '', value: '' }]);
+  const updateHeader = (id: string, field: 'key' | 'value', val: string) => 
+    setHeaders(headers.map(h => h.id === id ? { ...h, [field]: val } : h));
+  const removeHeader = (id: string) => setHeaders(headers.filter(h => h.id !== id));
+
+  // --- Filter Config ---
   const getFilterConfig = (type: string) => {
     switch (type) {
-      case 'NFT Mint':
-        return {
-          label: 'Policy IDs',
-          placeholder: 'Paste Policy ID (Hex)...',
-          description: 'Only trigger when assets with these Policy IDs are minted or burned.'
-        };
-      case 'Asset Move':
-        return {
-          label: 'Asset / Policy Filters',
-          placeholder: 'PolicyID or AssetFingerprint...',
-          description: 'Trigger when specific assets are moved between wallets.'
-        };
-      case 'Transaction':
-      default:
-        return {
-          label: 'Wallet Addresses',
-          placeholder: 'addr1... or stake1...',
-          description: 'Leave empty to listen to ALL network transactions (Firehose Mode).'
-        };
+      case 'NFT Mint': return { label: 'Policy IDs', placeholder: 'Paste Policy ID (Hex)...', description: 'Trigger on mint/burn of these Policies.' };
+      case 'Asset Move': return { label: 'Asset / Policy Filters', placeholder: 'PolicyID...', description: 'Trigger on movement of specific assets.' };
+      case 'Transaction': default: return { label: 'Wallet Addresses', placeholder: 'addr1... or stake1...', description: 'Leave empty for Firehose Mode (All Tx).' };
     }
   };
-
   const filterConfig = getFilterConfig(eventType);
 
-  // --- Actions ---
-
+  // --- FIX: Use Validate Endpoint instead of Test Endpoint ---
   const handleTestConnection = async () => {
-    if (!targetUrl) return;
-    if (!targetUrl.startsWith('http')) {
-      toast.error('URL must start with http:// or https://');
+    if (!targetUrl || !targetUrl.startsWith('http')) {
+      toast.error('Valid URL required for testing');
       return;
     }
 
-    setIsTestingConnection(true);
-    const toastId = toast.loading('Pinging webhook...');
+    setIsValidatingUrl(true);
+    const toastId = toast.loading('Pinging endpoint...');
 
     try {
-      await triggerDirectWebhookTest('test-connection', {
-        Event: 'Test',
-        Message: 'Panoptes connection verification',
-        Timestamp: new Date().toISOString()
+      // Use the raw fetch to hit the stateless validation endpoint
+      // This avoids the "Guid Parse" error on the backend
+      const response = await fetch('/Subscriptions/validate-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(targetUrl) // Send just the string
       });
-      toast.success('Connection Successful! (200 OK)', { id: toastId });
+
+      const result = await response.json();
+
+      if (response.ok && result.valid) {
+        toast.success(`Success: ${result.message}`, { id: toastId });
+      } else {
+        toast.error(`Unreachable: ${result.message || response.statusText}`, { id: toastId });
+      }
     } catch (err: any) {
-      console.error(err);
-      toast.error(`Connection Failed: ${err.message || 'Unknown error'}`, { id: toastId });
+      toast.error(`Connection Failed: ${err.message}`, { id: toastId });
     } finally {
-      setIsTestingConnection(false);
+      setIsValidatingUrl(false);
     }
   };
 
-  const isFormValid = name.trim().length > 0 && targetUrl.startsWith('http');
+  const isStep1Valid = name.trim().length > 0 && targetUrl.startsWith('http');
 
-  const handlePreSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!isFormValid) return;
-
-    // Check for Firehose condition (Transaction type with no filters)
-    if (filterTargets.length === 0 && eventType === 'Transaction') {
-      setShowFirehoseWarning(true);
-    } else {
-      executeCreate();
-    }
+  const handleNext = () => {
+    if (!isStep1Valid) return;
+    setStep(2);
   };
 
-  const executeCreate = () => {
+  const handleFinalSubmit = () => {
     let lovelace: number | undefined = undefined;
     if (minAda && !isNaN(parseFloat(minAda))) {
        const val = parseFloat(minAda);
        if (val > 0) lovelace = Math.floor(val * 1_000_000);
+    }
+
+    const customHeaders: Record<string, string> = {};
+    headers.forEach(h => {
+        if (h.key.trim()) customHeaders[h.key.trim()] = h.value.trim();
+    });
+
+    if (filterTargets.length === 0 && eventType === 'Transaction' && !showFirehoseWarning) {
+      setShowFirehoseWarning(true);
+      return;
     }
 
     onCreate({
@@ -135,7 +145,8 @@ const CreateSubscriptionModal: React.FC<CreateSubscriptionModalProps> = ({
       targetUrl: targetUrl.trim(),
       eventType,
       walletAddresses: filterTargets.length > 0 ? filterTargets : undefined,
-      minimumLovelace: lovelace
+      minimumLovelace: lovelace,
+      customHeaders: Object.keys(customHeaders).length > 0 ? customHeaders : undefined
     });
     onClose();
   };
@@ -144,10 +155,7 @@ const CreateSubscriptionModal: React.FC<CreateSubscriptionModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div 
-        className="fixed inset-0 bg-gray-900/75 dark:bg-black/80 backdrop-blur-sm transition-opacity"
-        onClick={onClose}
-      />
+      <div className="fixed inset-0 bg-gray-900/75 dark:bg-black/80 backdrop-blur-sm transition-opacity" onClick={onClose} />
 
       <div className="flex min-h-full items-center justify-center p-4">
         <div className="relative w-full max-w-5xl bg-white dark:bg-black rounded-xl shadow-2xl overflow-hidden border border-gray-200 dark:border-gray-800 flex flex-col max-h-[90vh]">
@@ -156,90 +164,72 @@ const CreateSubscriptionModal: React.FC<CreateSubscriptionModalProps> = ({
           <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/30">
             <div>
               <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 font-michroma tracking-wide">New Subscription</h3>
-              <p className="text-xs text-gray-500 dark:text-gray-400 font-mono mt-1">Configure trigger and filters</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 font-mono mt-1">
+                {step === 1 ? 'Step 1: Configuration & Filters' : 'Step 2: Delivery Options'}
+              </p>
             </div>
-            <button onClick={onClose} className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-200 transition-colors">
-              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
+            
+            <div className="flex items-center gap-2">
+                <div className={`h-1.5 w-8 rounded-full transition-colors ${step === 1 ? 'bg-indigo-600 dark:bg-green-500' : 'bg-gray-200 dark:bg-gray-700'}`} />
+                <div className={`h-1.5 w-8 rounded-full transition-colors ${step === 2 ? 'bg-indigo-600 dark:bg-green-500' : 'bg-gray-200 dark:bg-gray-700'}`} />
+            </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto custom-scrollbar">
-            <div className="p-6 md:p-8 space-y-8">
-              
-              {/* Split Layout */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 h-full">
-                
-                {/* LEFT: Core Config */}
+          <div className="flex-1 overflow-y-auto custom-scrollbar p-6 md:p-8">
+            
+            {/* STEP 1 */}
+            {step === 1 && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 h-full animate-in fade-in slide-in-from-left-4 duration-300">
                 <div className="space-y-6">
                   <div className="space-y-1.5">
-                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
-                      Friendly Name <span className="text-red-500">*</span>
-                    </label>
+                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">Friendly Name *</label>
                     <input
                       type="text"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       placeholder="e.g. Main Wallet Tracker"
-                      className="w-full h-10 px-3 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-black text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-sentinel focus:border-sentinel transition-all placeholder:text-gray-500 text-sm"
+                      className="w-full h-10 px-3 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-black text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-sentinel text-sm"
                       autoFocus
                     />
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
-                      Webhook URL <span className="text-red-500">*</span>
-                    </label>
+                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">Webhook URL *</label>
                     <div className="relative">
                       <input
                         type="text"
                         value={targetUrl}
                         onChange={(e) => setTargetUrl(e.target.value)}
                         placeholder="https://api.mysite.com/webhook"
-                        className={`w-full h-10 pl-3 pr-20 rounded-lg border bg-white dark:bg-black text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-sentinel focus:border-sentinel transition-all placeholder:text-gray-500 text-sm font-mono ${
-                          targetUrl && !targetUrl.startsWith('http')
-                            ? 'border-red-500' 
-                            : 'border-gray-300 dark:border-gray-700'
-                        }`}
+                        className="w-full h-10 pl-3 pr-20 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-black text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-sentinel font-mono text-sm"
                       />
                       <button
                         type="button"
                         onClick={handleTestConnection}
-                        disabled={!targetUrl || isTestingConnection}
+                        disabled={!targetUrl || isValidatingUrl}
                         className="absolute right-1 top-1 bottom-1 px-3 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-xs font-medium text-gray-700 dark:text-gray-300 rounded-md transition-colors disabled:opacity-50"
                       >
-                        {isTestingConnection ? '...' : 'Test'}
+                        {isValidatingUrl ? '...' : 'Test'}
                       </button>
                     </div>
                   </div>
 
-                  {/* Visual Event Selector */}
                   <EventTypeSelector value={eventType} onChange={setEventType} />
 
                   <div className="space-y-1.5">
-                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center justify-between">
-                      Min Value
-                      <span className="text-[10px] text-gray-500 font-normal bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded">Optional</span>
-                    </label>
-                    <div className="relative">
-                        <input
+                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">Min Value (ADA)</label>
+                    <input
                         type="number"
                         min="0"
                         step="0.1"
                         placeholder="0"
                         value={minAda}
                         onChange={(e) => setMinAda(e.target.value)}
-                        className="w-full h-10 pl-3 pr-10 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-black text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-sentinel focus:border-sentinel transition-all placeholder:text-gray-500 text-sm font-mono"
-                      />
-                      <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                        <span className="text-gray-500 dark:text-gray-400 text-xs font-bold">ADA</span>
-                      </div>
-                    </div>
+                        className="w-full h-10 px-3 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-black text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-sentinel text-sm"
+                    />
                   </div>
                 </div>
 
-                {/* RIGHT: Dynamic Chips Input */}
                 <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-900/20 rounded-xl border border-gray-200 dark:border-gray-800 p-5">
                   <WalletAddressInput 
                     addresses={filterTargets}
@@ -250,44 +240,141 @@ const CreateSubscriptionModal: React.FC<CreateSubscriptionModalProps> = ({
                   />
                 </div>
               </div>
-            </div>
+            )}
+
+            {/* STEP 2 */}
+            {step === 2 && (
+              <div className="flex flex-col h-full animate-in fade-in slide-in-from-right-4 duration-300">
+                 
+                 {/* Default Headers Section */}
+                 <div className="bg-gray-50 dark:bg-gray-900/40 border border-gray-200 dark:border-gray-800 rounded-lg overflow-hidden mb-6">
+                    <button 
+                      onClick={() => setShowDefaultHeaders(!showDefaultHeaders)}
+                      className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-100 dark:hover:bg-gray-800/50 transition-colors"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Info className="w-4 h-4 text-gray-500" />
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Default Headers</span>
+                        <span className="text-xs text-gray-500 font-normal">(Included automatically)</span>
+                      </div>
+                      <span className="text-xs text-indigo-600 dark:text-green-500 font-medium">
+                        {showDefaultHeaders ? 'Hide' : 'View'}
+                      </span>
+                    </button>
+                    
+                    {showDefaultHeaders && (
+                      <div className="px-4 pb-4 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-black">
+                        <div className="mt-3 grid gap-2">
+                          {DEFAULT_HEADERS.map((h, i) => (
+                            <div key={i} className="flex items-center gap-3 text-xs font-mono">
+                              <span className="w-40 text-gray-500 dark:text-gray-400 text-right">{h.key}:</span>
+                              <span className="text-gray-800 dark:text-gray-200 bg-gray-100 dark:bg-gray-900 px-2 py-0.5 rounded">{h.value}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                 </div>
+
+                 {/* Custom Headers Section */}
+                 <div className="flex-1 overflow-y-auto">
+                    <div className="flex items-center justify-between mb-4">
+                        <h4 className="text-sm font-bold text-gray-900 dark:text-white">Custom Headers</h4>
+                        <button onClick={addHeader} className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 dark:bg-green-900/20 text-indigo-600 dark:text-green-400 rounded-md text-xs font-bold hover:bg-indigo-100 dark:hover:bg-green-900/30 transition-colors">
+                            <Plus className="w-3 h-3" /> Add Header
+                        </button>
+                    </div>
+
+                    {headers.length === 0 ? (
+                        <div className="text-center py-12 border-2 border-dashed border-gray-200 dark:border-gray-800 rounded-lg">
+                            <p className="text-sm text-gray-500 mb-2">No custom headers configured.</p>
+                            <p className="text-xs text-gray-400">Add headers like <code>Authorization</code> or <code>X-Api-Key</code> if your endpoint requires them.</p>
+                        </div>
+                    ) : (
+                        <div className="space-y-3">
+                            {headers.map((h, idx) => (
+                                <div key={h.id} className="flex items-center gap-3 animate-in slide-in-from-bottom-2 duration-200">
+                                    <div className="flex-1 flex gap-3">
+                                      <input 
+                                          type="text" 
+                                          placeholder="Header Key (e.g. X-Api-Key)"
+                                          value={h.key}
+                                          onChange={(e) => updateHeader(h.id, 'key', e.target.value)}
+                                          className="flex-1 h-10 px-3 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-black font-mono text-sm focus:ring-1 focus:ring-sentinel"
+                                      />
+                                      <input 
+                                          type="text" 
+                                          placeholder="Value"
+                                          value={h.value}
+                                          onChange={(e) => updateHeader(h.id, 'value', e.target.value)}
+                                          className="flex-1 h-10 px-3 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-black font-mono text-sm focus:ring-1 focus:ring-sentinel"
+                                      />
+                                    </div>
+                                    <button onClick={() => removeHeader(h.id)} className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors">
+                                        <Trash2 className="w-4 h-4" />
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                 </div>
+              </div>
+            )}
           </div>
 
           {/* Footer */}
-          <div className="flex items-center justify-end gap-3 px-6 py-4 bg-gray-50 dark:bg-gray-900/30 border-t border-gray-200 dark:border-gray-800">
-            <button
-              onClick={onClose}
-              disabled={isValidatingUrl}
-              className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handlePreSubmit}
-              disabled={isValidatingUrl || !isFormValid}
-              className={`
-                px-6 py-2 text-sm font-bold text-black rounded-lg shadow-sm
-                transition-all transform active:scale-95
-                ${!isFormValid
-                  ? 'bg-sentinel/50 cursor-not-allowed' 
-                  : 'bg-sentinel hover:bg-sentinel-hover shadow-sentinel/20'}
-              `}
-            >
-              Create Subscription
-            </button>
+          <div className="flex items-center justify-between px-6 py-4 bg-gray-50 dark:bg-gray-900/30 border-t border-gray-200 dark:border-gray-800">
+            {step === 2 ? (
+                <button
+                    onClick={() => setStep(1)}
+                    className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                >
+                    <ArrowLeft className="w-4 h-4" /> Back
+                </button>
+            ) : (
+                <button
+                    onClick={onClose}
+                    className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                >
+                    Cancel
+                </button>
+            )}
+
+            {step === 1 ? (
+                <button
+                    onClick={handleNext}
+                    disabled={!isStep1Valid}
+                    className={`flex items-center gap-2 px-6 py-2 text-sm font-bold text-white rounded-lg shadow-sm transition-all ${
+                        !isStep1Valid ? 'bg-gray-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700 dark:bg-green-600 dark:hover:bg-green-500'
+                    }`}
+                >
+                    Next Step <ArrowRight className="w-4 h-4" />
+                </button>
+            ) : (
+                <button
+                    onClick={handleFinalSubmit}
+                    disabled={isValidatingUrl}
+                    className="flex items-center gap-2 px-6 py-2 text-sm font-bold text-black bg-sentinel hover:bg-sentinel-hover shadow-sentinel/20 rounded-lg shadow-sm transition-all"
+                >
+                    <Check className="w-4 h-4" /> Create Subscription
+                </button>
+            )}
           </div>
 
-          {/* Warning Modals */}
+          {/* Firehose Warning */}
           {showFirehoseWarning && (
              <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/80 dark:bg-black/80 backdrop-blur-sm p-6">
                 <div className="bg-white dark:bg-black border-2 border-yellow-500 rounded-xl max-w-md w-full p-6 shadow-2xl">
-                    <h4 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">High Traffic Warning</h4>
+                    <h4 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2 flex items-center gap-2">
+                        <AlertCircle className="w-5 h-5 text-yellow-500" />
+                        High Traffic Warning
+                    </h4>
                     <p className="text-sm text-gray-600 dark:text-gray-300 mb-6">
-                        You are about to listen to <strong>EVERY transaction</strong> (Firehose Mode). This may generate significant load.
+                        You are about to listen to <strong>EVERY transaction</strong> on the network (Firehose Mode). This may generate significant load.
                     </p>
                     <div className="flex gap-3 justify-end">
-                        <button onClick={() => setShowFirehoseWarning(false)} className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-700 rounded-lg">Back</button>
-                        <button onClick={executeCreate} className="px-4 py-2 text-sm font-bold text-white bg-yellow-600 hover:bg-yellow-500 rounded-lg">Proceed</button>
+                        <button onClick={() => setShowFirehoseWarning(false)} className="px-4 py-2 text-sm border rounded-lg text-gray-700 dark:text-gray-300 dark:border-gray-700">Back</button>
+                        <button onClick={handleFinalSubmit} className="px-4 py-2 text-sm font-bold text-white bg-yellow-600 hover:bg-yellow-700 rounded-lg">Confirm</button>
                     </div>
                 </div>
              </div>
