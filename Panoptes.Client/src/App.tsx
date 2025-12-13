@@ -1,12 +1,15 @@
-import { BrowserRouter as Router, Routes, Route, Navigate, useLocation} from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { createContext, useEffect, useState } from 'react';
 import { Toaster } from 'react-hot-toast';
 import Dashboard from './pages/Dashboard';
 import SubscriptionDetail from './pages/SubscriptionDetail';
 import Settings from './pages/Settings';
 import Health from './pages/Health';
+import Profile from './pages/Profile'; // <--- 1. Import Profile Page
 import { DashboardLayout } from './layouts/DashboardLayout';
 import Landing from './pages/Landing';
+
+import { useAuth, AuthProvider } from './context/AuthContext';
 import { useScrollbarTheme } from './hooks/useScrollbarTheme';
 import { useAuth, AuthProvider } from './context/AuthContext'; // 1. Import AuthProvider
 import { CustomCursor } from './pages/landing/components/Cursor';
@@ -15,7 +18,7 @@ import { CustomCursor } from './pages/landing/components/Cursor';
 export const ThemeContext = createContext<{
   isDark: boolean;
   setIsDark: (v: boolean) => void;
-}>({ isDark: false, setIsDark: () => {} });
+}>({ isDark: false, setIsDark: () => { } });
 
 // --- GUARDS ---
 
@@ -38,15 +41,15 @@ function RequireAuth({ children }: { children: JSX.Element }) {
 
 // 2. Guest Guard: Redirects logged-in users away from Landing
 function RedirectIfAuthenticated({ children }: { children: JSX.Element }) {
-    const { user, loading } = useAuth();
-    
-    if (loading) return null;
-    
-    if (user) {
-        return <Navigate to="/dashboard" replace />;
-    }
-    
-    return <>{children}</>;
+  const { user, loading } = useAuth();
+
+  if (loading) return null;
+
+  if (user) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return <>{children}</>;
 }
 
 function App() {
@@ -55,7 +58,7 @@ function App() {
       const stored = localStorage.getItem('theme');
       if (stored === 'dark') return true;
       if (stored === 'light') return false;
-    } catch (e) {}
+    } catch (e) { }
     return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
   });
 
@@ -70,7 +73,7 @@ function App() {
     }
     try {
       localStorage.setItem('theme', isDark ? 'dark' : 'light');
-    } catch (e) {}
+    } catch (e) { }
   }, [isDark]);
 
   // Apply scrollbar theme dynamically
@@ -78,8 +81,14 @@ function App() {
 
   return (
     <ThemeContext.Provider value={{ isDark, setIsDark }}>
+
+      <AuthProvider>
+        <Toaster
+          position="top-right"
+
       <Toaster
           position="bottom-right"
+
           toastOptions={{
             className: 'font-mono text-sm', 
             style: {
@@ -112,39 +121,51 @@ function App() {
             },
           }}
         />
+
+
       <CustomCursor/>
       <AuthProvider>
         
+
         <Router>
           <Routes>
-            {/* PUBLIC ROUTE: Landing Page 
-                Wrapped in RedirectIfAuthenticated so logged-in users go straight to dashboard 
-            */}
-            <Route 
-                path="/" 
-                element={
-                    <RedirectIfAuthenticated>
-                        <Landing />
-                    </RedirectIfAuthenticated>
-                } 
+            {/* PUBLIC ROUTE: Landing Page */}
+            <Route
+              path="/"
+              element={
+                <RedirectIfAuthenticated>
+                  <Landing />
+                </RedirectIfAuthenticated>
+              }
             />
 
-            {/* PROTECTED ROUTES: Dashboard Area 
-                Moved to "/dashboard" to avoid conflict with Landing
-            */}
-            <Route 
-                path="/dashboard" 
-                element={
-                    <RequireAuth>
-                        <DashboardLayout />
-                    </RequireAuth>
-                }
+            {/* PROTECTED ROUTES: Dashboard Area */}
+            <Route
+              path="/dashboard"
+              element={
+                <RequireAuth>
+                  <DashboardLayout />
+                </RequireAuth>
+              }
             >
               <Route index element={<Dashboard />} />
               <Route path="analytics" element={<Dashboard />} />
               <Route path="health" element={<Health />} />
               <Route path="subscriptions/:id" element={<SubscriptionDetail />} />
               <Route path="settings" element={<Settings />} />
+            </Route>
+
+            {/* --- NEW ROUTE: Profile --- */}
+            {/* Using DashboardLayout so the sidebar persists */}
+            <Route
+              path="/profile"
+              element={
+                <RequireAuth>
+                  <DashboardLayout />
+                </RequireAuth>
+              }
+            >
+              <Route index element={<Profile />} />
             </Route>
 
             {/* Fallback */}
