@@ -1,4 +1,13 @@
 import React from 'react';
+import { 
+  Activity, 
+  BarChart3, 
+  Clock, 
+  Wallet, 
+  AlertTriangle, 
+  Layers, 
+  RefreshCw 
+} from 'lucide-react';
 import StatCard from '../components/StatCard';
 import TimeRangeSelector from '../components/TimeRangeSelector';
 import VolumeChart from '../components/VolumeChart';
@@ -13,19 +22,20 @@ interface AnalyticsPageProps {
 
 const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ subscriptions }) => {
   const {
-    totalWebhooks,      // Restored
+    totalWebhooks,
     successRate,
     avgLatency,
-    rateLimitedCount,   // Restored
+    rateLimitedCount,
     
-    // New Value Metrics
+    // Value Metrics
     totalVolumeAda,
     topSourceWallet,
     topSourceCount,
     
+    // Chart Data
     volumeData,
     distributionData,
-    heatmapData,        // New Heatmap Data
+    heatmapData,
     
     isLoading,
     error,
@@ -34,89 +44,120 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ subscriptions }) => {
     refetch,
   } = useStatsData(subscriptions);
 
+  // --- ERROR STATE ---
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
-        <p className="text-red-800 font-medium mb-2">Failed to load statistics</p>
-        <button onClick={refetch} className="px-4 py-2 bg-red-600 text-white rounded-md">Retry</button>
+      <div className="bg-red-50 dark:bg-red-950/20 border-l-4 border-red-500 p-6 shadow-sm rounded-sm">
+        <div className="flex items-start gap-4">
+          <AlertTriangle className="w-6 h-6 text-red-600 mt-0.5" />
+          <div>
+            <h3 className="font-mono font-bold text-red-800 dark:text-red-400 uppercase tracking-wider">
+              Telemetry Load Failure
+            </h3>
+            <p className="font-mono text-sm text-red-700 dark:text-red-300 mt-2 mb-4">
+              Unable to retrieve analytics data from the aggregation engine.
+            </p>
+            <button 
+              onClick={refetch} 
+              className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-mono text-xs uppercase tracking-wider rounded-sm flex items-center gap-2 transition-colors"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              Retry_Connection
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
 
+  // --- MAIN CONTENT ---
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="space-y-8">
+      
+      {/* 1. Header & Controls */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-zinc-200 dark:border-zinc-800 pb-6">
         <div>
-          <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100">Performance Deep Dive</h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Latency analysis, value transfer, and traffic patterns
+          <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 font-mono uppercase tracking-tight flex items-center gap-3">
+            <BarChart3 className="w-6 h-6 text-zinc-500" />
+            Performance_Deep_Dive
+          </h2>
+          <p className="text-xs font-mono text-zinc-500 mt-1">
+            LATENCY ANALYSIS | TRAFFIC PATTERNS | VALUE TRANSFER
           </p>
         </div>
         <TimeRangeSelector value={timeRange} onChange={setTimeRange} />
       </div>
 
-      {/* Metric Cards Grid - Now displaying 4 key metrics (You can swap these as needed) */}
+      {/* 2. Primary Metrics Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* 1. Total Volume (Value) */}
+        
+        {/* Total Volume */}
         <StatCard
           title="Total Volume"
-          value={isLoading ? '—' : `₳ ${totalVolumeAda.toLocaleString(undefined, { maximumFractionDigits: 0 })}`}
-          subtitle="ADA transferred"
-          icon={<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
+          value={isLoading ? 'CALCULATING...' : `₳ ${totalVolumeAda.toLocaleString(undefined, { maximumFractionDigits: 0 })}`}
+          subtitle="ASSET_TRANSFER_VALUE"
+          icon={<Activity className="w-5 h-5" />}
         />
         
-        {/* 2. Success Rate (Health) */}
+        {/* Success Rate */}
         <StatCard
           title="Success Rate"
-          value={isLoading ? '—' : `${successRate}%`}
-          subtitle="HTTP 2xx responses"
+          value={isLoading ? '...' : `${successRate}%`}
+          subtitle="HTTP_2XX_RATIO"
           trend={successRate >= 99 ? 'up' : 'down'}
-          icon={<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
+          trendValue={successRate >= 99 ? 'OPTIMAL' : 'DEGRADED'}
+          icon={<div className="font-mono font-bold text-xs">OK</div>}
         />
 
-        {/* 3. Avg Latency (Performance) */}
+        {/* Avg Latency */}
         <StatCard
           title="Avg Latency"
-          value={isLoading ? '—' : `${avgLatency}ms`}
-          subtitle="Response time"
+          value={isLoading ? '...' : `${avgLatency}ms`}
+          subtitle="RESPONSE_TIME"
           trend={avgLatency <= 500 ? 'up' : 'neutral'}
-          icon={<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
+          trendValue={avgLatency <= 200 ? 'FAST' : 'NORMAL'}
+          icon={<Clock className="w-5 h-5" />}
         />
         
-        {/* 4. Top Source (Behavior) */}
+        {/* Top Source */}
         <StatCard
           title="Top Source"
-          value={isLoading ? '—' : (topSourceWallet || 'None')}
-          subtitle={topSourceWallet ? `${topSourceCount} events` : 'No activity'}
-          icon={<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>}
+          value={isLoading ? '...' : (topSourceWallet ? `${topSourceWallet.slice(0, 8)}...` : 'NONE')}
+          subtitle={topSourceWallet ? `EVENTS: ${topSourceCount}` : 'NO_ACTIVITY'}
+          icon={<Wallet className="w-5 h-5" />}
         />
       </div>
 
-      {/* Secondary Metrics Row (Optional - "Rate Limited" and "Total Events" restored here) */}
+      {/* 3. Secondary Metrics (Dense Row) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-         <StatCard
+        <StatCard
           title="Rate Limited"
-          value={isLoading ? '—' : rateLimitedCount}
-          subtitle="Throttled events (429)"
+          value={isLoading ? '...' : rateLimitedCount.toString()}
+          subtitle="HTTP_429_THROTTLED"
           trend={rateLimitedCount === 0 ? 'up' : 'down'}
-          icon={<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>}
+          alertColor={rateLimitedCount > 0 ? 'bg-amber-50 border-amber-200 dark:bg-amber-900/10 dark:border-amber-900' : undefined}
+          icon={<AlertTriangle className="w-5 h-5" />}
         />
-         <StatCard
+        <StatCard
           title="Total Events"
-          value={isLoading ? '—' : totalWebhooks.toLocaleString()}
-          subtitle="Total logs in period"
-          icon={<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>}
+          value={isLoading ? '...' : totalWebhooks.toLocaleString()}
+          subtitle="LOG_AGGREGATION_COUNT"
+          icon={<Layers className="w-5 h-5" />}
         />
       </div>
 
-      {/* Charts Grid */}
+      {/* 4. Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <VolumeChart data={volumeData} timeRange={timeRange} isLoading={isLoading} />
-        <DistributionChart data={distributionData} isLoading={isLoading} />
+        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-sm shadow-sm p-4">
+            <VolumeChart data={volumeData} timeRange={timeRange} isLoading={isLoading} />
+        </div>
+        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-sm shadow-sm p-4 overflow-hidden">
+            <DistributionChart data={distributionData} isLoading={isLoading} />
+        </div>
       </div>
 
-      {/* Heatmap Row */}
-      <div className="w-full">
+      {/* 5. Heatmap Section */}
+      <div className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-sm shadow-sm p-4 overflow-hidden">
         <ActivityHeatmap data={heatmapData} isLoading={isLoading} />
       </div>
     </div>

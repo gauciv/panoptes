@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { DeliveryLog, WebhookSubscription } from '../types';
-import { Clock, AlertCircle, CheckCircle, Terminal, RefreshCw, XCircle } from 'lucide-react';
-import { cn } from '../lib/utils'; // Assuming you have a utility for classes, or just remove if not
+import { Clock, CheckCircle, Terminal, RefreshCw, XCircle } from 'lucide-react';
 
 interface LogViewerProps {
     logs: DeliveryLog[];
