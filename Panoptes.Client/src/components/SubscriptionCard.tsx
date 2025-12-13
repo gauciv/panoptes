@@ -157,19 +157,24 @@ export const SubscriptionCard: React.FC<SubscriptionCardProps> = ({
     >
       {/* --- LEFT PANEL: INFO --- */}
       <div className="flex-1 p-3 md:p-4 flex flex-col justify-center min-w-0">
-        <div className="flex items-center justify-between mb-2">
+        
+        {/* MODIFIED HEADER: Title separated from Metadata */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-y-2 mb-2">
+            
+            {/* Title Container */}
+            <h3 className="font-bold text-zinc-800 dark:text-zinc-100 text-sm md:text-base truncate">
+                {subscription.name}
+            </h3>
+            
+            {/* Metadata Container: Tag + Status */}
             <div className="flex items-center gap-2">
-                <h3 className="font-bold text-zinc-800 dark:text-zinc-100 text-sm md:text-base truncate">
-                  {subscription.name}
-                </h3>
-                <span className="px-1.5 py-0.5 text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-600 uppercase tracking-tight">
+                 <span className="px-1.5 py-0.5 text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-600 uppercase tracking-tight">
                   {subscription.eventType}
                 </span>
+                <span className={`text-[9px] font-mono font-bold tracking-widest uppercase ${config.textCol}`}>
+                   {config.text}
+                </span>
             </div>
-            
-            <span className={`text-[9px] font-mono font-bold tracking-widest uppercase ${config.textCol}`}>
-               {config.text}
-            </span>
         </div>
 
         {/* URL Box */}
