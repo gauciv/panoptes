@@ -40,9 +40,9 @@ export const SubscriptionGrid: React.FC<SubscriptionGridProps> = ({
   // --- EMPTY STATE ---
   if (!subscriptions || subscriptions.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 px-4 border-2 border-dashed border-gray-300 rounded-xl bg-gray-50/50">
-        <h3 className="text-lg font-medium text-gray-900 mb-1">No subscriptions yet</h3>
-        <p className="text-gray-500 text-center max-w-sm">
+      <div className="flex flex-col items-center justify-center py-16 px-4 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-xl bg-gray-50/50 dark:bg-white/5">
+        <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-1">No subscriptions yet</h3>
+        <p className="text-gray-500 dark:text-gray-400 text-center max-w-sm">
           Create your first webhook subscription to start monitoring events.
         </p>
       </div>
@@ -51,7 +51,8 @@ export const SubscriptionGrid: React.FC<SubscriptionGridProps> = ({
 
   // --- LIST STATE ---
   return (
-    <div className="grid grid-cols-1 gap-3 p-4">
+    // ADDED: border, subtle background tint, rounded corners, and shadow
+    <div className="grid grid-cols-1 gap-3 p-4 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 shadow-sm">
       {subscriptions.map((sub) => (
         <SubscriptionCard 
           key={sub.id} 
