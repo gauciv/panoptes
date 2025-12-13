@@ -1,8 +1,8 @@
 import React from 'react';
-import StatCard from './StatCard';
-import TimeRangeSelector from './TimeRangeSelector';
-import VolumeChart from './VolumeChart';
-import DistributionChart from './DistributionChart';
+import StatCard from '../components/StatCard';
+import TimeRangeSelector from '../components/TimeRangeSelector';
+import VolumeChart from '../components/VolumeChart';
+import DistributionChart from '../components/DistributionChart';
 import { useStatsData, formatTimeRangeLabel, isCustomTimeRange } from '../hooks/useStatsData';
 import { WebhookSubscription } from '../types';
 
@@ -38,8 +38,8 @@ const StatsDashboard: React.FC<StatsDashboardProps> = ({ subscriptions }) => {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100">Analytics Overview</h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+          <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Analytics Overview</h2>
+          <p className="text-md text-gray-500 dark:text-gray-400 mt-1">
             Historical performance metrics
           </p>
         </div>
