@@ -229,10 +229,12 @@ const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: p
 
   const calculateSuccessRate = () => {
     if (!logs || logs.length === 0) return "-";
-    const total = logs.length;
-    const successCount = logs.filter(l => l.responseStatusCode >= 200 && l.responseStatusCode < 300).length;
+    // Exclude 429s from denominator and numerator
+    const filteredLogs = logs.filter(l => l.responseStatusCode !== 429);
+    if (filteredLogs.length === 0) return "-";
+    const successCount = filteredLogs.filter(l => l.responseStatusCode >= 200 && l.responseStatusCode < 300).length;
     if (successCount === 0) return "0%";
-    return Math.round((successCount / total) * 100) + "%";
+    return Math.round((successCount / filteredLogs.length) * 100) + "%";
   };
 
   const calculateAvgLatency = () => {
