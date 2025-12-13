@@ -323,16 +323,43 @@ function groupLogsByEventType(
   logs: DeliveryLog[],
   subscriptions: WebhookSubscription[]
 ): DistributionDataPoint[] {
+  // Create a map for fallback lookup
   const subscriptionMap = new Map(subscriptions.map(s => [s.id, s]));
   const eventTypeCounts: Map<string, number> = new Map();
   
   logs.forEach(log => {
-    const subscription = subscriptionMap.get(log.subscriptionId);
-    const eventType = subscription?.eventType || 'Unknown';
+    let eventType = 'Unknown';
+
+    // 1. Try to extract the real event type snapshot from the payload JSON
+    if (log.payloadJson) {
+      try {
+        const payload = JSON.parse(log.payloadJson);
+        if (payload.Event) {
+          eventType = payload.Event;
+        }
+      } catch (e) {
+        // JSON parse failed, ignore
+      }
+    }
+
+    // 2. If JSON parsing failed or didn't have Event, try the current subscription list
+    if (eventType === 'Unknown' || !eventType) {
+       const subscription = subscriptionMap.get(log.subscriptionId);
+       if (subscription && subscription.eventType) {
+         eventType = subscription.eventType;
+       }
+    }
+
+    // 3. Fallback for capitalization consistency (Backend sends 'Transaction', UI might use 'transaction')
+    // Capitalize first letter to merge them
+    if (eventType && eventType !== 'Unknown') {
+        eventType = eventType.charAt(0).toUpperCase() + eventType.slice(1);
+    }
+
     eventTypeCounts.set(eventType, (eventTypeCounts.get(eventType) || 0) + 1);
   });
   
-  const total = logs.length || 1; // Avoid division by zero
+  const total = logs.length || 1; 
   
   return Array.from(eventTypeCounts.entries())
     .map(([eventType, count], index) => ({

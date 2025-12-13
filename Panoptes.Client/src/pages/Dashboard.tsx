@@ -24,7 +24,7 @@ import LogViewer from '../components/LogViewer';
 import CreateSubscriptionModal from '../components/CreateSubscriptionModal';
 import EditSubscriptionModal from '../components/EditSubscriptionModal';
 import ConfirmationModal from '../components/ConfirmationModal';
-import StatsDashboard from './Analytics';
+import AnalyticsPage from './Analytics';
 import { SetupWizard } from '../components/SetupWizard';
 import { EmptyState } from '../components/EmptyState';
 import { OnboardingTour } from '../components/OnboardingTour';
@@ -333,7 +333,7 @@ const Dashboard: React.FC = () => {
 
       {/* --- ANALYTICS VIEW --- */}
       {activeView === 'analytics' && (
-        <StatsDashboard subscriptions={subscriptions} />
+        <AnalyticsPage subscriptions={subscriptions} />
       )}
 
       {/* --- OVERVIEW VIEW --- */}
