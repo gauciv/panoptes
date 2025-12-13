@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { BookOpen, ExternalLink, User, Power, ChevronRight } from 'lucide-react';
+import { BookOpen, ExternalLink, User, Power } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { cn } from '../lib/utils';
 import { useNavigate } from 'react-router-dom';
