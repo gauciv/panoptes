@@ -508,7 +508,7 @@ const Dashboard: React.FC = () => {
                     </button>
                   </div>
                 ) : (
-                  <div className="border border-white/10 rounded-lg p-4 bg-white/5">
+                  <div className=" rounded-lg  bg-white/5">
                       <SubscriptionGrid
                         subscriptions={filteredSubscriptions}
                         loading={loading}

@@ -51,8 +51,7 @@ export const SubscriptionGrid: React.FC<SubscriptionGridProps> = ({
 
   // --- LIST STATE ---
   return (
-    // ADDED: border, subtle background tint, rounded corners, and shadow
-    <div className="grid grid-cols-1 gap-3 p-4 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 shadow-sm">
+    <div className="grid grid-cols-1 gap-3 bg-white dark:bg-white/5">
       {subscriptions.map((sub) => (
         <SubscriptionCard 
           key={sub.id} 
