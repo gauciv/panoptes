@@ -207,7 +207,7 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  const handleCreate = async (data: { name: string; targetUrl: string; eventType: string; walletAddresses?: string[] }) => {
+  const handleCreate = async (data: { name: string; targetUrl: string; eventType: string; walletAddresses?: string[]; customHeaders?: Record<string, string>; }) => {
     try {
       await createSubscription({
         name: data.name,
@@ -222,7 +222,8 @@ const Dashboard: React.FC = () => {
         maxWebhooksPerHour: 1000,
         enableBatching: false,
         batchWindowSeconds: 10,
-        walletAddresses: data.walletAddresses || null
+        walletAddresses: data.walletAddresses || null,
+        customHeaders: data.customHeaders ? JSON.stringify(data.customHeaders) : undefined,
       });
       setIsModalOpen(false);
       setInitialModalValues(undefined);
