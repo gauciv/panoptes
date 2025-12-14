@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { fetchUserAttributes } from 'aws-amplify/auth';
-import { User } from 'lucide-react';
 
 interface UserProfile {
   name: string;
