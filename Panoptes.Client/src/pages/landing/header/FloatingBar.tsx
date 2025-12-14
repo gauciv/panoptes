@@ -1,13 +1,19 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { VolumeControl } from '@/components/VolumeControl';
 import { GlitchButton } from '@/components/GlitchButton';
 import { Menu } from './Menu';
+import { useAuth } from '@/context/AuthContext'; // ✅ Import Auth Hook
 
 // 1. Accept the onOpenLogin prop
 export function FloatingBar({ onOpenLogin }: { onOpenLogin: () => void }) {
   const [isVisible, setIsVisible] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  
+  // ✅ Hooks for navigation and auth state
+  const { user } = useAuth();
+  const navigate = useNavigate();
 
   // Scroll Listener
   useEffect(() => {
@@ -25,6 +31,15 @@ export function FloatingBar({ onOpenLogin }: { onOpenLogin: () => void }) {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  // ✅ Handler: Redirect to Dashboard if logged in, otherwise open Modal
+  const handleAuthAction = () => {
+    if (user) {
+        navigate('/dashboard');
+    } else {
+        onOpenLogin();
+    }
+  };
 
   return (
     <>
@@ -49,11 +64,12 @@ export function FloatingBar({ onOpenLogin }: { onOpenLogin: () => void }) {
                {/* Mute Button (Persistent) */}
                <VolumeControl /> 
                
-               {/* 2. Login Shortcut (Desktop) - Updated to open Modal */}
-               <div className="hidden md:block" onClick={onOpenLogin}>
+               {/* 2. Login/Dashboard Shortcut (Desktop) */}
+               <div className="hidden md:block" onClick={handleAuthAction}>
                   <GlitchButton 
-                    label="LOGIN" 
-                    variant="ghost" // Changed to ghost for better contrast on bar
+                    // ✅ Dynamic Label
+                    label={user ? "DASHBOARD" : "LOGIN"} 
+                    variant="ghost" 
                     className="text-[10px] cursor-pointer" 
                   />
                </div>
@@ -86,7 +102,7 @@ export function FloatingBar({ onOpenLogin }: { onOpenLogin: () => void }) {
          {isMenuOpen && (
             <Menu 
                closeMenu={() => setIsMenuOpen(false)} 
-               onOpenLogin={onOpenLogin} // 3. Pass the prop down to the Menu
+               onOpenLogin={handleAuthAction} // ✅ Pass the smart handler here too
             />
          )}
       </AnimatePresence>
