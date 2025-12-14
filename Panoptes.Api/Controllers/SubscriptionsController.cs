@@ -475,8 +475,8 @@ namespace Panoptes.Api.Controllers
             existingSub.TargetAddress = subscription.TargetAddress;
             existingSub.PolicyId = subscription.PolicyId;
             
-            // NEW: Add MinimumLovelace update support
             existingSub.MinimumLovelace = subscription.MinimumLovelace;
+            existingSub.CustomHeaders = subscription.CustomHeaders;
 
             if (subscription.WalletAddresses != null)
             {

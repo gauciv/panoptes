@@ -26,6 +26,7 @@ export interface WebhookSubscription {
     isCircuitBroken?: boolean;
     circuitBrokenReason?: string | null;
     minimumLovelace?: number | null;
+    customHeaders?: string;
 }
 
 export interface DeliveryLog {
