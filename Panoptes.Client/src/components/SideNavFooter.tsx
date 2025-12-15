@@ -1,22 +1,16 @@
 import { useState, useEffect } from 'react';
-import { User, Power } from 'lucide-react'; // Removed BookOpen, ExternalLink
+import { User } from 'lucide-react'; 
 import { useAuth } from '../context/AuthContext';
 import { cn } from '../lib/utils';
 import { useNavigate } from 'react-router-dom';
-import toast from 'react-hot-toast';
-import { LogoutModal } from './LogoutModal';
 
 interface SideNavFooterProps {
   isCollapsed: boolean;
 }
 
 export function SideNavFooter({ isCollapsed }: SideNavFooterProps) {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
-  
-  // Modal State
-  const [showLogoutModal, setShowLogoutModal] = useState(false);
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   // User Identifiers
   const userId = user?.username || user?.signInDetails?.loginId || 'guest';
@@ -24,31 +18,6 @@ export function SideNavFooter({ isCollapsed }: SideNavFooterProps) {
 
   // Display Name State
   const [displayName, setDisplayName] = useState(userEmail);
-
-  // Logout Handlers
-  const handleLogoutClick = (e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent triggering parent click events
-    setShowLogoutModal(true);
-  };
-
-  const handleLogoutConfirm = async () => {
-    setIsLoggingOut(true);
-    try {
-      await logout();
-      toast.success("TERMINAL_SESSION_CLOSED");
-      navigate('/');
-    } catch (error) {
-      console.error("Logout failed", error);
-      toast.error("Logout failed");
-    } finally {
-      setIsLoggingOut(false);
-      setShowLogoutModal(false);
-    }
-  };
-
-  const handleLogoutCancel = () => {
-    setShowLogoutModal(false);
-  };
 
   // Name Resolution Effect
   useEffect(() => {
@@ -58,7 +27,6 @@ export function SideNavFooter({ isCollapsed }: SideNavFooterProps) {
         return;
       }
 
-      // Look up keys with the userId prefix
       const first = localStorage.getItem(`panoptes_user_${userId}_first_name`);
       const last = localStorage.getItem(`panoptes_user_${userId}_last_name`);
 
@@ -76,27 +44,31 @@ export function SideNavFooter({ isCollapsed }: SideNavFooterProps) {
     };
   }, [userId, userEmail]);
 
+  // Handle Navigation (Fixes the "Refresh" bug)
+  const handleProfileClick = () => {
+    navigate('/dashboard/profile'); // ✅ Corrected Path
+  };
+
   return (
     <div className="mt-auto">
-      {/* 2. User Profile Strip (Now the only item) */}
       <div className={cn(
         "border-t border-zinc-200 dark:border-zinc-800 p-2",
         isCollapsed ? "flex justify-center" : ""
       )}>
         {isCollapsed ? (
-          // Collapsed: Show Logout Button
+          // Collapsed: Navigate to Profile
           <button
-            onClick={handleLogoutClick}
-            className="p-2 text-zinc-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors"
-            title="Sign Out"
+            onClick={handleProfileClick}
+            className="p-2 text-zinc-500 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-md transition-colors"
+            title="View Profile"
           >
-            <Power className="w-5 h-5" />
+            <User className="w-5 h-5" />
           </button>
         ) : (
-          // Expanded: Interactive Profile Strip
+          // Expanded: Navigate to Profile
           <div 
             className="flex items-center gap-3 px-2 py-2 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer group transition-colors"
-            onClick={() => navigate('/profile')}
+            onClick={handleProfileClick}
             title="View Profile"
           >
             {/* Avatar */}
@@ -109,36 +81,23 @@ export function SideNavFooter({ isCollapsed }: SideNavFooterProps) {
               <p className="text-xs font-mono font-medium text-zinc-900 dark:text-zinc-100 truncate">
                 {displayName}
               </p>
+              
+              {/* Status Line */}
               <div className="flex items-center gap-1.5 mt-0.5">
                 <span className="relative flex h-1.5 w-1.5">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
                 </span>
+                
+                {/* Fix Duplicate: Only show email if it's different from the name above */}
                 <span className="text-[10px] text-zinc-500 dark:text-zinc-400 truncate max-w-[120px]">
-                  {userEmail}
+                  {displayName !== userEmail ? userEmail : 'Active Session'}
                 </span>
               </div>
             </div>
-
-            {/* Actions: Logout Button */}
-            <button
-              onClick={handleLogoutClick}
-              className="p-1.5 text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors opacity-0 group-hover:opacity-100"
-              title="Sign Out"
-            >
-              <Power className="w-4 h-4" />
-            </button>
           </div>
         )}
       </div>
-
-      {/* Logout Modal */}
-      <LogoutModal
-        isOpen={showLogoutModal}
-        onConfirm={handleLogoutConfirm}
-        onCancel={handleLogoutCancel}
-        isLoading={isLoggingOut}
-      />
     </div>
   );
 }

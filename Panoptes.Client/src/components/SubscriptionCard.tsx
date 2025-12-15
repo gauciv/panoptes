@@ -110,21 +110,21 @@ export const SubscriptionCard: React.FC<SubscriptionCardProps> = ({
         return {
           // Changed: Added dark:border-l-emerald-400 to make it pop in dark mode
           border: 'border-l-emerald-600 dark:border-l-emerald-400',
-          text: 'OP:NORMAL',
+          text: 'STATUS:NORMAL',
           textCol: 'text-emerald-700 dark:text-emerald-400',
         };
       case 'paused':
         return {
           // Changed: Added dark:border-l-amber-400
           border: 'border-l-amber-500 dark:border-l-amber-400',
-          text: 'OP:STANDBY',
+          text: 'STATUS:STANDBY',
           textCol: 'text-amber-700 dark:text-amber-400',
         };
       case 'disabled':
         return {
           // Changed: Added dark:border-l-rose-500
           border: 'border-l-rose-600 dark:border-l-rose-500',
-          text: 'OP:LIMIT_HIT',
+          text: 'STATUS:LIMIT_HIT',
           textCol: 'text-rose-700 dark:text-rose-400',
         };
     }

@@ -13,8 +13,7 @@ const Profile: React.FC = () => {
     const [lastName, setLastName] = useState('');
     const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
 
-    // 1. Get a unique identifier for the current user (Username or Email)
-    // We prefer username as it's immutable, but email works too.
+    // 1. Get a unique identifier for the current user
     const userId = user?.username || user?.signInDetails?.loginId || 'guest';
     const email = user?.signInDetails?.loginId || 'user@example.com';
 
@@ -25,7 +24,7 @@ const Profile: React.FC = () => {
         const savedFirst = localStorage.getItem(`panoptes_user_${userId}_first_name`);
         const savedLast = localStorage.getItem(`panoptes_user_${userId}_last_name`);
 
-        // Reset state first (in case switching users without full refresh)
+        // Reset state first
         setFirstName(savedFirst || '');
         setLastName(savedLast || '');
     }, [userId]);
@@ -34,8 +33,18 @@ const Profile: React.FC = () => {
     const handleSaveName = () => {
         if (userId === 'guest') return;
 
-        localStorage.setItem(`panoptes_user_${userId}_first_name`, firstName);
-        localStorage.setItem(`panoptes_user_${userId}_last_name`, lastName);
+        // ✅ FIX: Check if values actually changed before saving/toasting
+        const storedFirst = localStorage.getItem(`panoptes_user_${userId}_first_name`) || '';
+        const storedLast = localStorage.getItem(`panoptes_user_${userId}_last_name`) || '';
+
+        // If current state matches stored state, do nothing
+        if (firstName.trim() === storedFirst && lastName.trim() === storedLast) {
+            return; 
+        }
+
+        // Proceed with save
+        localStorage.setItem(`panoptes_user_${userId}_first_name`, firstName.trim());
+        localStorage.setItem(`panoptes_user_${userId}_last_name`, lastName.trim());
 
         // Trigger event so SideNav updates immediately
         window.dispatchEvent(new Event('user_profile_updated'));
