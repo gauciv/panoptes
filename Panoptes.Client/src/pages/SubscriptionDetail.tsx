@@ -18,7 +18,6 @@ import {
   Activity,
   Server,
   Clock,
-  Terminal
 } from 'lucide-react';
 
 import {
@@ -27,7 +26,6 @@ import {
   updateSubscription,
   deleteSubscription,
   toggleSubscriptionActive
-  // !! unused; resetSubscription
 } from '../services/api';
 
 import { WebhookSubscription, DeliveryLog } from '../types';
@@ -37,7 +35,8 @@ import SubscriptionDetailSkeleton from '../components/SubscriptionDetailSkeleton
 import Pagination from '../components/Pagination';
 
 import AdvancedOptionsModal from '../components/AdvancedOptionsModal';
-import WebhookTester from '../components/WebhookTester';
+// FIX: Named import to resolve error 2613
+import { WebhookTester } from '../components/WebhookTester'; 
 import { convertToCSV, downloadFile, generateFilename } from '../utils/exportUtils';
 
 // --- PROPS INTERFACE ---
@@ -65,29 +64,7 @@ const StatsCard = ({ label, value, icon: Icon, alertColor }: { label: string, va
   </div>
 );
 
-const TestWebhookModal = ({ isOpen, onClose, children }: { isOpen: boolean; onClose: () => void; children: React.ReactNode }) => {
-  if (!isOpen) return null;
-  return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="fixed inset-0 bg-gray-900/75 dark:bg-black/80 backdrop-blur-sm transition-opacity" onClick={onClose} />
-      <div className="flex min-h-full items-center justify-center p-4">
-        <div className="relative w-full max-w-4xl bg-white dark:bg-gray-900 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-800 overflow-hidden animate-in zoom-in-95 duration-200">
-          <div className="flex justify-between items-center px-6 py-4 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
-            <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-              <Terminal className="w-5 h-5" /> Webhook Tester
-            </h3>
-            <button onClick={onClose} className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
-              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-            </button>
-          </div>
-          <div className="p-0">
-            {children}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
+// DELETED: Local TestWebhookModal component (Redundant)
 
 const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: propSubscription, onBack }) => {
   const { id: paramId } = useParams<{ id: string }>();
@@ -163,7 +140,7 @@ const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: p
   const handleExportLogs = async (format: 'csv' | 'json') => {
     if (!activeId || !subscription) return;
     try {
-      const limit = 1000; // Fetch larger set for export
+      const limit = 1000; 
       const logsData = await getSubscriptionLogs(activeId, 0, limit);
       const logsToExport = logsData.logs || [];
 
@@ -193,20 +170,17 @@ const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: p
       setLoading(true);
       fetchSubscription().then(() => setLoading(false));
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeId, propSubscription]);
 
   useEffect(() => {
     fetchLogs();
     const logsInterval = setInterval(fetchLogs, 3000);
     return () => clearInterval(logsInterval);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeId, currentPage]);
 
   useEffect(() => {
     const subInterval = setInterval(() => fetchSubscription(true), 3000);
     return () => clearInterval(subInterval);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeId]);
 
   // --- HANDLERS ---
@@ -250,20 +224,6 @@ const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: p
     }
   };
 
-  // !! Not used
-  // const handleReset = async () => {
-  //   if (!activeId) return;
-  //   try {
-  //     await resetSubscription(activeId);
-  //     await fetchSubscription(true);
-  //     setError(null);
-  //   } catch (error: any) {
-  //     console.error("Error resetting subscription:", error);
-  //     const errorMsg = error.response?.data || error.message || "Failed to reset subscription.";
-  //     setError(`Reset Failed: ${errorMsg}`);
-  //   }
-  // };
-
   const handleCopyUrl = () => {
     if (!subscription) return;
     navigator.clipboard.writeText(subscription.targetUrl);
@@ -304,6 +264,14 @@ const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: p
     return <span className="inline-flex items-center px-1.5 py-0.5 rounded-sm text-[10px] font-mono font-bold bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400 border border-red-200 dark:border-red-800">{statusCode} ERR</span>;
   };
 
+  const getPayload = (log: any) => {
+    return log.payloadJson || log.PayloadJson || log.requestPayload || log.RequestPayload || '{}';
+  };
+
+  const getResponse = (log: any) => {
+    return log.responseBody || log.ResponseBody || '(No content)';
+  };
+
   const formatJson = (data: string | object) => {
     try {
       if (typeof data === 'string') return JSON.stringify(JSON.parse(data), null, 2);
@@ -311,7 +279,6 @@ const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: p
     } catch (e) { return String(data); }
   };
 
-  // --- RENDER ---
   if (loading && !subscription) return <SubscriptionDetailSkeleton />;
 
   if (!subscription) {
@@ -339,7 +306,6 @@ const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: p
         <div className="flex items-center gap-3 w-full md:w-auto">
           
           <div className="min-w-0">
-             {/* Header Wrap Fix */}
              <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                 <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 font-mono tracking-tight break-all mr-2">
                     {subscription.name}
@@ -360,10 +326,10 @@ const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: p
           </div>
         </div>
 
-        {/* INDUSTRIAL TOOLS GRID: 2x2 on Mobile, Flex on Desktop */}
+        {/* INDUSTRIAL TOOLS GRID */}
         <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 w-full sm:w-auto">
             <button 
-                onClick={() => setShowTester(!showTester)}
+                onClick={() => setShowTester(true)}
                 className="flex items-center justify-center gap-2 px-3 py-2 bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 rounded-sm hover:bg-zinc-50 dark:hover:bg-zinc-800 text-xs font-mono font-bold uppercase tracking-wider shadow-[2px_2px_0px_0px_rgba(0,0,0,0.1)] active:translate-y-[1px] active:shadow-none transition-all"
             >
                 <Zap className="w-3.5 h-3.5 text-indigo-500" />
@@ -394,7 +360,6 @@ const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: p
                 Config
             </button>
             
-            {/* Delete spans full width on mobile */}
             <button 
                 onClick={() => setIsDeleteModalOpen(true)}
                 className="col-span-2 sm:col-span-1 flex items-center justify-center gap-2 px-3 py-2 bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-rose-600 dark:text-rose-400 rounded-sm hover:bg-rose-50 dark:hover:bg-rose-900/20 text-xs font-mono font-bold uppercase tracking-wider shadow-[2px_2px_0px_0px_rgba(0,0,0,0.1)] active:translate-y-[1px] active:shadow-none transition-all"
@@ -405,7 +370,6 @@ const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: p
         </div>
       </div>
 
-      {/* ERROR/WARNING BANNERS (Industrial Style) */}
       {error && (
         <div className="bg-red-50 dark:bg-red-950/30 border-l-4 border-red-500 p-4 font-mono text-sm shadow-sm">
           <div className="flex items-start">
@@ -417,17 +381,14 @@ const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: p
 
       {/* 2. CONFIGURATION CARD */}
       <div className="bg-white dark:bg-zinc-900 rounded-sm border border-zinc-300 dark:border-zinc-700 shadow-[3px_3px_0px_0px_rgba(0,0,0,0.05)] dark:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.05)]">
-        {/* Header */}
         <div className="px-6 py-3 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50 flex flex-col sm:flex-row justify-between sm:items-center gap-3">
             <h3 className="text-xs font-mono font-bold text-zinc-500 uppercase tracking-widest">System Configuration</h3>
             
-            {/* Secret Key Toggle - FIXED FOR MOBILE */}
             <div className="flex items-center gap-3 self-start sm:self-auto bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 px-3 py-1.5 rounded-sm">
                 <span className="text-[10px] text-zinc-400 font-mono font-bold uppercase tracking-wider">Secret:</span>
                 <code className="text-xs font-mono text-zinc-700 dark:text-zinc-300 tracking-wide">
                     {showSecretKey ? subscription.secretKey : "••••••••••••••••"}
                 </code>
-                {/* Touch Target Increased & Event Propagation Stopped */}
                 <button 
                     onClick={(e) => {
                         e.stopPropagation();
@@ -476,26 +437,6 @@ const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: p
         </div>
       </div>
 
-      {/* Webhook Tester Section */}
-      {showTester && activeId && (
-        <div className="animate-in fade-in slide-in-from-top-4 duration-300">
-          <WebhookTester
-            subscriptionId={activeId}
-            targetUrl={subscription.targetUrl}
-            samplePayload={{
-              event: "test_event",
-              timestamp: new Date().toISOString(),
-              subscriptionId: activeId,
-              data: {
-                message: "Manual test initiated via control panel.",
-                user: "admin"
-              }
-            }}
-          />
-        </div>
-      )}
-      <TestWebhookModal isOpen={false} onClose={() => {}} children={null}/>
-
       {/* 3. STATS ROW */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatsCard label="Total Deliveries" value={String(totalLogs)} icon={Server} />
@@ -517,7 +458,6 @@ const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: p
                 <span className="text-2xl font-mono font-bold text-zinc-900 dark:text-zinc-100">{usageLastMinute}</span>
                 <span className="text-xs font-mono text-zinc-400">/ {subscription.maxWebhooksPerMinute}</span>
             </div>
-            {/* Industrial Progress Bar */}
             <div className="w-full bg-zinc-100 dark:bg-zinc-800 h-1.5 rounded-sm overflow-hidden border border-zinc-200 dark:border-zinc-700">
                 <div 
                     className={`h-full ${usageLastMinute >= subscription.maxWebhooksPerMinute ? 'bg-amber-500' : 'bg-emerald-500'}`} 
@@ -534,7 +474,6 @@ const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: p
                 <h3 className="text-xs font-mono font-bold text-zinc-500 uppercase tracking-widest">Delivery Logs</h3>
             </div>
             
-            {/* Export Actions */}
             <div className="flex gap-2 self-start sm:self-auto">
                 <button 
                   onClick={() => handleExportLogs('json')}
@@ -559,7 +498,6 @@ const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: p
             <div className="p-12 text-center text-zinc-500 dark:text-zinc-400 font-mono text-xs">NO_DATA_AVAILABLE</div>
         ) : (
             <div>
-                {/* Responsive Log Header (Hidden on Mobile) */}
                 <div className="hidden md:grid grid-cols-12 gap-4 px-6 py-2 text-[10px] font-mono font-bold text-zinc-400 uppercase tracking-wider border-b border-zinc-100 dark:border-zinc-800">
                     <div className="col-span-3">Timestamp</div>
                     <div className="col-span-2">Status</div>
@@ -575,12 +513,10 @@ const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: p
                         
                         return (
                             <div key={log.id} className={`group transition-colors ${isExpanded ? 'bg-zinc-50 dark:bg-zinc-900/50' : 'hover:bg-zinc-50 dark:hover:bg-zinc-900/30'}`}>
-                                {/* Log Row: Flex on Mobile, Grid on Desktop */}
                                 <div 
                                     onClick={() => toggleRow(log.id)}
                                     className="px-6 py-3 cursor-pointer flex flex-col md:grid md:grid-cols-12 gap-2 md:gap-4 items-start md:items-center"
                                 >
-                                    {/* Mobile Top Row: Status + Time */}
                                     <div className="flex md:hidden w-full justify-between items-center mb-1">
                                         <div>{renderStatusBadge(log.responseStatusCode)}</div>
                                         <div className="text-xs text-zinc-500 font-mono">
@@ -588,24 +524,19 @@ const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: p
                                         </div>
                                     </div>
 
-                                    {/* Desktop Time Column */}
                                     <div className="hidden md:block col-span-3 text-zinc-600 dark:text-zinc-300 font-mono text-xs">
                                         {new Date(timeValue).toLocaleTimeString()} <span className="text-zinc-400 text-[10px]">{new Date(timeValue).toLocaleDateString()}</span>
                                     </div>
 
-                                    {/* Desktop Status Column */}
                                     <div className="hidden md:block col-span-2 font-mono">
                                         {renderStatusBadge(log.responseStatusCode)}
                                     </div>
 
-                                    {/* Latency Column */}
                                     <div className="col-span-2 font-mono text-xs text-zinc-500 dark:text-zinc-400 flex items-center gap-1">
                                         <span className="md:hidden font-bold">Latency:</span> {log.latencyMs}ms
                                     </div>
 
-                                    {/* Result Column */}
                                     <div className="col-span-5 w-full font-mono text-xs text-zinc-500 dark:text-zinc-400 truncate flex items-center gap-2">
-                                        {/* Mobile Expand Icon */}
                                         <div className="md:hidden mr-1">
                                             {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
                                         </div>
@@ -618,39 +549,51 @@ const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: p
                                     </div>
                                 </div>
 
-                                {/* Expanded Details */}
                                 {isExpanded && (
-                                    <div className="px-6 py-4 border-t border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 animate-in slide-in-from-top-1">
-                                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                                            {/* Request Payload */}
-                                            <div>
-                                                <h4 className="text-[10px] font-mono font-bold text-zinc-400 uppercase tracking-wider mb-2">Request Payload</h4>
-                                                <div className="bg-zinc-50 dark:bg-zinc-900 rounded-sm border border-zinc-200 dark:border-zinc-800 p-3 overflow-x-auto max-h-60 custom-scrollbar max-w-[calc(100vw-4rem)]">
-                                                    <pre className="text-xs font-mono text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap break-all">
-                                                        {(log as any).requestPayload ? formatJson((log as any).requestPayload) : "null"}
-                                                    </pre>
-                                                </div>
+                                <div className="px-6 py-4 border-t border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 animate-in slide-in-from-top-1">
+                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                        {/* Payload Section */}
+                                        <div>
+                                            <div className="flex items-center justify-between mb-2">
+                                                <h4 className="text-[10px] font-mono font-bold text-zinc-400 uppercase tracking-wider">Payload</h4>
+                                                <button 
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        navigator.clipboard.writeText(formatJson(getPayload(log)));
+                                                    }}
+                                                    className="text-[10px] font-mono font-bold text-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-400 uppercase tracking-wider"
+                                                >
+                                                    Copy
+                                                </button>
                                             </div>
-                                            {/* Server Response */}
-                                            <div>
-                                                <h4 className="text-[10px] font-mono font-bold text-zinc-400 uppercase tracking-wider mb-2">Server Response</h4>
-                                                <div className="bg-zinc-50 dark:bg-zinc-900 rounded-sm border border-zinc-200 dark:border-zinc-800 p-3 overflow-x-auto max-h-60 custom-scrollbar max-w-[calc(100vw-4rem)]">
-                                                    <pre className="text-xs font-mono text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap break-all">
-                                                        {(log as any).responseBody ? formatJson((log as any).responseBody) : "null"}
-                                                    </pre>
-                                                </div>
+                                            <div className="bg-zinc-50 dark:bg-zinc-900 rounded-sm border border-zinc-200 dark:border-zinc-800 p-3 overflow-x-auto max-h-60 custom-scrollbar max-w-[calc(100vw-4rem)]">
+                                                <pre className="text-xs font-mono text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap break-all">
+                                                    {/* USES HELPER FUNCTION */}
+                                                    {formatJson(getPayload(log))}
+                                                </pre>
+                                            </div>
+                                        </div>
+
+                                        {/* Response Section */}
+                                        <div>
+                                            <h4 className="text-[10px] font-mono font-bold text-zinc-400 uppercase tracking-wider mb-2">Server Response</h4>
+                                            <div className="bg-zinc-50 dark:bg-zinc-900 rounded-sm border border-zinc-200 dark:border-zinc-800 p-3 overflow-x-auto max-h-60 custom-scrollbar max-w-[calc(100vw-4rem)]">
+                                                <pre className="text-xs font-mono text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap break-all">
+                                                    {/* USES HELPER FUNCTION */}
+                                                    {formatJson(getResponse(log))}
+                                                </pre>
                                             </div>
                                         </div>
                                     </div>
-                                )}
-                            </div>
+                                </div>
+                            )}
+                          </div>
                         );
                     })}
                 </div>
             </div>
         )}
 
-        {/* Pagination */}
         <div className="p-4 border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50">
           <Pagination
             currentPage={currentPage}
@@ -686,6 +629,12 @@ const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: p
             subscriptionName={subscription.name}
             deliverLatestOnly={deliverLatestOnly}
             onDeliverLatestOnlyChange={handleDeliverLatestOnlyChange}
+          />
+          {/* FIX: Use global WebhookTester with isOpen/onClose logic */}
+          <WebhookTester 
+            isOpen={showTester} 
+            onClose={() => setShowTester(false)} 
+            subscription={subscription} 
           />
         </>
       )}

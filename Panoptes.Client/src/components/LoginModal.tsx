@@ -2,10 +2,12 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { X } from 'lucide-react';
 import clsx from 'clsx';
+import { useNavigate } from 'react-router-dom'; // ✅ Import Navigate
 import { LoginForm } from './LoginForm';
 import { OAuthButtons } from './OAuthButtons';
 import { ScrambleText } from './ScrambleText';
 import { useAudio } from '@/pages/landing/context/VolumeContext';
+import { useAuth } from '@/context/AuthContext'; // ✅ Import Auth Hook
 
 type LoginModalProps = {
   isOpen: boolean;
@@ -29,6 +31,10 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
   const [isVerifying, setIsVerifying] = useState(false);
   const [isMobileDevice, setIsMobileDevice] = useState(false);
   const { isPlaying } = useAudio(); 
+  
+  // ✅ Auth & Navigation
+  const { user } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const checkDevice = () => {
@@ -40,14 +46,22 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
   }, []);
 
   useEffect(() => {
-    if (isPlaying) {
+    // ✅ Safety Redirect: If modal opens but user is already logged in, go to dashboard
+    if (isOpen && user) {
+        navigate('/dashboard');
+        onClose();
+        return;
+    }
+
+    if (isPlaying && isOpen) { // Added isOpen check to prevent sound on unmount/redirect
       const openSfx = new Audio('/sounds/menu_sound.mp3');
       openSfx.volume = 0.3;
       openSfx.play().catch(() => {});
     }
+    
     if (isOpen) document.body.style.overflow = 'hidden';
     return () => { document.body.style.overflow = 'unset'; };
-  }, [isOpen, isPlaying]);
+  }, [isOpen, isPlaying, user, navigate, onClose]); // Added dependencies
 
   const handleClose = () => {
     if (isPlaying) {
@@ -57,6 +71,9 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
     }
     onClose();
   };
+  
+  // Prevent rendering if redirecting
+  if (isOpen && user) return null;
 
   return (
     <div className="fixed inset-0 z-[999] flex items-center justify-center pointer-events-none">
@@ -91,10 +108,7 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
             <X size={20} />
         </button>
 
-        {/* 2. Grid Layout: 
-            - If mobile device: Force 1 column
-            - If desktop: Use 2 columns 
-        */}
+        {/* Grid Layout */}
         <div className={clsx(
             "grid min-h-[550px]", 
             isMobileDevice ? "grid-cols-1" : "grid-cols-1 md:grid-cols-2"

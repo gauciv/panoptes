@@ -21,7 +21,6 @@ const LogViewer: React.FC<LogViewerProps> = ({ logs, subscriptions }) => {
         return sub?.name || `ID: ${subscriptionId.substring(0, 8)}...`;
     };
 
-    // Helper for Status UI
     const getStatusConfig = (statusCode: number) => {
         if (statusCode >= 200 && statusCode < 300) {
             return {
@@ -52,9 +51,13 @@ const LogViewer: React.FC<LogViewerProps> = ({ logs, subscriptions }) => {
 
     const formatJson = (jsonString: string) => {
         try {
-            return JSON.stringify(JSON.parse(jsonString || '{}'), null, 2);
+            // FIX: Handle null/undefined/empty string gracefully
+            if (!jsonString || jsonString === 'null') return "{}"; 
+            
+            const parsed = typeof jsonString === 'string' ? JSON.parse(jsonString) : jsonString;
+            return JSON.stringify(parsed, null, 2);
         } catch {
-            return jsonString || '{}';
+            return String(jsonString);
         }
     };
 
@@ -87,19 +90,17 @@ const LogViewer: React.FC<LogViewerProps> = ({ logs, subscriptions }) => {
                         `}
                         onClick={() => toggleExpand(log.id)}
                     >
-                        {/* Status Stripe (Left Border) */}
+                        {/* Status Stripe */}
                         <div className={`absolute left-0 top-0 bottom-0 w-1 ${status.bg.replace('/10', '')}`} />
 
                         {/* Main Card Content */}
                         <div className="pl-4 pr-4 py-3">
                             <div className="flex items-center justify-between mb-1.5">
-                                {/* Status Badge */}
                                 <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${status.bg} ${status.color} border ${status.border}`}>
                                     <status.icon className="w-3 h-3" />
                                     <span>{log.responseStatusCode}</span>
                                 </div>
                                 
-                                {/* Timestamp */}
                                 <div className="flex items-center gap-1 text-[10px] text-gray-400 dark:text-gray-500 font-mono">
                                     <Clock className="w-3 h-3" />
                                     {new Date(log.attemptedAt).toLocaleTimeString()}
@@ -107,14 +108,12 @@ const LogViewer: React.FC<LogViewerProps> = ({ logs, subscriptions }) => {
                             </div>
 
                             <div className="flex items-center justify-between">
-                                {/* Subscription Name */}
                                 <div className="flex items-center gap-2 overflow-hidden">
                                     <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 truncate max-w-[140px]" title={subName}>
                                         {subName}
                                     </span>
                                 </div>
 
-                                {/* Latency */}
                                 <span className="text-[10px] font-mono text-gray-400 dark:text-gray-500">
                                     {log.latencyMs.toFixed(0)}ms
                                 </span>
@@ -127,23 +126,24 @@ const LogViewer: React.FC<LogViewerProps> = ({ logs, subscriptions }) => {
                                 <div className="grid gap-3">
                                     <div>
                                         <div className="flex items-center justify-between mb-1">
-                                            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Payload</span>
-                                            <button 
-                                                className="text-[10px] text-indigo-500 hover:text-indigo-400"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    navigator.clipboard.writeText(formatJson(log.payloadJson));
-                                                    // Simple toast or feedback could go here
-                                                }}
-                                            >
-                                                Copy
-                                            </button>
-                                        </div>
-                                        <div className="relative group/code">
-                                            <pre className="text-[10px] font-mono bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded p-2 overflow-x-auto text-gray-600 dark:text-gray-400 max-h-32 custom-scrollbar">
-                                                {formatJson(log.payloadJson)}
-                                            </pre>
-                                        </div>
+                                        <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Payload</span>
+                                        <button 
+                                            className="text-[10px] text-indigo-500 hover:text-indigo-400"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                // FIX: Use payloadJson matches index.ts
+                                                navigator.clipboard.writeText(formatJson(log.payloadJson)); 
+                                            }}
+                                        >
+                                            Copy
+                                        </button>
+                                    </div>
+                                    <div className="relative group/code">
+                                        <pre className="text-[10px] font-mono bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded p-2 overflow-x-auto text-gray-600 dark:text-gray-400 max-h-32 custom-scrollbar">
+                                            {/* FIX: Use payloadJson matches index.ts */}
+                                            {formatJson(log.payloadJson)}
+                                        </pre>
+                                    </div>
                                     </div>
                                     
                                     <div>
