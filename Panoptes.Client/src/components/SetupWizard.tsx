@@ -154,10 +154,11 @@ export function SetupWizard({ onComplete, onClose }: SetupWizardProps) {
               <div className="space-y-1.5">
                  <Label className="text-xs font-bold text-zinc-500 uppercase">Select Network</Label>
                  <Select value={network} onValueChange={handleNetworkChange}>
-                    <SelectTrigger className="font-mono text-sm bg-zinc-50 dark:bg-black border-zinc-200 dark:border-zinc-800">
+                    <SelectTrigger className="font-mono text-sm bg-zinc-50 dark:bg-black border-zinc-200 dark:border-zinc-800 dark:text-zinc-100">
                        <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className="font-mono">
+                    {/* ✅ FIX 1: Added z-[1200] to appear above the modal (which is 1100) */}
+                    <SelectContent className="font-mono z-[1200]">
                        <SelectItem value="Mainnet">Mainnet</SelectItem>
                        <SelectItem value="Preprod">Preprod</SelectItem>
                        <SelectItem value="Preview">Preview</SelectItem>
@@ -172,7 +173,7 @@ export function SetupWizard({ onComplete, onClose }: SetupWizardProps) {
                     <Input 
                        value={grpcEndpoint}
                        onChange={(e) => setGrpcEndpoint(e.target.value)}
-                       className="pl-9 font-mono text-sm bg-zinc-50 dark:bg-black border-zinc-200 dark:border-zinc-800"
+                       className="pl-9 font-mono text-sm bg-zinc-50 dark:bg-black border-zinc-200 dark:border-zinc-800 dark:text-zinc-100"
                     />
                  </div>
               </div>
@@ -187,7 +188,7 @@ export function SetupWizard({ onComplete, onClose }: SetupWizardProps) {
                     value={apiKey}
                     onChange={(e) => setApiKey(e.target.value)}
                     placeholder="dmtr_utxorpc1..."
-                    className="font-mono text-sm bg-zinc-50 dark:bg-black border-zinc-200 dark:border-zinc-800"
+                    className="font-mono text-sm bg-zinc-50 dark:bg-black border-zinc-200 dark:border-zinc-800 dark:text-zinc-100"
                  />
               </div>
            </div>
@@ -214,7 +215,8 @@ export function SetupWizard({ onComplete, onClose }: SetupWizardProps) {
         <div className="p-6 pt-0 flex gap-3">
            <Button 
               variant="outline" 
-              className="flex-1 font-mono text-xs uppercase"
+              // ✅ FIX 2: Added explicit dark mode styles for visibility
+              className="flex-1 font-mono text-xs uppercase border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800"
               onClick={handleValidate}
               disabled={isValidating || !apiKey.trim()}
            >

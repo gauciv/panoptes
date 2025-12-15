@@ -99,15 +99,16 @@ export function OnboardingTour({ enabled = true, onFinish }: OnboardingTourProps
       localStorage.setItem(TOUR_STORAGE_KEY, 'true');
       
       if (status === STATUS.FINISHED) {
-          // 1. Prioritize Navigation with a Query Param trigger
-          // We send ?setup=true so the destination page knows to open the wizard
-          navigate('/settings?setup=true');
+          console.log("[Onboarding] Launching Setup Wizard Navigation...");
           
-          // 2. Fire the callback just in case the parent is still alive
-          if (onFinish) onFinish();
+          // ✅ FIX: Updated path to include '/dashboard' prefix
+          navigate('/dashboard/settings?setup=true');
+          
+          if (onFinish) {
+             onFinish();
+          }
       }
 
-      // 3. Close the tour (small delay to allow navigation to start)
       setTimeout(() => setRun(false), 50);
     }
   };

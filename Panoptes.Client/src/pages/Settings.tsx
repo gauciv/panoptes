@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { 
   Loader2, 
   ArrowLeft, 
@@ -11,27 +11,27 @@ import {
   Terminal, 
   Save, 
   RefreshCw,
-  Eye,
-  EyeOff,
-  Zap,
-  Settings as SettingsIcon,
+  Eye, 
+  EyeOff, 
+  Zap, 
+  Settings as SettingsIcon, 
   Globe,
-  // ADDED: Icons for Docs
-  BookOpen,
-  ExternalLink
+  BookOpen, 
+  ExternalLink 
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import toast from 'react-hot-toast';
+import { SetupWizard } from '@/components/SetupWizard';
 
 // --- Types ---
 interface SetupStatus {
   isConfigured: boolean;
   activeNetwork?: string;
   activeEndpoint?: string;
-  configuredNetworks: string[]; // List of networks that have keys stored
+  configuredNetworks: string[];
 }
 
 interface ValidationResult {
@@ -54,12 +54,13 @@ const NETWORKS = [
 
 export default function Settings() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   
   // System State
   const [setupStatus, setSetupStatus] = useState<SetupStatus | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Form State (For the currently editing network)
+  // Form State
   const [editingNetwork, setEditingNetwork] = useState<string | null>(null);
   const [grpcEndpoint, setGrpcEndpoint] = useState<string>('');
   const [apiKey, setApiKey] = useState<string>('');
@@ -72,6 +73,32 @@ export default function Settings() {
   
   // Feedback
   const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
+
+  // Wizard State
+  const [showWizard, setShowWizard] = useState(false);
+
+  // --- LOGGING MOUNT ---
+  useEffect(() => {
+    console.log("[Settings Page] Mounted.");
+    console.log("[Settings Page] Current URL Params:", searchParams.toString());
+  }, []);
+
+  // --- WIZARD TRIGGER ---
+  useEffect(() => {
+    const shouldSetup = searchParams.get('setup');
+    console.log("[Settings Page] Checking 'setup' param:", shouldSetup);
+
+    if (shouldSetup === 'true') {
+        console.log("[Settings Page] 'setup=true' detected! Opening Wizard...");
+        setShowWizard(true);
+        
+        // Clean up URL
+        setSearchParams(params => {
+            params.delete('setup');
+            return params;
+        });
+    }
+  }, [searchParams, setSearchParams]);
 
   useEffect(() => {
     fetchSetupStatus();
@@ -164,7 +191,6 @@ export default function Settings() {
       setEditingNetwork(null);
       fetchSetupStatus();
       
-      // Update LocalStorage for Client SideNav consistency
       if (setupStatus?.activeNetwork === editingNetwork) {
           localStorage.setItem('panoptes-network', editingNetwork);
       }
@@ -212,6 +238,13 @@ export default function Settings() {
     } catch (err) {
       toast.error('Reset failed');
     }
+  };
+  
+  const handleWizardComplete = () => {
+      console.log("[Settings] Wizard Completed.");
+      setShowWizard(false);
+      fetchSetupStatus();
+      toast.success('System Initialized via Wizard');
   };
 
   if (isLoading) {
@@ -262,7 +295,7 @@ export default function Settings() {
                         className={cn(
                             "relative flex flex-col bg-white dark:bg-zinc-900 border rounded-sm transition-all duration-300",
                             isActive ? "border-indigo-500 shadow-lg shadow-indigo-500/10" : "border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700",
-                            isEditing ? "md:col-span-3 ring-1 ring-zinc-200 dark:ring-zinc-800" : "" // Expand when editing
+                            isEditing ? "md:col-span-3 ring-1 ring-zinc-200 dark:ring-zinc-800" : ""
                         )}
                     >
                         {/* Status Bar */}
@@ -437,7 +470,6 @@ export default function Settings() {
                     <HelpCircle className="w-4 h-4 text-zinc-500" /> Documentation
                 </h3>
                 <div className="space-y-3">
-                    {/* ✅ NEW: Read Docs Button */}
                     <Button 
                         variant="outline" 
                         onClick={() => window.open('#', '_blank')} 
@@ -476,6 +508,20 @@ export default function Settings() {
             System requires restart after switching networks
         </div>
       </div>
+      
+      {showWizard && (
+         <div className="fixed inset-0 z-[9999] pointer-events-auto"> 
+            {/* Added Wrapper to force Z-Index context just in case */}
+            <SetupWizard 
+                onComplete={handleWizardComplete} 
+                onClose={() => {
+                    console.log("[Settings] Closing Wizard");
+                    setShowWizard(false);
+                }} 
+            />
+         </div>
+      )}
+
     </div>
   );
 }

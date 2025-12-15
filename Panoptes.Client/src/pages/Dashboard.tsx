@@ -338,12 +338,7 @@ const Dashboard: React.FC = () => {
   const handleTourFinish = () => {
     console.log("Tour finished");
     setIsTourActive(false);
-    const alreadyShown = localStorage.getItem(SETUP_WIZARD_SHOWN_KEY);
-    if (!setupStatus?.isConfigured && !alreadyShown) {
-      console.log("Showing setup wizard for the first time");
-      setShowSetupWizard(true);
-      localStorage.setItem(SETUP_WIZARD_SHOWN_KEY, 'true');
-    }
+    localStorage.setItem(SETUP_WIZARD_SHOWN_KEY, 'true');
   };
 
   // Derived state for Empty State vs No Results
