@@ -13,6 +13,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
+// Added Toast for immediate feedback if needed
+import toast from 'react-hot-toast';
 
 interface SetupWizardProps {
   onComplete: () => void;
@@ -39,7 +41,8 @@ export function SetupWizard({ onComplete, onClose }: SetupWizardProps) {
   const [isValidating, setIsValidating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  
+  // REMOVED: const [error, setError] ... (This was the cause of the warning)
 
   const handleNetworkChange = (value: string) => {
     setNetwork(value);
@@ -49,12 +52,12 @@ export function SetupWizard({ onComplete, onClose }: SetupWizardProps) {
 
   const handleValidate = async () => {
     if (!apiKey.trim()) {
-      setError('API_KEY_REQUIRED');
+      // CHANGED: Use validation result or toast instead of setError
+      setValidationResult({ isValid: false, error: 'API Key is required' });
       return;
     }
 
     setIsValidating(true);
-    setError(null);
     setValidationResult(null);
 
     try {
@@ -69,7 +72,6 @@ export function SetupWizard({ onComplete, onClose }: SetupWizardProps) {
       if (!response.ok) {
         const errorMsg = data.error || data.message || 'Validation failed';
         setValidationResult({ isValid: false, error: errorMsg });
-        setError(errorMsg);
         return;
       }
 
@@ -77,7 +79,6 @@ export function SetupWizard({ onComplete, onClose }: SetupWizardProps) {
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Network error';
       setValidationResult({ isValid: false, error: msg });
-      setError(msg);
     } finally {
       setIsValidating(false);
     }
@@ -87,7 +88,6 @@ export function SetupWizard({ onComplete, onClose }: SetupWizardProps) {
     if (!validationResult?.isValid) return;
 
     setIsSaving(true);
-    setError(null);
 
     try {
       const response = await fetch('/setup/save-credentials', {
@@ -109,14 +109,14 @@ export function SetupWizard({ onComplete, onClose }: SetupWizardProps) {
 
       onComplete();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Save failed');
+      // CHANGED: Use toast for save errors
+      toast.error(err instanceof Error ? err.message : 'Save failed');
     } finally {
       setIsSaving(false);
     }
   };
 
   return (
-    // Modal Overlay: z-[1100]
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[1100] p-4">
       <div className="bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 w-full max-w-lg shadow-2xl rounded-sm overflow-hidden flex flex-col max-h-[90vh]">
         
@@ -128,7 +128,7 @@ export function SetupWizard({ onComplete, onClose }: SetupWizardProps) {
             </div>
             <div>
                <h2 className="text-sm font-bold font-mono uppercase tracking-wide text-zinc-900 dark:text-zinc-100">System Initialization</h2>
-               <p className="text-[10px] text-zinc-500 font-mono">Configure Primary Network Connection</p>
+               <p className="text-[10px] text-zinc-500 font-mono">Configure UTxORPC Provider Connection</p>
             </div>
           </div>
           {onClose && (
@@ -142,9 +142,9 @@ export function SetupWizard({ onComplete, onClose }: SetupWizardProps) {
            <div className="bg-indigo-50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-900 p-4 rounded-sm flex gap-3">
               <Shield className="w-5 h-5 text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5" />
               <div className="space-y-1">
-                 <h3 className="text-xs font-bold text-indigo-700 dark:text-indigo-300 font-mono uppercase">Credential Required</h3>
+                 <h3 className="text-xs font-bold text-indigo-700 dark:text-indigo-300 font-mono uppercase">UTxORPC Credential Required</h3>
                  <p className="text-xs text-indigo-600/80 dark:text-indigo-400/70 leading-relaxed">
-                    Panoptes requires a UtxoRPC connection to sync with the blockchain. Please provide your Demeter API key to continue.
+                    Panoptes requires a UtxoRPC gRPC connection (via Demeter.run) to sync with the blockchain.
                  </p>
               </div>
            </div>
@@ -157,7 +157,7 @@ export function SetupWizard({ onComplete, onClose }: SetupWizardProps) {
                     <SelectTrigger className="font-mono text-sm bg-zinc-50 dark:bg-black border-zinc-200 dark:border-zinc-800 dark:text-zinc-100">
                        <SelectValue />
                     </SelectTrigger>
-                    {/* ✅ FIX 1: Use !z-[9999] to force it above everything */}
+                    {/* !z-[9999] ensures dropdown appears above modal */}
                     <SelectContent className="font-mono !z-[9999] bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800">
                        <SelectItem value="Mainnet">Mainnet</SelectItem>
                        <SelectItem value="Preprod">Preprod</SelectItem>
@@ -167,7 +167,7 @@ export function SetupWizard({ onComplete, onClose }: SetupWizardProps) {
               </div>
 
               <div className="space-y-1.5">
-                 <Label className="text-xs font-bold text-zinc-500 uppercase">Provider Endpoint</Label>
+                 <Label className="text-xs font-bold text-zinc-500 uppercase">Provider Endpoint (gRPC)</Label>
                  <div className="relative">
                     <Terminal className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
                     <Input 
@@ -180,7 +180,7 @@ export function SetupWizard({ onComplete, onClose }: SetupWizardProps) {
 
               <div className="space-y-1.5">
                  <div className="flex justify-between">
-                    <Label className="text-xs font-bold text-zinc-500 uppercase">API Key</Label>
+                    <Label className="text-xs font-bold text-zinc-500 uppercase">Demeter API Key</Label>
                     <a href="https://demeter.run" target="_blank" rel="noreferrer" className="text-[10px] text-indigo-500 hover:underline">Get Key →</a>
                  </div>
                  <Input 
@@ -209,21 +209,12 @@ export function SetupWizard({ onComplete, onClose }: SetupWizardProps) {
                  </span>
               </div>
            )}
-
-           {/* Error Banner (use the 'error' state so it's no longer unused) */}
-           {error && (!validationResult || validationResult.isValid) && (
-              <div className="p-3 rounded-sm border text-xs font-mono flex items-center gap-2 bg-rose-50 border-rose-200 text-rose-700 dark:bg-rose-900/10 dark:border-rose-900 dark:text-rose-400">
-                 <XCircle className="w-4 h-4" />
-                 <span>{error}</span>
-              </div>
-           )}
         </div>
 
         {/* Footer Actions */}
         <div className="p-6 pt-0 flex gap-3">
            <Button 
-              type="button" // Prevent default submit behavior
-              // ✅ FIX 2: Explicit background and text colors to fix "Invisible Button"
+              type="button"
               className="flex-1 font-mono text-xs uppercase bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800"
               onClick={handleValidate}
               disabled={isValidating || !apiKey.trim()}
