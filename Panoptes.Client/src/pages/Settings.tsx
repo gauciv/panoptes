@@ -7,15 +7,20 @@ import {
   XCircle, 
   HelpCircle, 
   Github, 
+  Server, 
   Shield, 
   Terminal, 
   Save, 
   RefreshCw,
   Eye,
   EyeOff,
+  Activity,
   Zap,
   Settings as SettingsIcon,
-  Globe
+  Globe,
+  // ADDED: Icons for Docs
+  BookOpen,
+  ExternalLink
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -44,9 +49,9 @@ const NETWORK_ENDPOINTS: Record<string, string> = {
 };
 
 const NETWORKS = [
-    { id: 'Mainnet', label: 'Mainnet', color: 'bg-emerald-500', border: 'border-emerald-500/20' },
-    { id: 'Preprod', label: 'Preprod', color: 'bg-blue-500', border: 'border-blue-500/20' },
-    { id: 'Preview', label: 'Preview', color: 'bg-purple-500', border: 'border-purple-500/20' },
+    { id: 'Mainnet', label: 'Mainnet', color: 'bg-emerald-500' },
+    { id: 'Preprod', label: 'Preprod', color: 'bg-blue-500' },
+    { id: 'Preview', label: 'Preview', color: 'bg-purple-500' },
 ];
 
 export default function Settings() {
@@ -190,7 +195,7 @@ export default function Settings() {
       if (!response.ok) throw new Error('Switch failed');
 
       toast.success(`Active Network: ${targetNetwork}`, { id: toastId });
-      localStorage.setItem('panoptes-network', targetNetwork); // Sync Client Side
+      localStorage.setItem('panoptes-network', targetNetwork);
       fetchSetupStatus();
     } catch (e) {
       toast.error('Failed to switch network', { id: toastId });
@@ -434,6 +439,16 @@ export default function Settings() {
                     <HelpCircle className="w-4 h-4 text-zinc-500" /> Documentation
                 </h3>
                 <div className="space-y-3">
+                    {/* ✅ NEW: Read Docs Button */}
+                    <Button 
+                        variant="outline" 
+                        onClick={() => window.open('#', '_blank')} 
+                        className="w-full justify-between font-mono text-xs"
+                    >
+                        <span className="flex items-center gap-2"><BookOpen className="w-3 h-3" /> Read_Documentation</span> 
+                        <ExternalLink className="w-3 h-3" />
+                    </Button>
+                    
                     <Button variant="outline" onClick={() => { localStorage.removeItem('panoptes_onboarding_completed'); navigate('/dashboard'); }} className="w-full justify-between font-mono text-xs">
                         <span>Replay_Product_Tour</span> <ArrowLeft className="w-3 h-3 rotate-180" />
                     </Button>
