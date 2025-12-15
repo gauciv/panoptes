@@ -35,17 +35,14 @@ import SubscriptionDetailSkeleton from '../components/SubscriptionDetailSkeleton
 import Pagination from '../components/Pagination';
 
 import AdvancedOptionsModal from '../components/AdvancedOptionsModal';
-// FIX: Named import to resolve error 2613
 import { WebhookTester } from '../components/WebhookTester'; 
 import { convertToCSV, downloadFile, generateFilename } from '../utils/exportUtils';
 
-// --- PROPS INTERFACE ---
 interface SubscriptionDetailProps {
   subscription?: WebhookSubscription | null;
   onBack?: () => void;
 }
 
-// --- INDUSTRIAL STATS CARD ---
 const StatsCard = ({ label, value, icon: Icon, alertColor }: { label: string, value: string, icon: any, alertColor?: string }) => (
   <div className={`
     p-4 rounded-sm border transition-all
@@ -63,8 +60,6 @@ const StatsCard = ({ label, value, icon: Icon, alertColor }: { label: string, va
     </p>
   </div>
 );
-
-// DELETED: Local TestWebhookModal component (Redundant)
 
 const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: propSubscription, onBack }) => {
   const { id: paramId } = useParams<{ id: string }>();
@@ -264,17 +259,26 @@ const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: p
     return <span className="inline-flex items-center px-1.5 py-0.5 rounded-sm text-[10px] font-mono font-bold bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400 border border-red-200 dark:border-red-800">{statusCode} ERR</span>;
   };
 
+  // Safe accessors for log properties to handle casing differences
   const getPayload = (log: any) => {
     return log.payloadJson || log.PayloadJson || log.requestPayload || log.RequestPayload || '{}';
   };
 
   const getResponse = (log: any) => {
-    return log.responseBody || log.ResponseBody || '(No content)';
+    const body = log.responseBody || log.ResponseBody;
+    if (body === '') return '(Empty Response)'; // Handle empty but successful responses
+    return body || '(No content)';
   };
 
   const formatJson = (data: string | object) => {
     try {
-      if (typeof data === 'string') return JSON.stringify(JSON.parse(data), null, 2);
+      if (typeof data === 'string') {
+        // Only parse if it looks like JSON
+        if (data.trim().startsWith('{') || data.trim().startsWith('[')) {
+            return JSON.stringify(JSON.parse(data), null, 2);
+        }
+        return data;
+      }
       return JSON.stringify(data, null, 2);
     } catch (e) { return String(data); }
   };
@@ -507,7 +511,8 @@ const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: p
 
                 <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
                     {logs.map((log) => {
-                        const timeValue = (log as any).timestamp || (log as any).createdAt || new Date();
+                        // ✅ FIX: Use attemptedAt specifically, fallback to createdAt
+                        const timeValue = (log as any).attemptedAt || (log as any).createdAt || (log as any).timestamp;
                         const isExpanded = expandedLogId === log.id;
                         const isThrottled = log.responseStatusCode === 429;
                         
@@ -520,12 +525,20 @@ const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: p
                                     <div className="flex md:hidden w-full justify-between items-center mb-1">
                                         <div>{renderStatusBadge(log.responseStatusCode)}</div>
                                         <div className="text-xs text-zinc-500 font-mono">
-                                            {new Date(timeValue).toLocaleTimeString()}
+                                            {/* ✅ CHECK: Only render if valid time */}
+                                            {timeValue ? new Date(timeValue).toLocaleTimeString() : 'N/A'}
                                         </div>
                                     </div>
 
                                     <div className="hidden md:block col-span-3 text-zinc-600 dark:text-zinc-300 font-mono text-xs">
-                                        {new Date(timeValue).toLocaleTimeString()} <span className="text-zinc-400 text-[10px]">{new Date(timeValue).toLocaleDateString()}</span>
+                                        {/* ✅ CHECK: Only render if valid time */}
+                                        {timeValue ? (
+                                            <>
+                                                {new Date(timeValue).toLocaleTimeString()} <span className="text-zinc-400 text-[10px]">{new Date(timeValue).toLocaleDateString()}</span>
+                                            </>
+                                        ) : (
+                                            <span className="text-zinc-400">N/A</span>
+                                        )}
                                     </div>
 
                                     <div className="hidden md:block col-span-2 font-mono">
@@ -544,7 +557,8 @@ const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: p
                                             <span className="text-[10px] font-bold text-amber-600 dark:text-amber-500 uppercase tracking-tight whitespace-nowrap">[Rate Limit]</span>
                                         )}
                                         <span className={`truncate ${isThrottled ? 'opacity-75' : ''}`}>
-                                            {(log as any).responseBody || 'No Content'}
+                                            {/* ✅ FIX: Display friendly text if response body is empty */}
+                                            {getResponse(log)}
                                         </span>
                                     </div>
                                 </div>
@@ -568,7 +582,6 @@ const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: p
                                             </div>
                                             <div className="bg-zinc-50 dark:bg-zinc-900 rounded-sm border border-zinc-200 dark:border-zinc-800 p-3 overflow-x-auto max-h-60 custom-scrollbar max-w-[calc(100vw-4rem)]">
                                                 <pre className="text-xs font-mono text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap break-all">
-                                                    {/* USES HELPER FUNCTION */}
                                                     {formatJson(getPayload(log))}
                                                 </pre>
                                             </div>
@@ -579,7 +592,6 @@ const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: p
                                             <h4 className="text-[10px] font-mono font-bold text-zinc-400 uppercase tracking-wider mb-2">Server Response</h4>
                                             <div className="bg-zinc-50 dark:bg-zinc-900 rounded-sm border border-zinc-200 dark:border-zinc-800 p-3 overflow-x-auto max-h-60 custom-scrollbar max-w-[calc(100vw-4rem)]">
                                                 <pre className="text-xs font-mono text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap break-all">
-                                                    {/* USES HELPER FUNCTION */}
                                                     {formatJson(getResponse(log))}
                                                 </pre>
                                             </div>
@@ -630,7 +642,6 @@ const SubscriptionDetail: React.FC<SubscriptionDetailProps> = ({ subscription: p
             deliverLatestOnly={deliverLatestOnly}
             onDeliverLatestOnlyChange={handleDeliverLatestOnlyChange}
           />
-          {/* FIX: Use global WebhookTester with isOpen/onClose logic */}
           <WebhookTester 
             isOpen={showTester} 
             onClose={() => setShowTester(false)} 
