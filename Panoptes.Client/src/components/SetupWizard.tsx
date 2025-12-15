@@ -1,8 +1,18 @@
 import { useState } from 'react';
+import { 
+  Loader2, 
+  Server, 
+  CheckCircle2, 
+  XCircle, 
+  ArrowRight,
+  Shield,
+  Terminal 
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface SetupWizardProps {
   onComplete: () => void;
@@ -25,6 +35,7 @@ export function SetupWizard({ onComplete, onClose }: SetupWizardProps) {
   const [network, setNetwork] = useState<string>('Preprod');
   const [grpcEndpoint, setGrpcEndpoint] = useState<string>(NETWORK_ENDPOINTS.Preprod);
   const [apiKey, setApiKey] = useState<string>('');
+  
   const [isValidating, setIsValidating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
@@ -33,12 +44,12 @@ export function SetupWizard({ onComplete, onClose }: SetupWizardProps) {
   const handleNetworkChange = (value: string) => {
     setNetwork(value);
     setGrpcEndpoint(NETWORK_ENDPOINTS[value] || '');
-    setValidationResult(null); // Reset validation when network changes
+    setValidationResult(null);
   };
 
   const handleValidate = async () => {
     if (!apiKey.trim()) {
-      setError('Please enter an API key');
+      setError('API_KEY_REQUIRED');
       return;
     }
 
@@ -47,288 +58,180 @@ export function SetupWizard({ onComplete, onClose }: SetupWizardProps) {
     setValidationResult(null);
 
     try {
-      console.log('Validating credentials...', { grpcEndpoint, network });
       const response = await fetch('/setup/validate-demeter', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          grpcEndpoint,
-          apiKey,
-          network,
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ grpcEndpoint, apiKey, network }),
       });
 
-      console.log('Response status:', response.status);
       const data = await response.json();
-      console.log('Response data:', data);
 
       if (!response.ok) {
         const errorMsg = data.error || data.message || 'Validation failed';
-        setValidationResult({
-          isValid: false,
-          error: errorMsg,
-        });
+        setValidationResult({ isValid: false, error: errorMsg });
         setError(errorMsg);
         return;
       }
 
-      setValidationResult({
-        isValid: true,
-        chainTipSlot: data.chainTipSlot,
-      });
+      setValidationResult({ isValid: true, chainTipSlot: data.chainTipSlot });
     } catch (err) {
-      console.error('Validation error:', err);
-      let errorMessage = '🔌 Cannot connect to backend API';
-      if (err instanceof Error) {
-        if (err.message.includes('Failed to fetch')) {
-          errorMessage = '🔌 Backend API not responding. Please ensure:\n\n1. Backend is running: dotnet run --project Panoptes.Api\n2. Backend is accessible (check terminal for errors)\n3. Frontend dev server is running with proxy enabled';
-        } else {
-          errorMessage = `Error: ${err.message}`;
-        }
-      }
-      setValidationResult({
-        isValid: false,
-        error: errorMessage,
-      });
-      setError(errorMessage);
+      const msg = err instanceof Error ? err.message : 'Network error';
+      setValidationResult({ isValid: false, error: msg });
+      setError(msg);
     } finally {
       setIsValidating(false);
     }
   };
 
   const handleSave = async () => {
-    if (!validationResult?.isValid) {
-      setError('Please validate credentials first');
-      return;
-    }
+    if (!validationResult?.isValid) return;
 
     setIsSaving(true);
     setError(null);
 
     try {
-      console.log('Saving credentials...', { grpcEndpoint, network, apiKeyLength: apiKey.length });
-      
       const response = await fetch('/setup/save-credentials', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          grpcEndpoint,
-          apiKey,
-          network,
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ grpcEndpoint, apiKey, network }),
       });
-
-      console.log('Save response status:', response.status);
 
       if (!response.ok) {
         const data = await response.json();
-        console.error('Save failed:', data);
-        setError(data.error || 'Failed to save credentials');
-        return;
+        throw new Error(data.error || 'Failed to save');
       }
 
-      const result = await response.json();
-      console.log('Save successful:', result);
+      // Also ensure this network is switched to active
+      await fetch('/setup/switch-network', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ network }),
+      });
 
-      // Success - notify parent component
       onComplete();
     } catch (err) {
-      let errorMessage = 'Network error';
-      if (err instanceof Error) {
-        if (err.message.includes('Failed to fetch')) {
-          errorMessage = 'Cannot connect to backend API. Make sure the API is running on http://localhost:5186';
-        } else {
-          errorMessage = err.message;
-        }
-      }
-      setError(errorMessage);
+      setError(err instanceof Error ? err.message : 'Save failed');
     } finally {
       setIsSaving(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 bg-[rgba(5,5,5,0.85)] flex items-center justify-center z-[1100] p-4">
-      <div className="bg-[#050505] border border-[#006A33] text-[#F8F8FF] p-8 max-w-2xl w-full mx-4 relative max-h-[90vh] overflow-y-auto rounded-none shadow-[0_0_20px_rgba(0,106,51,0.3)] font-mono">
-        {/* Grid Background Effect */}
-        <div className="absolute inset-0 opacity-10 pointer-events-none" 
-             style={{ backgroundImage: 'radial-gradient(#006A33 1px, transparent 1px)', backgroundSize: '20px 20px' }}>
-        </div>
-        
-        <button
-          onClick={onClose || onComplete}
-          className="absolute top-4 right-4 text-[#006A33] hover:text-white transition-colors p-1 z-10"
-          aria-label="Close"
-          title="Skip Setup"
-        >
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[1100] p-4">
+      <div className="bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 w-full max-w-lg shadow-2xl rounded-sm overflow-hidden flex flex-col max-h-[90vh]">
         
         {/* Header */}
-        <div className="flex justify-between items-center mb-4 border-b border-[#006A33]/30 pb-2 relative z-10">
-          <span className="text-[#006A33] text-xs tracking-widest uppercase font-bold">
-            SYSTEM_CONFIG // DEMETER_SETUP
-          </span>
+        <div className="px-6 py-4 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50 flex justify-between items-center">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-indigo-500/10 rounded-md text-indigo-500">
+               <Server className="w-5 h-5" />
+            </div>
+            <div>
+               <h2 className="text-sm font-bold font-mono uppercase tracking-wide text-zinc-900 dark:text-zinc-100">System Initialization</h2>
+               <p className="text-[10px] text-zinc-500 font-mono">Configure Primary Network Connection</p>
+            </div>
+          </div>
+          {onClose && (
+             <button onClick={onClose} className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200">✕</button>
+          )}
         </div>
-        
-        <div className="mb-6 relative z-10">
-          <h2 className="text-xl font-bold text-white mb-2 uppercase tracking-wide">
-            Initialize_Connection
-          </h2>
-          <p className="text-gray-300 text-sm leading-relaxed">
-            Configure your Demeter credentials to establish blockchain data sync.
-          </p>
-        </div>
 
-        <div className="space-y-6 relative z-10">
-          {/* Network Selection */}
-          <div>
-            <Label htmlFor="network" className="text-xs font-bold mb-2 block text-[#006A33] uppercase tracking-wider">
-              Network
-            </Label>
-            <Select value={network} onValueChange={handleNetworkChange}>
-              <SelectTrigger id="network" className="bg-[#0a0a0a] border-[#006A33]/50 text-white font-mono text-sm hover:border-[#006A33] focus:border-[#006A33] focus:ring-[#006A33]/20">
-                <SelectValue placeholder="Select network" />
-              </SelectTrigger>
-              <SelectContent className="bg-[#0a0a0a] border-[#006A33]/50">
-                <SelectItem value="Mainnet" className="text-white hover:bg-[#006A33]/20 focus:bg-[#006A33]/20">🟢 Mainnet</SelectItem>
-                <SelectItem value="Preprod" className="text-white hover:bg-[#006A33]/20 focus:bg-[#006A33]/20">🔵 Preprod</SelectItem>
-                <SelectItem value="Preview" className="text-white hover:bg-[#006A33]/20 focus:bg-[#006A33]/20">🟣 Preview</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* gRPC Endpoint */}
-          <div>
-            <Label htmlFor="endpoint" className="text-xs font-bold mb-2 block text-[#006A33] uppercase tracking-wider">
-              gRPC Endpoint
-            </Label>
-            <Input
-              id="endpoint"
-              type="text"
-              value={grpcEndpoint}
-              onChange={(e) => setGrpcEndpoint(e.target.value)}
-              placeholder="https://cardano-preprod.utxorpc-m1.demeter.run"
-              className="bg-[#0a0a0a] border-[#006A33]/50 text-white font-mono text-sm placeholder:text-gray-500 hover:border-[#006A33] focus:border-[#006A33] focus:ring-[#006A33]/20"
-            />
-          </div>
-
-          {/* API Key */}
-          <div>
-            <Label htmlFor="apiKey" className="text-xs font-bold mb-2 block text-[#006A33] uppercase tracking-wider">
-              Demeter API Key
-            </Label>
-            <Input
-              id="apiKey"
-              type="password"
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-              placeholder="dmtr_utxorpc1..."
-              className="bg-[#0a0a0a] border-[#006A33]/50 text-white font-mono text-sm placeholder:text-gray-500 hover:border-[#006A33] focus:border-[#006A33] focus:ring-[#006A33]/20"
-            />
-            <p className="text-xs text-gray-400 mt-1">
-              Get your API key from{' '}
-              <a
-                href="https://demeter.run"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-[#006A33] hover:text-[#008040] hover:underline"
-              >
-                demeter.run
-              </a>
-            </p>
-          </div>
-
-          {/* Validation Result */}
-          {validationResult && (
-            <div
-              className={`border p-4 ${
-                validationResult.isValid
-                  ? 'bg-[#006A33]/10 border-[#006A33]/50'
-                  : 'bg-red-900/20 border-red-500/50'
-              }`}
-            >
-              <div className="text-sm">
-                {validationResult.isValid ? (
-                  <div className="flex items-center gap-2">
-                    <span className="text-[#006A33] font-bold">
-                      ✓ CONNECTION_ESTABLISHED
-                    </span>
-                    {validationResult.chainTipSlot && (
-                      <span className="text-sm text-gray-400">
-                        Chain tip: {validationResult.chainTipSlot.toLocaleString()}
-                      </span>
-                    )}
-                  </div>
-                ) : (
-                  <span className="text-red-400">
-                    ✗ {validationResult.error}
-                  </span>
-                )}
+        {/* Content */}
+        <div className="p-6 space-y-6 overflow-y-auto">
+           {/* Info Banner */}
+           <div className="bg-indigo-50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-900 p-4 rounded-sm flex gap-3">
+              <Shield className="w-5 h-5 text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                 <h3 className="text-xs font-bold text-indigo-700 dark:text-indigo-300 font-mono uppercase">Credential Required</h3>
+                 <p className="text-xs text-indigo-600/80 dark:text-indigo-400/70 leading-relaxed">
+                    Panoptes requires a UtxoRPC connection to sync with the blockchain. Please provide your Demeter API key to continue.
+                 </p>
               </div>
-            </div>
-          )}
+           </div>
 
-          {/* Error Alert */}
-          {error && !validationResult && (
-            <div className="border border-red-500/50 bg-red-900/20 p-4">
-              <p className="text-sm text-red-400">{error}</p>
-            </div>
-          )}
+           {/* Form */}
+           <div className="space-y-4">
+              <div className="space-y-1.5">
+                 <Label className="text-xs font-bold text-zinc-500 uppercase">Select Network</Label>
+                 <Select value={network} onValueChange={handleNetworkChange}>
+                    <SelectTrigger className="font-mono text-sm bg-zinc-50 dark:bg-black border-zinc-200 dark:border-zinc-800">
+                       <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="font-mono">
+                       <SelectItem value="Mainnet">Mainnet</SelectItem>
+                       <SelectItem value="Preprod">Preprod</SelectItem>
+                       <SelectItem value="Preview">Preview</SelectItem>
+                    </SelectContent>
+                 </Select>
+              </div>
 
-          {/* Action Buttons */}
-          <div className="flex gap-4 pt-4">
-            <button
+              <div className="space-y-1.5">
+                 <Label className="text-xs font-bold text-zinc-500 uppercase">Provider Endpoint</Label>
+                 <div className="relative">
+                    <Terminal className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+                    <Input 
+                       value={grpcEndpoint}
+                       onChange={(e) => setGrpcEndpoint(e.target.value)}
+                       className="pl-9 font-mono text-sm bg-zinc-50 dark:bg-black border-zinc-200 dark:border-zinc-800"
+                    />
+                 </div>
+              </div>
+
+              <div className="space-y-1.5">
+                 <div className="flex justify-between">
+                    <Label className="text-xs font-bold text-zinc-500 uppercase">API Key</Label>
+                    <a href="https://demeter.run" target="_blank" rel="noreferrer" className="text-[10px] text-indigo-500 hover:underline">Get Key →</a>
+                 </div>
+                 <Input 
+                    type="password"
+                    value={apiKey}
+                    onChange={(e) => setApiKey(e.target.value)}
+                    placeholder="dmtr_utxorpc1..."
+                    className="font-mono text-sm bg-zinc-50 dark:bg-black border-zinc-200 dark:border-zinc-800"
+                 />
+              </div>
+           </div>
+
+           {/* Validation Status */}
+           {validationResult && (
+              <div className={cn(
+                 "p-3 rounded-sm border text-xs font-mono flex items-center gap-2",
+                 validationResult.isValid 
+                    ? "bg-emerald-50 border-emerald-200 text-emerald-700 dark:bg-emerald-900/10 dark:border-emerald-900 dark:text-emerald-400"
+                    : "bg-rose-50 border-rose-200 text-rose-700 dark:bg-rose-900/10 dark:border-rose-900 dark:text-rose-400"
+              )}>
+                 {validationResult.isValid ? <CheckCircle2 className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
+                 <span>
+                    {validationResult.isValid 
+                       ? `Connection Verified (Tip: ${validationResult.chainTipSlot})` 
+                       : validationResult.error}
+                 </span>
+              </div>
+           )}
+        </div>
+
+        {/* Footer Actions */}
+        <div className="p-6 pt-0 flex gap-3">
+           <Button 
+              variant="outline" 
+              className="flex-1 font-mono text-xs uppercase"
               onClick={handleValidate}
               disabled={isValidating || !apiKey.trim()}
-              className="flex-1 px-4 py-2 text-xs font-bold text-[#006A33] border border-[#006A33] hover:bg-[#006A33] hover:text-white transition-all uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-            >
-              {isValidating ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  VALIDATING...
-                </>
-              ) : (
-                'TEST_CONNECTION'
-              )}
-            </button>
-
-            <button
+           >
+              {isValidating ? <Loader2 className="w-3 h-3 animate-spin mr-2" /> : null}
+              Test Connection
+           </Button>
+           
+           <Button 
+              className="flex-1 font-mono text-xs uppercase bg-zinc-900 dark:bg-zinc-100 text-white dark:text-black hover:bg-zinc-800 dark:hover:bg-zinc-200"
               onClick={handleSave}
               disabled={!validationResult?.isValid || isSaving}
-              className="flex-1 px-6 py-2 text-xs font-bold bg-[#006A33] text-white hover:bg-[#008040] transition-all uppercase tracking-wider shadow-[0_0_10px_rgba(0,106,51,0.5)] disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none flex items-center justify-center"
-            >
-              {isSaving ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  SAVING...
-                </>
-              ) : (
-                'SAVE_&_CONTINUE >'
-              )}
-            </button>
-          </div>
-
-          {/* Help Text */}
-          <div className="bg-[#006A33]/10 border border-[#006A33]/30 p-4">
-            <p className="text-xs text-[#006A33] font-bold uppercase tracking-wider mb-2">
-              First Time Setup:
-            </p>
-            <ol className="text-sm text-gray-300 mt-2 space-y-1 list-decimal list-inside">
-              <li>Visit demeter.run and create an account</li>
-              <li>Navigate to the UtxoRPC service</li>
-              <li>Copy your API key (starts with 'dmtr_utxorpc1...')</li>
-              <li>Paste it above and click "Test Connection"</li>
-              <li>Once validated, click "Save & Continue"</li>
-            </ol>
-          </div>
+           >
+              {isSaving ? <Loader2 className="w-3 h-3 animate-spin mr-2" /> : <ArrowRight className="w-3 h-3 mr-2" />}
+              Save & Initialize
+           </Button>
         </div>
+
       </div>
     </div>
   );

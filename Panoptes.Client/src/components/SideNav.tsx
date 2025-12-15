@@ -110,6 +110,7 @@ export function SideNav() {
   const NavContent = ({ forceExpanded = false }: { forceExpanded?: boolean }) => {
     const effectiveCollapsed = forceExpanded ? false : isCollapsed;
     const currentNetObj = NETWORKS.find(n => n.id === activeNetwork) || NETWORKS[0];
+    const isSystemConfigured = configuredNetworks.length > 0;
 
     return (
       <div className="flex flex-col h-full bg-white dark:bg-zinc-900 border-r border-zinc-200 dark:border-zinc-800">
@@ -153,38 +154,45 @@ export function SideNav() {
             {!effectiveCollapsed && (
                 <div className="px-3 mb-2 flex items-center justify-between">
                     <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Network</span>
-                    <button 
-                        onClick={() => { navigate('/settings'); closeMobile(); }}
-                        className="text-[10px] text-zinc-500 hover:text-indigo-500 flex items-center gap-1 transition-colors"
-                    >
-                        <Settings className="w-3 h-3" /> Config
-                    </button>
+                    {/* [REMOVED] Settings Config button deleted here as requested */}
                 </div>
             )}
             
             <div className="relative">
-              <button
-                disabled={isSwitching}
-                onClick={() => !effectiveCollapsed && setShowNetworkMenu(!showNetworkMenu)}
-                className={cn(
-                  "w-full flex items-center gap-3 px-3 py-2 rounded-md transition-colors border border-transparent",
-                  "hover:bg-zinc-100 dark:hover:bg-zinc-800",
-                  effectiveCollapsed ? "justify-center" : "justify-between",
-                  showNetworkMenu && "bg-zinc-100 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700"
-                )}
-                title={effectiveCollapsed ? `Active: ${currentNetObj.label}` : undefined}
-              >
-                <div className="flex items-center gap-3">
-                  <div className={cn("w-2 h-2 rounded-full ring-2 ring-opacity-50 animate-pulse", currentNetObj.color, "ring-current")} />
-                  {!effectiveCollapsed && <span className="text-sm font-bold text-zinc-700 dark:text-zinc-200">{currentNetObj.label}</span>}
-                </div>
-                {!effectiveCollapsed && (
-                    <ChevronRight className={cn("w-4 h-4 text-zinc-400 transition-transform", showNetworkMenu && "rotate-90")} />
-                )}
-              </button>
+              {!isSystemConfigured ? (
+                 // [NEW] Not Configured State
+                 <div className={cn(
+                    "w-full flex items-center gap-3 px-3 py-2 rounded-md border border-dashed border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900/50 text-zinc-400 cursor-not-allowed",
+                    effectiveCollapsed ? "justify-center" : ""
+                  )}>
+                     <div className="w-2 h-2 rounded-full bg-zinc-400" />
+                     {!effectiveCollapsed && <span className="text-sm italic">Not Configured</span>}
+                 </div>
+              ) : (
+                // [EXISTING] Active Network Button
+                <button
+                    disabled={isSwitching}
+                    onClick={() => !effectiveCollapsed && setShowNetworkMenu(!showNetworkMenu)}
+                    className={cn(
+                    "w-full flex items-center gap-3 px-3 py-2 rounded-md transition-colors border border-transparent",
+                    "hover:bg-zinc-100 dark:hover:bg-zinc-800",
+                    effectiveCollapsed ? "justify-center" : "justify-between",
+                    showNetworkMenu && "bg-zinc-100 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700"
+                    )}
+                    title={effectiveCollapsed ? `Active: ${currentNetObj.label}` : undefined}
+                >
+                    <div className="flex items-center gap-3">
+                    <div className={cn("w-2 h-2 rounded-full ring-2 ring-opacity-50 animate-pulse", currentNetObj.color, "ring-current")} />
+                    {!effectiveCollapsed && <span className="text-sm font-bold text-zinc-700 dark:text-zinc-200">{currentNetObj.label}</span>}
+                    </div>
+                    {!effectiveCollapsed && (
+                        <ChevronRight className={cn("w-4 h-4 text-zinc-400 transition-transform", showNetworkMenu && "rotate-90")} />
+                    )}
+                </button>
+              )}
 
               {/* Network Dropdown */}
-              {!effectiveCollapsed && showNetworkMenu && (
+              {!effectiveCollapsed && showNetworkMenu && isSystemConfigured && (
                 <div className="mt-2 mx-1 p-1 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-md shadow-lg animate-in slide-in-from-top-2 duration-200 z-50">
                   {NETWORKS.map((net) => {
                     const isConfigured = configuredNetworks.includes(net.id);
@@ -200,7 +208,8 @@ export function SideNav() {
                           className={cn(
                             "w-full flex items-center justify-between px-3 py-2 rounded text-sm transition-all mb-1 last:mb-0",
                             isActive 
-                              ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 font-bold" 
+                              // [UPDATED] Green Theme Restored Here
+                              ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 font-bold" 
                               : "text-zinc-500 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-900 hover:text-zinc-900 dark:hover:text-zinc-200"
                           )}
                         >

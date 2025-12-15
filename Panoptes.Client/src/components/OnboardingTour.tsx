@@ -20,21 +20,21 @@ function CustomTooltip({
   return (
     <div
       {...tooltipProps}
-      className="bg-[#050505] border border-[#006A33] text-[#F8F8FF] p-6 max-w-md rounded-none shadow-[0_0_20px_rgba(0,106,51,0.3)] font-mono relative overflow-hidden"
+      className="bg-[#09090b] border border-zinc-800 text-zinc-100 p-6 max-w-md rounded-sm shadow-2xl font-mono relative overflow-hidden"
     >
-      {/* Grid Background Effect */}
-      <div className="absolute inset-0 opacity-10 pointer-events-none" 
-           style={{ backgroundImage: 'radial-gradient(#006A33 1px, transparent 1px)', backgroundSize: '20px 20px' }}>
+      {/* Grid Background Effect (Subtle Industrial) */}
+      <div className="absolute inset-0 opacity-[0.03] pointer-events-none" 
+           style={{ backgroundImage: 'radial-gradient(#ffffff 1px, transparent 1px)', backgroundSize: '20px 20px' }}>
       </div>
 
       {/* Header */}
-      <div className="flex justify-between items-center mb-4 border-b border-[#006A33]/30 pb-2 relative z-10">
-        <span className="text-[#006A33] text-xs tracking-widest uppercase font-bold">
+      <div className="flex justify-between items-center mb-4 border-b border-zinc-800 pb-2 relative z-10">
+        <span className="text-zinc-500 text-xs tracking-widest uppercase font-bold">
           SYSTEM_GUIDE // STEP_0{index + 1}
         </span>
         <button 
           {...closeProps} 
-          className="text-[#006A33] hover:text-white transition-colors p-1"
+          className="text-zinc-500 hover:text-white transition-colors p-1"
           title="Skip Tour"
         >
           <span className="sr-only">Close</span>
@@ -53,7 +53,7 @@ function CustomTooltip({
           {index > 0 && (
             <button
               {...backProps}
-              className="px-4 py-2 text-xs font-bold text-[#006A33] border border-[#006A33] hover:bg-[#006A33] hover:text-white transition-all uppercase tracking-wider"
+              className="px-4 py-2 text-xs font-bold text-zinc-500 border border-zinc-800 hover:bg-zinc-800 hover:text-white transition-all uppercase tracking-wider rounded-sm"
             >
               Back
             </button>
@@ -62,7 +62,7 @@ function CustomTooltip({
         
         <button
           {...primaryProps}
-          className="px-6 py-2 text-xs font-bold bg-[#006A33] text-white hover:bg-[#008040] transition-all uppercase tracking-wider shadow-[0_0_10px_rgba(0,106,51,0.5)]"
+          className="px-6 py-2 text-xs font-bold bg-zinc-100 text-black hover:bg-white hover:shadow-[0_0_15px_rgba(255,255,255,0.2)] transition-all uppercase tracking-wider rounded-sm"
         >
           {isLastStep ? 'Initialize_System >' : 'Next_Step >'}
         </button>
@@ -114,19 +114,32 @@ export function OnboardingTour({ enabled = true, onFinish }: OnboardingTourProps
       content: (
         <div>
           <h3 className="font-bold text-lg mb-2 text-white uppercase tracking-wide">System_Login</h3>
-          <p className="text-gray-300 text-sm leading-relaxed">
+          <p className="text-zinc-400 text-sm leading-relaxed">
             Welcome to Panoptes. Your real-time blockchain surveillance system is ready for configuration.
           </p>
         </div>
       ),
       placement: 'center',
     },
+    // ✅ NEW STEP: Network Switcher
+    {
+        target: 'nav', // General target for the sidebar
+        content: (
+            <div>
+                <h3 className="font-bold text-lg mb-2 text-white uppercase tracking-wide">Network_Manager</h3>
+                <p className="text-zinc-400 text-sm leading-relaxed">
+                    Switch between <strong>Preprod</strong>, <strong>Mainnet</strong>, and <strong>Preview</strong> using the dropdown menu. Configure API keys for each network in Settings.
+                </p>
+            </div>
+        ),
+        placement: 'right'
+    },
     {
       target: '[data-tour="create-subscription"]',
       content: (
         <div>
           <h3 className="font-bold text-lg mb-2 text-white uppercase tracking-wide">Initialize_Monitor</h3>
-          <p className="text-gray-300 text-sm leading-relaxed">
+          <p className="text-zinc-400 text-sm leading-relaxed">
             Deploy new surveillance hooks here. Monitor wallets, contracts, and transaction flows.
           </p>
         </div>
@@ -137,7 +150,7 @@ export function OnboardingTour({ enabled = true, onFinish }: OnboardingTourProps
       content: (
         <div>
           <h3 className="font-bold text-lg mb-2 text-white uppercase tracking-wide">Filter_Protocols</h3>
-          <p className="text-gray-300 text-sm leading-relaxed">
+          <p className="text-zinc-400 text-sm leading-relaxed">
             Isolate specific event streams. Filter by status, event type, or search for specific subscription IDs.
           </p>
         </div>
@@ -148,7 +161,7 @@ export function OnboardingTour({ enabled = true, onFinish }: OnboardingTourProps
       content: (
         <div>
           <h3 className="font-bold text-lg mb-2 text-white uppercase tracking-wide">Event_Logs</h3>
-          <p className="text-gray-300 text-sm leading-relaxed">
+          <p className="text-zinc-400 text-sm leading-relaxed">
             Detailed audit trail of all captured events and delivery attempts.
           </p>
         </div>
@@ -161,7 +174,7 @@ export function OnboardingTour({ enabled = true, onFinish }: OnboardingTourProps
       content: (
         <div>
           <h3 className="font-bold text-lg mb-2 text-white uppercase tracking-wide">System_Test</h3>
-          <p className="text-gray-300 text-sm leading-relaxed">
+          <p className="text-zinc-400 text-sm leading-relaxed">
             Verify your integration integrity. Use the built-in tester to simulate events and validate webhook delivery.
           </p>
         </div>
@@ -188,9 +201,9 @@ export function OnboardingTour({ enabled = true, onFinish }: OnboardingTourProps
           overlayColor: 'rgba(5, 5, 5, 0.85)',
         },
         spotlight: {
-          borderRadius: 8,
-          border: '2px solid #006A33',
-          boxShadow: '0 0 20px rgba(0, 106, 51, 0.5)',
+          borderRadius: 4,
+          border: '2px solid #52525b', // zinc-600
+          boxShadow: '0 0 20px rgba(255, 255, 255, 0.1)',
         },
       }}
       floaterProps={{
