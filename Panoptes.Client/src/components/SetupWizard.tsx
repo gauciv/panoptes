@@ -209,6 +209,14 @@ export function SetupWizard({ onComplete, onClose }: SetupWizardProps) {
                  </span>
               </div>
            )}
+
+           {/* Error Banner (use the 'error' state so it's no longer unused) */}
+           {error && (!validationResult || validationResult.isValid) && (
+              <div className="p-3 rounded-sm border text-xs font-mono flex items-center gap-2 bg-rose-50 border-rose-200 text-rose-700 dark:bg-rose-900/10 dark:border-rose-900 dark:text-rose-400">
+                 <XCircle className="w-4 h-4" />
+                 <span>{error}</span>
+              </div>
+           )}
         </div>
 
         {/* Footer Actions */}
