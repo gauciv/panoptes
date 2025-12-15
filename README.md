@@ -103,25 +103,6 @@ The wizard will:
 - 💾 Store configuration securely in PostgreSQL database
 - 🚀 Auto-start the blockchain sync worker
 
-**Manual Configuration (Advanced)**
-
-For automated deployments, you can also configure via `appsettings.Local.json`:
-
-```json
-{
-  "ConnectionStrings": {
-    "DefaultConnection": "Host=localhost;Port=5432;Database=panoptes_db;Username=postgres;Password=panoptes_password"
-  },
-  "Argus": {
-    "GrpcEndpoint": "https://cardano-preprod.utxorpc-m1.demeter.run",
-    "ApiKey": "YOUR_DEMETER_API_KEY_HERE",
-    "Network": "Preprod"
-  }
-}
-```
-
-> ⚠️ **Security Note**: GUI configuration is preferred as credentials are encrypted at rest. If using config files, never commit `appsettings.Local.json` to version control!
-
 ### Running the Application
 
 **Backend (Terminal 1):**
