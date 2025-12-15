@@ -18,6 +18,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import toast from 'react-hot-toast';
+import { useNavigate } from 'react-router-dom';
 
 interface ConfigureNetworkModalProps {
   networkId: string;
@@ -47,6 +48,7 @@ export function ConfigureNetworkModal({
   const [isValidating, setIsValidating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
+  const navigate = useNavigate();
 
   // 1. VALIDATE CREDENTIALS
   const handleValidate = async () => {
@@ -230,6 +232,12 @@ export function ConfigureNetworkModal({
                     <h4 className="text-xs font-bold font-mono uppercase text-zinc-700 dark:text-zinc-300 flex items-center gap-2">
                         <BookOpen className="w-4 h-4" /> Setup Guide
                     </h4>
+                    <button 
+                        onClick={() => navigate('/docs')} 
+                        className="text-[10px] text-emerald-500 hover:underline cursor-pointer"
+                    >
+                        VIEW_FULL_DOCS →
+                    </button>
                     <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
                         You are configuring the <strong>{networkLabel}</strong> profile. Panoptes utilizes <strong>UTxORPC</strong> for high-speed blockchain synchronization.
                     </p>

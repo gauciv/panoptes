@@ -267,14 +267,15 @@ export default function Settings() {
                     <HelpCircle className="w-4 h-4 text-zinc-500" /> Documentation
                 </h3>
                 <div className="space-y-3">
-                    <Button 
-                        variant="outline" 
-                        onClick={() => window.open('#', '_blank')} 
-                        className="w-full justify-between font-mono text-xs"
-                    >
-                        <span className="flex items-center gap-2"><BookOpen className="w-3 h-3" /> Read_Documentation</span> 
-                        <ExternalLink className="w-3 h-3" />
-                    </Button>
+                  <Button 
+                      variant="outline" 
+                      // CHANGE: from window.open('#') to navigate('/docs')
+                      onClick={() => navigate('/docs')} 
+                      className="w-full justify-between font-mono text-xs"
+                  >
+                      <span className="flex items-center gap-2"><BookOpen className="w-3 h-3" /> Read_Documentation</span> 
+                      <ExternalLink className="w-3 h-3" />
+                  </Button>
                     
                     <Button variant="outline" onClick={() => { localStorage.removeItem('panoptes_onboarding_completed'); navigate('/dashboard'); }} className="w-full justify-between font-mono text-xs">
                         <span>Replay_Product_Tour</span> <ArrowLeft className="w-3 h-3 rotate-180" />

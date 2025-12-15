@@ -11,6 +11,7 @@ import Landing from './pages/Landing';
 import { useScrollbarTheme } from './hooks/useScrollbarTheme';
 import { useAuth, AuthProvider } from './context/AuthContext';
 import { CustomCursor } from './pages/landing/components/Cursor';
+import Docs from './pages/Docs';
 
 export const ThemeContext = createContext<{
   isDark: boolean;
@@ -148,6 +149,14 @@ function App() {
 
             {/* Fallback */}
             <Route path="*" element={<Navigate to="/" replace />} />
+            <Route 
+              path="/docs" 
+              element={
+                <RequireAuth>
+                  <Docs />
+                </RequireAuth>
+              } 
+            />
 
           </Routes>
         </Router>
