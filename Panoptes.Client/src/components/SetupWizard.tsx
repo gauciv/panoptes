@@ -101,7 +101,6 @@ export function SetupWizard({ onComplete, onClose }: SetupWizardProps) {
         throw new Error(data.error || 'Failed to save');
       }
 
-      // Also ensure this network is switched to active
       await fetch('/setup/switch-network', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -117,6 +116,7 @@ export function SetupWizard({ onComplete, onClose }: SetupWizardProps) {
   };
 
   return (
+    // Modal Overlay: z-[1100]
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[1100] p-4">
       <div className="bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 w-full max-w-lg shadow-2xl rounded-sm overflow-hidden flex flex-col max-h-[90vh]">
         
@@ -157,8 +157,8 @@ export function SetupWizard({ onComplete, onClose }: SetupWizardProps) {
                     <SelectTrigger className="font-mono text-sm bg-zinc-50 dark:bg-black border-zinc-200 dark:border-zinc-800 dark:text-zinc-100">
                        <SelectValue />
                     </SelectTrigger>
-                    {/* ✅ FIX 1: Added z-[1200] to appear above the modal (which is 1100) */}
-                    <SelectContent className="font-mono z-[1200]">
+                    {/* ✅ FIX 1: Use !z-[9999] to force it above everything */}
+                    <SelectContent className="font-mono !z-[9999] bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800">
                        <SelectItem value="Mainnet">Mainnet</SelectItem>
                        <SelectItem value="Preprod">Preprod</SelectItem>
                        <SelectItem value="Preview">Preview</SelectItem>
@@ -214,9 +214,9 @@ export function SetupWizard({ onComplete, onClose }: SetupWizardProps) {
         {/* Footer Actions */}
         <div className="p-6 pt-0 flex gap-3">
            <Button 
-              variant="outline" 
-              // ✅ FIX 2: Added explicit dark mode styles for visibility
-              className="flex-1 font-mono text-xs uppercase border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+              type="button" // Prevent default submit behavior
+              // ✅ FIX 2: Explicit background and text colors to fix "Invisible Button"
+              className="flex-1 font-mono text-xs uppercase bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800"
               onClick={handleValidate}
               disabled={isValidating || !apiKey.trim()}
            >
@@ -225,6 +225,7 @@ export function SetupWizard({ onComplete, onClose }: SetupWizardProps) {
            </Button>
            
            <Button 
+              type="button"
               className="flex-1 font-mono text-xs uppercase bg-zinc-900 dark:bg-zinc-100 text-white dark:text-black hover:bg-zinc-800 dark:hover:bg-zinc-200"
               onClick={handleSave}
               disabled={!validationResult?.isValid || isSaving}

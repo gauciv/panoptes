@@ -510,16 +510,10 @@ export default function Settings() {
       </div>
       
       {showWizard && (
-         <div className="fixed inset-0 z-[9999] pointer-events-auto"> 
-            {/* Added Wrapper to force Z-Index context just in case */}
-            <SetupWizard 
-                onComplete={handleWizardComplete} 
-                onClose={() => {
-                    console.log("[Settings] Closing Wizard");
-                    setShowWizard(false);
-                }} 
-            />
-         </div>
+         <SetupWizard 
+            onComplete={handleWizardComplete} 
+            onClose={() => setShowWizard(false)} 
+         />
       )}
 
     </div>
