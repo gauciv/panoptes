@@ -229,8 +229,26 @@ const EditSubscriptionModal: React.FC<EditSubscriptionModalProps> = ({
 
                                     <div className="grid grid-cols-2 gap-4 items-end">
                                         <div className="space-y-1.5">
-                                            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">Min Value (ADA)</label>
-                                            <input type="number" min="0" step="0.1" placeholder="0" value={minAda} onChange={(e) => setMinAda(e.target.value)} className="w-full h-10 px-3 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-black text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-sentinel focus:border-sentinel transition-all placeholder:text-gray-500 text-sm font-mono" />
+                                        <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">Min Value (ADA)</label>
+                                            <input 
+                                                type="number" 
+                                                min="0" 
+                                                step="0.1" 
+                                                placeholder="0" 
+                                                value={minAda} 
+                                                // FIX: Strict validation prevents negative signs and values
+                                                onChange={(e) => {
+                                                    const val = e.target.value;
+                                                    if (val === '' || (parseFloat(val) >= 0 && !val.includes('-'))) {
+                                                        setMinAda(val);
+                                                    }
+                                                }}
+                                                // UX: Prevent typing '-' key directly
+                                                onKeyDown={(e) => {
+                                                    if (e.key === '-' || e.key === 'e') e.preventDefault();
+                                                }}
+                                                className="w-full h-10 px-3 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-black text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-sentinel focus:border-sentinel transition-all placeholder:text-gray-500 text-sm font-mono" 
+                                            />
                                         </div>
                                         <div className="h-10 flex items-center px-4 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg">
                                             <label className="inline-flex items-center cursor-pointer w-full">

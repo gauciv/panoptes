@@ -224,7 +224,17 @@ const CreateSubscriptionModal: React.FC<CreateSubscriptionModalProps> = ({
                         step="0.1"
                         placeholder="0"
                         value={minAda}
-                        onChange={(e) => setMinAda(e.target.value)}
+                        // FIX: Strict validation - prevents negative signs and negative values
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === '' || (parseFloat(val) >= 0 && !val.includes('-'))) {
+                            setMinAda(val);
+                          }
+                        }}
+                        // UX: Prevent typing '-' key directly
+                        onKeyDown={(e) => {
+                          if (e.key === '-' || e.key === 'e') e.preventDefault();
+                        }}
                         className="w-full h-10 px-3 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-black text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-sentinel text-sm"
                     />
                   </div>
