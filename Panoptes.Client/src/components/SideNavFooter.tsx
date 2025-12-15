@@ -3,6 +3,8 @@ import { User } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { cn } from '../lib/utils';
 import { useNavigate } from 'react-router-dom';
+// ✅ IMPORTED: Needed to get email from Google/Social logins
+import { fetchUserAttributes } from 'aws-amplify/auth';
 
 interface SideNavFooterProps {
   isCollapsed: boolean;
@@ -14,12 +16,40 @@ export function SideNavFooter({ isCollapsed }: SideNavFooterProps) {
 
   // User Identifiers
   const userId = user?.username || user?.signInDetails?.loginId || 'guest';
-  const userEmail = user?.signInDetails?.loginId || "Unknown Operator";
+  
+  // State for resolved data
+  const [userEmail, setUserEmail] = useState<string>("Unknown Operator");
+  const [displayName, setDisplayName] = useState("Loading...");
 
-  // Display Name State
-  const [displayName, setDisplayName] = useState(userEmail);
+  // ✅ 1. Fetch Real Email (Handles Google/Federated Logins)
+  useEffect(() => {
+    const resolveUserEmail = async () => {
+      if (!user) return;
 
-  // Name Resolution Effect
+      // Plan A: Try standard login details
+      if (user.signInDetails?.loginId) {
+        setUserEmail(user.signInDetails.loginId);
+        return;
+      }
+
+      // Plan B: Fetch attributes for Social Logins (Google)
+      try {
+        const attributes = await fetchUserAttributes();
+        if (attributes.email) {
+          setUserEmail(attributes.email);
+        } else {
+          setUserEmail("External Account");
+        }
+      } catch (e) {
+        // Fallback if everything fails
+        setUserEmail("Unknown Operator");
+      }
+    };
+
+    resolveUserEmail();
+  }, [user]);
+
+  // ✅ 2. Name Resolution Effect (Updates when Profile is saved)
   useEffect(() => {
     const updateDisplayName = () => {
       if (userId === 'guest') {
@@ -30,6 +60,7 @@ export function SideNavFooter({ isCollapsed }: SideNavFooterProps) {
       const first = localStorage.getItem(`panoptes_user_${userId}_first_name`);
       const last = localStorage.getItem(`panoptes_user_${userId}_last_name`);
 
+      // If user set a custom name, use it. Otherwise default to the resolved email.
       if (first || last) {
         setDisplayName(`${first || ''} ${last || ''}`.trim());
       } else {
@@ -37,17 +68,27 @@ export function SideNavFooter({ isCollapsed }: SideNavFooterProps) {
       }
     };
 
+    // Run immediately when email or ID changes
     updateDisplayName();
+
+    // Listen for updates from Profile page
     window.addEventListener('user_profile_updated', updateDisplayName);
     return () => {
       window.removeEventListener('user_profile_updated', updateDisplayName);
     };
   }, [userId, userEmail]);
 
-  // Handle Navigation (Fixes the "Refresh" bug)
   const handleProfileClick = () => {
-    navigate('/dashboard/profile'); // ✅ Corrected Path
+    navigate('/dashboard/profile');
   };
+
+  // Logic to determine secondary text (The status line)
+  // If the Name is the same as the Email, show "Active Session".
+  // If the Email is "Unknown Operator", show "Active Session".
+  // Otherwise, show the Email.
+  const secondaryText = (displayName !== userEmail && userEmail !== "Unknown Operator") 
+    ? userEmail 
+    : "Active Session";
 
   return (
     <div className="mt-auto">
@@ -56,7 +97,6 @@ export function SideNavFooter({ isCollapsed }: SideNavFooterProps) {
         isCollapsed ? "flex justify-center" : ""
       )}>
         {isCollapsed ? (
-          // Collapsed: Navigate to Profile
           <button
             onClick={handleProfileClick}
             className="p-2 text-zinc-500 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-md transition-colors"
@@ -65,7 +105,6 @@ export function SideNavFooter({ isCollapsed }: SideNavFooterProps) {
             <User className="w-5 h-5" />
           </button>
         ) : (
-          // Expanded: Navigate to Profile
           <div 
             className="flex items-center gap-3 px-2 py-2 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer group transition-colors"
             onClick={handleProfileClick}
@@ -89,9 +128,8 @@ export function SideNavFooter({ isCollapsed }: SideNavFooterProps) {
                   <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
                 </span>
                 
-                {/* Fix Duplicate: Only show email if it's different from the name above */}
                 <span className="text-[10px] text-zinc-500 dark:text-zinc-400 truncate max-w-[120px]">
-                  {displayName !== userEmail ? userEmail : 'Active Session'}
+                  {secondaryText}
                 </span>
               </div>
             </div>
