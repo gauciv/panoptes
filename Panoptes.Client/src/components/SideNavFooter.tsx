@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { BookOpen, ExternalLink, User, Power } from 'lucide-react';
+import { User, Power } from 'lucide-react'; // Removed BookOpen, ExternalLink
 import { useAuth } from '../context/AuthContext';
 import { cn } from '../lib/utils';
 import { useNavigate } from 'react-router-dom';
@@ -19,7 +19,6 @@ export function SideNavFooter({ isCollapsed }: SideNavFooterProps) {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   // User Identifiers
-  // Get identifiers safely
   const userId = user?.username || user?.signInDetails?.loginId || 'guest';
   const userEmail = user?.signInDetails?.loginId || "Unknown Operator";
 
@@ -79,42 +78,16 @@ export function SideNavFooter({ isCollapsed }: SideNavFooterProps) {
 
   return (
     <div className="mt-auto">
-      {/* 1. Documentation Promo (Only when expanded) */}
-      {!isCollapsed && (
-        <div className="p-3 m-2 mb-2 bg-gradient-to-br from-sentinel/10 to-sentinel/5 border border-sentinel/20 rounded-lg">
-          <div className="flex items-start gap-3">
-            <div className="flex-shrink-0 w-8 h-8 rounded-tech bg-sentinel/10 text-sentinel flex items-center justify-center mt-0.5">
-              <BookOpen className="w-4 h-4" aria-hidden="true" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <h3 className="font-sans font-semibold text-sm text-foreground mb-1">
-                View Documentation
-              </h3>
-              <p className="text-xs text-muted-foreground mb-3">
-                Learn how to integrate and use Panoptes
-              </p>
-              <a
-                href="#"
-                className="inline-flex items-center gap-2 px-3 py-1.5 bg-sentinel hover:bg-sentinel-hover text-white rounded-tech text-xs font-mono transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sentinel focus-visible:ring-offset-2"
-              >
-                Read Docs
-                <ExternalLink className="w-3 h-3" aria-hidden="true" />
-              </a>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 2. User Profile Strip */}
+      {/* 2. User Profile Strip (Now the only item) */}
       <div className={cn(
-        "border-t border-border p-2",
+        "border-t border-zinc-200 dark:border-zinc-800 p-2",
         isCollapsed ? "flex justify-center" : ""
       )}>
         {isCollapsed ? (
           // Collapsed: Show Logout Button
           <button
             onClick={handleLogoutClick}
-            className="p-2 text-muted-foreground hover:text-red-400 hover:bg-red-400/10 rounded-tech transition-colors"
+            className="p-2 text-zinc-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors"
             title="Sign Out"
           >
             <Power className="w-5 h-5" />
@@ -122,18 +95,18 @@ export function SideNavFooter({ isCollapsed }: SideNavFooterProps) {
         ) : (
           // Expanded: Interactive Profile Strip
           <div 
-            className="flex items-center gap-3 px-2 py-2 rounded-tech hover:bg-accent/50 cursor-pointer group transition-colors"
+            className="flex items-center gap-3 px-2 py-2 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer group transition-colors"
             onClick={() => navigate('/profile')}
             title="View Profile"
           >
             {/* Avatar */}
-            <div className="flex-shrink-0 w-9 h-9 bg-sentinel/10 border border-sentinel/30 flex items-center justify-center text-sentinel rounded-sm">
+            <div className="flex-shrink-0 w-9 h-9 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400 rounded-sm">
               <User className="w-4 h-4" />
             </div>
 
             {/* User Info */}
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-mono font-medium text-foreground truncate">
+              <p className="text-xs font-mono font-medium text-zinc-900 dark:text-zinc-100 truncate">
                 {displayName}
               </p>
               <div className="flex items-center gap-1.5 mt-0.5">
@@ -141,16 +114,16 @@ export function SideNavFooter({ isCollapsed }: SideNavFooterProps) {
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
                 </span>
-                <span className="text-[10px] text-muted-foreground truncate max-w-[120px]">
+                <span className="text-[10px] text-zinc-500 dark:text-zinc-400 truncate max-w-[120px]">
                   {userEmail}
                 </span>
               </div>
             </div>
 
-            {/* Actions: Logout Button (stops propagation to profile nav) */}
+            {/* Actions: Logout Button */}
             <button
               onClick={handleLogoutClick}
-              className="p-1.5 text-muted-foreground hover:text-red-400 hover:bg-red-400/10 rounded transition-colors opacity-0 group-hover:opacity-100"
+              className="p-1.5 text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors opacity-0 group-hover:opacity-100"
               title="Sign Out"
             >
               <Power className="w-4 h-4" />

@@ -1,6 +1,6 @@
 import { useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Menu, X, Globe, Check, Settings, Lock } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Menu, X, Check, Settings, Lock } from 'lucide-react';
 import { PRIMARY_NAV_ITEMS, SECONDARY_NAV_ITEMS } from '../config/navigation';
 import { SideNavItem } from './SideNavItem';
 import { SideNavFooter } from './SideNavFooter';
