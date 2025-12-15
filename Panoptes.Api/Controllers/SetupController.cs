@@ -29,16 +29,23 @@ namespace Panoptes.Api.Controllers
         [HttpGet("status")]
         public async Task<ActionResult<SetupStatus>> GetStatus()
         {
-            var config = await _dbContext.DemeterConfigs
-                .Where(c => c.IsActive)
-                .FirstOrDefaultAsync();
+            // Get the currently active config
+            var activeConfig = await _dbContext.DemeterConfigs
+                .AsNoTracking()
+                .FirstOrDefaultAsync(c => c.IsActive);
+
+            // Get list of all configured networks (where we have keys stored)
+            var configuredNetworks = await _dbContext.DemeterConfigs
+                .AsNoTracking()
+                .Select(c => c.Network)
+                .ToListAsync();
 
             var status = new SetupStatus
             {
-                IsConfigured = config != null,
-                Network = config?.Network,
-                GrpcEndpoint = config?.GrpcEndpoint,
-                LastUpdated = config?.UpdatedAt
+                IsConfigured = activeConfig != null,
+                ActiveNetwork = activeConfig?.Network,
+                ActiveEndpoint = activeConfig?.GrpcEndpoint,
+                ConfiguredNetworks = configuredNetworks
             };
 
             return Ok(status);
@@ -47,44 +54,36 @@ namespace Panoptes.Api.Controllers
         [HttpPost("validate-demeter")]
         public async Task<ActionResult<ValidationResult>> ValidateDemeter([FromBody] DemeterCredentials credentials)
         {
-            if (string.IsNullOrWhiteSpace(credentials.GrpcEndpoint))
+            if (string.IsNullOrWhiteSpace(credentials.GrpcEndpoint) || string.IsNullOrWhiteSpace(credentials.ApiKey))
             {
-                return BadRequest(new ValidationResult
-                {
-                    IsValid = false,
-                    Message = "GrpcEndpoint is required"
-                });
+                return BadRequest(new ValidationResult { IsValid = false, Message = "Endpoint and API Key are required" });
             }
 
-            if (string.IsNullOrWhiteSpace(credentials.ApiKey))
+            // SAFETY CHECK: Prevent mixing up networks
+            // Demeter endpoints usually contain the network name (e.g., 'cardano-mainnet' or 'cardano-preprod')
+            if (!string.IsNullOrEmpty(credentials.Network))
             {
-                return BadRequest(new ValidationResult
-                {
-                    IsValid = false,
-                    Message = "ApiKey is required"
-                });
+                var urlLower = credentials.GrpcEndpoint.ToLower();
+                var netLower = credentials.Network.ToLower();
+                
+                if (urlLower.Contains("mainnet") && netLower != "mainnet")
+                    return Ok(new ValidationResult { IsValid = false, Message = "MISMATCH: You are using a Mainnet URL for a non-Mainnet configuration." });
+                
+                if (urlLower.Contains("preprod") && netLower != "preprod")
+                    return Ok(new ValidationResult { IsValid = false, Message = "MISMATCH: You are using a Preprod URL for a non-Preprod configuration." });
             }
 
             try
             {
-                // Test connection by getting chain tip
-                var headers = new Dictionary<string, string>
-                {
-                    { "dmtr-api-key", credentials.ApiKey }
-                };
-
+                var headers = new Dictionary<string, string> { { "dmtr-api-key", credentials.ApiKey } };
                 var provider = new PanoptesU5CProvider(credentials.GrpcEndpoint, headers);
                 
-                // Determine network magic from network name
-                ulong networkMagic = credentials.Network switch
-                {
-                    "Mainnet" => 764824073,
-                    "Preprod" => 1,
-                    "Preview" => 2,
-                    _ => 1
-                };
-
-                var tip = await provider.GetTipAsync(networkMagic);
+                // Use a default timeout for validation so we don't hang
+                using var cts = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(10));
+                
+                // We just ask for the tip. If the key is invalid, Demeter throws RpcException(Unauthenticated).
+                // If the key is for the wrong network, the Slot/Hash might look weird, but usually connection succeeds.
+                var tip = await provider.GetTipAsync(0, cts.Token);
 
                 return Ok(new ValidationResult
                 {
@@ -106,89 +105,115 @@ namespace Panoptes.Api.Controllers
         [HttpPost("save-credentials")]
         public async Task<ActionResult> SaveCredentials([FromBody] DemeterCredentials credentials)
         {
-            _logger.LogInformation("SaveCredentials called: Network={Network}, Endpoint={Endpoint}, ApiKeyLength={Length}", 
-                credentials.Network, credentials.GrpcEndpoint, credentials.ApiKey?.Length ?? 0);
-
-            if (string.IsNullOrWhiteSpace(credentials.GrpcEndpoint) || 
-                string.IsNullOrWhiteSpace(credentials.ApiKey))
-            {
-                _logger.LogWarning("SaveCredentials failed: Missing required fields");
+            if (string.IsNullOrWhiteSpace(credentials.GrpcEndpoint) || string.IsNullOrWhiteSpace(credentials.ApiKey))
                 return BadRequest("GrpcEndpoint and ApiKey are required");
-            }
+
+            var network = credentials.Network ?? "Preprod";
 
             try
             {
-                // Deactivate any existing configs
-                var existingConfigs = await _dbContext.DemeterConfigs
-                    .Where(c => c.IsActive)
-                    .ToListAsync();
+                var encryptedApiKey = _dataProtector.Protect(credentials.ApiKey);
 
-                _logger.LogInformation("Found {Count} existing active configs to deactivate", existingConfigs.Count);
+                // UPSERT LOGIC: Check if we already have a profile for this network
+                var existingConfig = await _dbContext.DemeterConfigs
+                    .FirstOrDefaultAsync(c => c.Network == network);
 
-                foreach (var config in existingConfigs)
+                if (existingConfig != null)
                 {
-                    config.IsActive = false;
+                    _logger.LogInformation("Updating existing configuration for {Network}", network);
+                    existingConfig.GrpcEndpoint = credentials.GrpcEndpoint;
+                    existingConfig.ApiKeyEncrypted = encryptedApiKey;
+                    existingConfig.UpdatedAt = DateTime.UtcNow;
+                    // Note: We do NOT automatically set IsActive=true here unless you want to force switch on save.
+                    // For now, let's keep the user on their current network unless they explicitly switch.
+                }
+                else
+                {
+                    _logger.LogInformation("Creating new configuration profile for {Network}", network);
+                    
+                    // If this is the FIRST config ever, make it active automatically
+                    var isFirstConfig = !await _dbContext.DemeterConfigs.AnyAsync();
+                    
+                    var newConfig = new DemeterConfig
+                    {
+                        Network = network,
+                        GrpcEndpoint = credentials.GrpcEndpoint,
+                        ApiKeyEncrypted = encryptedApiKey,
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow,
+                        IsActive = isFirstConfig 
+                    };
+                    _dbContext.DemeterConfigs.Add(newConfig);
                 }
 
-                // Encrypt API key
-                var encryptedApiKey = _dataProtector.Protect(credentials.ApiKey);
-                _logger.LogInformation("API key encrypted successfully");
-
-                // Create new config
-                var newConfig = new DemeterConfig
-                {
-                    GrpcEndpoint = credentials.GrpcEndpoint,
-                    ApiKeyEncrypted = encryptedApiKey,
-                    Network = credentials.Network ?? "Preprod",
-                    CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow,
-                    IsActive = true
-                };
-
-                _dbContext.DemeterConfigs.Add(newConfig);
                 await _dbContext.SaveChangesAsync();
-
-                _logger.LogInformation("✅ Credentials saved successfully to database: Network={Network}, Endpoint={Endpoint}", 
-                    newConfig.Network, newConfig.GrpcEndpoint);
-
-                return Ok(new { Message = "Credentials saved successfully. Worker will restart automatically." });
+                return Ok(new { Message = $"Credentials for {network} saved." });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to save credentials");
-                return StatusCode(500, new { Error = "Failed to save credentials", Details = ex.Message });
+                return StatusCode(500, new { Error = "Failed to save credentials" });
             }
         }
 
+        [HttpPost("switch-network")]
+        public async Task<ActionResult> SwitchNetwork([FromBody] NetworkSwitchRequest request)
+        {
+            var targetNetwork = request.Network;
+            
+            // 1. Find the target config
+            var targetConfig = await _dbContext.DemeterConfigs
+                .FirstOrDefaultAsync(c => c.Network == targetNetwork);
+
+            if (targetConfig == null)
+            {
+                return NotFound(new { Error = $"No configuration found for {targetNetwork}. Please configure it first." });
+            }
+
+            // 2. Deactivate currently active config
+            var activeConfigs = await _dbContext.DemeterConfigs
+                .Where(c => c.IsActive)
+                .ToListAsync();
+
+            foreach (var c in activeConfigs) c.IsActive = false;
+
+            // 3. Activate target
+            targetConfig.IsActive = true;
+            await _dbContext.SaveChangesAsync();
+
+            _logger.LogInformation("Switched active network to {Network}", targetNetwork);
+
+            return Ok(new { Message = $"Switched to {targetNetwork}. Worker restarting..." });
+        }
+        
         [HttpDelete("clear-credentials")]
         public async Task<ActionResult> ClearCredentials()
         {
             var configs = await _dbContext.DemeterConfigs.ToListAsync();
-            
-            foreach (var config in configs)
-            {
-                config.IsActive = false;
-            }
-
+            _dbContext.DemeterConfigs.RemoveRange(configs); // Actually delete them to wipe slate clean
             await _dbContext.SaveChangesAsync();
-
-            return Ok(new { Message = "Credentials cleared. Worker will stop." });
+            return Ok(new { Message = "All credentials wiped." });
         }
     }
 
     public class SetupStatus
     {
         public bool IsConfigured { get; set; }
-        public string? Network { get; set; }
-        public string? GrpcEndpoint { get; set; }
-        public DateTime? LastUpdated { get; set; }
+        public string? ActiveNetwork { get; set; }
+        public string? ActiveEndpoint { get; set; }
+        public List<string> ConfiguredNetworks { get; set; } = new();
     }
 
     public class DemeterCredentials
     {
         public string GrpcEndpoint { get; set; } = string.Empty;
         public string ApiKey { get; set; } = string.Empty;
-        public string? Network { get; set; } = "Preprod";
+        public string? Network { get; set; }
+    }
+
+    public class NetworkSwitchRequest
+    {
+        public string Network { get; set; } = string.Empty;
     }
 
     public class ValidationResult

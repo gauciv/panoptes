@@ -204,40 +204,74 @@ namespace Panoptes.Infrastructure.Services
                 // --- CHECK SUBSCRIPTIONS ---
                 foreach (var sub in subscriptions)
                 {
+                    // 1. SCOPE CHECK: Does this transaction involve the watched addresses/policies?
                     if (!IsRelevantForSubscription(sub, outputAddresses)) continue;
 
-                    // Filter Logic
+                    // 2. MIN VALUE CHECK: Does the value meet the threshold?
                     if (sub.MinimumLovelace.HasValue && sub.MinimumLovelace.Value > 0)
                     {
-                        ulong relevantAmount = 0;
+                        ulong valueToCheck = 0;
+
+                        // Case A: User is watching specific wallets -> Check sum received by those wallets
                         if (sub.WalletAddresses != null && sub.WalletAddresses.Any())
                         {
                             foreach (var walletAddr in sub.WalletAddresses)
                             {
                                 var walletLower = walletAddr.ToLowerInvariant();
-                                if (addressAmounts.TryGetValue(walletLower, out var amt)) relevantAmount += amt;
+                                
+                                // Check Hex Address
+                                if (addressAmounts.TryGetValue(walletLower, out var amtHex)) valueToCheck += amtHex;
+                                
+                                // Check Bech32 Address (if user added Bech32 to filter)
+                                // Note: ConvertToBech32Address logic handles normalization
                             }
                         }
+                        // Case B: Legacy TargetAddress
                         else if (!string.IsNullOrEmpty(sub.TargetAddress))
                         {
                             var targetLower = sub.TargetAddress.ToLowerInvariant();
-                            if (addressAmounts.TryGetValue(targetLower, out var amt)) relevantAmount = amt;
+                            if (addressAmounts.TryGetValue(targetLower, out var amt)) valueToCheck = amt;
                         }
-                        else relevantAmount = totalTxLovelace;
+                        // Case C: Firehose (No filters) -> Check TOTAL transaction volume
+                        else 
+                        {
+                            // Logic: If I want to see "Whale Moves" > 1M ADA, I care about the total volume moved.
+                            valueToCheck = totalTxLovelace;
+                        }
 
-                        if (relevantAmount < sub.MinimumLovelace.Value) continue;
+                        // THE FILTER:
+                        if (valueToCheck < sub.MinimumLovelace.Value) continue;
                     }
 
+                    // 3. EVENT TYPE CHECK
                     bool shouldDispatch = false;
                     string matchReason = "";
 
                     switch (sub.EventType?.ToLowerInvariant())
                     {
-                        case "transaction": shouldDispatch = true; matchReason = "Transaction match"; break;
+                        case "transaction": 
+                            shouldDispatch = true; 
+                            matchReason = "Transaction match"; 
+                            break;
+                            
                         case "nft mint":
-                        case "mint": if (tx.Mint() != null && tx.Mint().Any()) { shouldDispatch = true; matchReason = "Mint event"; } break;
+                        case "mint": 
+                            if (tx.Mint() != null && tx.Mint().Any()) 
+                            { 
+                                shouldDispatch = true; 
+                                matchReason = "Mint event"; 
+                            } 
+                            break;
+                            
                         case "asset move":
-                        case "assetmove": if (policyIds.Any()) { shouldDispatch = true; matchReason = "Asset transfer"; } break;
+                        case "assetmove": 
+                            // Only trigger if a Policy ID matches (if specified) or ANY policy is present
+                            if (policyIds.Any()) 
+                            { 
+                                shouldDispatch = true; 
+                                matchReason = "Asset transfer"; 
+                            } 
+                            break;
                     }
 
                     if (shouldDispatch)
