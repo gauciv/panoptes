@@ -27,10 +27,6 @@ services:
       - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=panoptes_db;Username=postgres;Password=${DB_PASSWORD}
       # Critical: Allow connections from anywhere (CloudFront/Internet)
       - ASPNETCORE_URLS=http://+:5033
-      # We will pass these via a .env file on the server
-      - Argus__GrpcEndpoint=${ARGUS_ENDPOINT}
-      - Argus__ApiKey=${ARGUS_API_KEY}
-      - Argus__Network=${ARGUS_NETWORK}
     ports:
       - "5033:5033"
 

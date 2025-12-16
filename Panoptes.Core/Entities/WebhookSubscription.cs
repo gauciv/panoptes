@@ -11,6 +11,10 @@ namespace Panoptes.Core.Entities
         [Key]
         public Guid Id { get; set; }
 
+        // 🔒 CRITICAL: Links this subscription to a specific AWS Cognito User
+        [Required]
+        public string UserId { get; set; } = string.Empty;
+
         public string Name { get; set; } = string.Empty;
         public string TargetUrl { get; set; } = string.Empty;
         public string EventType { get; set; } = string.Empty;

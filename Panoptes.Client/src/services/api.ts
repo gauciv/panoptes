@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { fetchAuthSession } from 'aws-amplify/auth'; // ✅ NEW: Import Amplify Auth
 import { WebhookSubscription, DeliveryLog } from '../types';
 
 // Assuming the backend runs on port 5000 (http) or 5001 (https). 
@@ -8,6 +9,26 @@ const api = axios.create({
     headers: {
         'Content-Type': 'application/json',
     },
+});
+
+// ✅ NEW: Request Interceptor to inject the Bearer Token
+api.interceptors.request.use(async (config) => {
+    try {
+        const session = await fetchAuthSession();
+        // We use the Access Token for API authorization
+        const token = session.tokens?.accessToken?.toString();
+        
+        if (token) {
+            config.headers.Authorization = `Bearer ${token}`;
+        }
+    } catch (error) {
+        // If session fetch fails (e.g. not logged in), we just proceed without token
+        // The backend will return 401 Unauthorized if required
+        console.debug("No auth session found or error fetching token", error);
+    }
+    return config;
+}, (error) => {
+    return Promise.reject(error);
 });
 
 export const getSubscriptions = async (): Promise<WebhookSubscription[]> => {
@@ -104,7 +125,7 @@ export interface HealthResponse {
     system: {
         memoryUsageMb: number;
         gcMemoryMb: number;
-        cpuUsagePercent: number; // <--- ADDED THIS LINE
+        cpuUsagePercent: number;
         threadCount: number;
         processStartTime: string;
         error?: string;
