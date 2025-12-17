@@ -340,7 +340,7 @@ const Health: React.FC = () => {
                             </span>
                           </p>
                           {/* ANIMATED NUMBER IMPLEMENTATION */}
-                          <p className="text-xl font-mono font-bold text-indigo-600 dark:text-indigo-400 truncate" title={health.metrics.lastBlockSynced?.toLocaleString()}>
+                          <p className="text-xl font-mono font-bold text-indigo-600 dark:text-indigo-400" title={health.metrics.lastBlockSynced?.toLocaleString()}>
                               <AnimatedNumber value={health.metrics.lastBlockSynced} />
                           </p>
                       </div>
