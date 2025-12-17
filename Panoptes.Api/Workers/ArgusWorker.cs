@@ -96,20 +96,6 @@ namespace Panoptes.Api.Workers
 
                 if (credentials == null)
                 {
-                    _logger.LogWarning(
-                        "═══════════════════════════════════════════════════════════════\n" +
-                        "⏸️  ARGUS WORKER IDLE - NO CREDENTIALS CONFIGURED\n" +
-                        "═══════════════════════════════════════════════════════════════\n" +
-                        "Demeter credentials not found in database or appsettings.json\n" +
-                        "\n" +
-                        "To start syncing:\n" +
-                        "  1. Open Panoptes UI in your browser\n" +
-                        "  2. Complete the Setup Wizard\n" +
-                        "  3. Enter your Demeter API credentials\n" +
-                        "  4. ArgusWorker will start automatically\n" +
-                        "\n" +
-                        "Checking again in 5 seconds...\n" +
-                        "═══════════════════════════════════════════════════════════════");
                     await Task.Delay(5000, stoppingToken);
                     continue;
                 }
