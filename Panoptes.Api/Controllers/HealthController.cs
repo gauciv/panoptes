@@ -8,11 +8,14 @@ using System;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization; // Required for [Authorize]
+using System.Security.Claims; // Required for User.FindFirst
 
 namespace Panoptes.Api.Controllers
 {
     [ApiController]
     [Route("[controller]")]
+    [Authorize] // 🔒 Secure the endpoint so we can get the UserId
     public class HealthController : ControllerBase
     {
         private readonly IAppDbContext _dbContext;
@@ -30,6 +33,19 @@ namespace Panoptes.Api.Controllers
             _httpClientFactory = httpClientFactory;
         }
 
+        // --- 🔐 SECURITY HELPER ---
+        private string GetCurrentUserId()
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value 
+                         ?? User.FindFirst("sub")?.Value;
+                         
+            if (string.IsNullOrEmpty(userId))
+            {
+                throw new UnauthorizedAccessException("User ID claim not found in token.");
+            }
+            return userId;
+        }
+
         [HttpGet]
         public async Task<ActionResult<HealthResponse>> GetHealth()
         {
@@ -43,16 +59,18 @@ namespace Panoptes.Api.Controllers
 
             var checks = new HealthChecks();
             
-            // Database check
+            // Database check (Global connectivity check)
             checks.Database = await CheckDatabaseHealthAsync();
             
-            // UtxoRPC service check
+            // UtxoRPC service check (Global connectivity check)
             checks.UtxoRpc = await CheckUtxoRpcHealthAsync();
             
-            // Get metrics
-            var metrics = await GetMetricsAsync();
+            // Get metrics (PERSONALIZED)
+            // We pass the User ID to ensure they only see THEIR data
+            var userId = GetCurrentUserId();
+            var metrics = await GetMetricsAsync(userId);
             
-            // Get system info (Now includes CPU)
+            // Get system info (Global container stats)
             var systemInfo = GetSystemInfo();
 
             response.Checks = checks;
@@ -80,7 +98,8 @@ namespace Panoptes.Api.Controllers
             try
             {
                 // Execute a simple query to test connectivity
-                await _dbContext.WebhookSubscriptions.AnyAsync();
+                // Using WebhookSubscriptions is fine, we just want to know if DB responds
+                await _dbContext.WebhookSubscriptions.FirstOrDefaultAsync();
                 stopwatch.Stop();
 
                 var time = stopwatch.ElapsedMilliseconds;
@@ -89,7 +108,6 @@ namespace Panoptes.Api.Controllers
                 {
                     Status = "Healthy",
                     ResponseTimeMs = time,
-                    // Improvement: Clarify 0ms readings
                     Message = time == 0 ? "Database connection successful (<1ms)" : "Database connection successful"
                 };
             }
@@ -110,7 +128,6 @@ namespace Panoptes.Api.Controllers
         {
             var stopwatch = Stopwatch.StartNew();
             
-            // First check if service is configured
             var demeterConfig = await _dbContext.DemeterConfigs
                 .AsNoTracking()
                 .FirstOrDefaultAsync(c => c.IsActive);
@@ -130,8 +147,6 @@ namespace Panoptes.Api.Controllers
 
             try
             {
-                // Try to ping the gRPC endpoint via HTTP
-                // Convert gRPC URL to HTTP for health check
                 var httpUrl = endpoint.Replace("grpc://", "http://").Replace("grpcs://", "https://");
                 
                 var client = _httpClientFactory.CreateClient();
@@ -172,16 +187,20 @@ namespace Panoptes.Api.Controllers
             }
         }
 
-        private async Task<MetricsInfo> GetMetricsAsync()
+        // 🔒 UPDATED: Accepts UserId to filter data
+        private async Task<MetricsInfo> GetMetricsAsync(string userId)
         {
             try
             {
+                // 1. Active: Filter by User + Active + NotDeleted
                 var activeSubscriptions = await _dbContext.WebhookSubscriptions
-                    .CountAsync(s => s.IsActive);
+                    .CountAsync(s => s.UserId == userId && s.IsActive && !s.IsDeleted);
 
-                var totalSubscriptions = await _dbContext.WebhookSubscriptions.CountAsync();
+                // 2. Total: Filter by User + NotDeleted
+                var totalSubscriptions = await _dbContext.WebhookSubscriptions
+                    .CountAsync(s => s.UserId == userId && !s.IsDeleted);
 
-                // Get last synced block
+                // 3. Last Synced Block (System Global State - this remains global)
                 var lastSlotState = await _dbContext.SystemStates
                     .FirstOrDefaultAsync(s => s.Key == "LastSyncedSlot");
                 
@@ -191,11 +210,17 @@ namespace Panoptes.Api.Controllers
                     lastBlockHeight = slot;
                 }
 
-                // Get delivery stats for last 24 hours
+                // 4. Logs: Filter by User via Join/Include
                 var last24Hours = DateTime.UtcNow.AddHours(-24);
-                var recentLogs = await _dbContext.DeliveryLogs
-                    .Where(l => l.AttemptedAt >= last24Hours)
-                    .ToListAsync();
+                
+                var recentLogsQuery = _dbContext.DeliveryLogs
+                    .Include(l => l.Subscription)
+                    .Where(l => l.AttemptedAt >= last24Hours 
+                                && l.Subscription != null 
+                                && l.Subscription.UserId == userId 
+                                && !l.Subscription.IsDeleted);
+
+                var recentLogs = await recentLogsQuery.ToListAsync();
 
                 return new MetricsInfo
                 {
@@ -224,7 +249,6 @@ namespace Panoptes.Api.Controllers
                 var gcMemoryMb = GC.GetTotalMemory(false) / 1024.0 / 1024.0;
                 var workingSetMb = process.WorkingSet64 / 1024.0 / 1024.0;
 
-                // NEW: Calculate CPU Usage (Average over process lifetime)
                 var totalCpuTime = process.TotalProcessorTime.TotalMilliseconds;
                 var totalRunTime = (DateTime.UtcNow - _startTime).TotalMilliseconds;
                 var cpuUsage = totalRunTime > 0 
@@ -236,7 +260,7 @@ namespace Panoptes.Api.Controllers
                     MemoryUsageMb = Math.Round(workingSetMb, 2),
                     GcMemoryMb = Math.Round(gcMemoryMb, 2),
                     ThreadCount = process.Threads.Count,
-                    CpuUsagePercent = Math.Round(cpuUsage, 2), // <--- New Metric
+                    CpuUsagePercent = Math.Round(cpuUsage, 2),
                     ProcessStartTime = _startTime
                 };
             }
@@ -259,7 +283,6 @@ namespace Panoptes.Api.Controllers
 
             if (dbConfig != null)
             {
-                // Credentials configured in database
                 var info = new SystemInfo
                 {
                     Network = dbConfig.Network,
@@ -271,7 +294,6 @@ namespace Panoptes.Api.Controllers
                 return Ok(info);
             }
 
-            // Fallback to appsettings
             if (!string.IsNullOrWhiteSpace(_config.GrpcEndpoint))
             {
                 var info = new SystemInfo
@@ -285,7 +307,6 @@ namespace Panoptes.Api.Controllers
                 return Ok(info);
             }
 
-            // No configuration found
             var defaultInfo = new SystemInfo
             {
                 Network = "Not Configured",
@@ -304,7 +325,7 @@ namespace Panoptes.Api.Controllers
         public string GrpcEndpoint { get; set; } = string.Empty;
         public bool HasApiKey { get; set; }
         public string[] AvailableNetworks { get; set; } = Array.Empty<string>();
-        public string ConfiguredVia { get; set; } = "None"; // "Database", "AppSettings", or "None"
+        public string ConfiguredVia { get; set; } = "None"; 
     }
 
     public class HealthResponse
@@ -355,7 +376,7 @@ namespace Panoptes.Api.Controllers
     {
         public double MemoryUsageMb { get; set; }
         public double GcMemoryMb { get; set; }
-        public double CpuUsagePercent { get; set; } // <--- Added field here
+        public double CpuUsagePercent { get; set; }
         public int ThreadCount { get; set; }
         public DateTime ProcessStartTime { get; set; }
         public string? Error { get; set; }

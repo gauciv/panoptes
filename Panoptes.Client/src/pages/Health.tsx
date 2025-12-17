@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { getHealth, HealthResponse } from '../services/api';
 import { 
   Activity, 
@@ -13,8 +13,49 @@ import {
 } from 'lucide-react';
 import { AreaChart, Area, ResponsiveContainer, YAxis } from 'recharts';
 
+// --- ANIMATED NUMBER COMPONENT ---
+const AnimatedNumber = ({ value }: { value: number | null | undefined }) => {
+  const [displayValue, setDisplayValue] = useState(0);
+  const previousValue = useRef(0);
+
+  useEffect(() => {
+    if (value === null || value === undefined) return;
+
+    let start = previousValue.current;
+    const end = value;
+    if (start === end) return;
+
+    const duration = 1000; // 1 second animation
+    const startTime = performance.now();
+
+    const animate = (currentTime: number) => {
+      const elapsed = currentTime - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      
+      // Easing function (easeOutQuart)
+      const ease = 1 - Math.pow(1 - progress, 4);
+      
+      const current = Math.floor(start + (end - start) * ease);
+      setDisplayValue(current);
+
+      if (progress < 1) {
+        requestAnimationFrame(animate);
+      } else {
+        previousValue.current = end;
+      }
+    };
+
+    requestAnimationFrame(animate);
+  }, [value]);
+
+  if (value === null || value === undefined) return <span>N/A</span>;
+
+  return <span>{displayValue.toLocaleString()}</span>;
+};
+// ---------------------------------
+
 // --- INDUSTRIAL STAT CARD ---
-const StatCard = ({ title, value, subtitle, icon }: { title: string, value: string, subtitle?: string, icon: any }) => (
+const StatCard = ({ title, value, subtitle, icon }: { title: string, value: string | React.ReactNode, subtitle?: string, icon: any }) => (
   <div className="bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-sm p-4 shadow-[3px_3px_0px_0px_rgba(0,0,0,0.05)] dark:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.05)]">
     <div className="flex justify-between items-start mb-3">
         <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400">{title}</span>
@@ -37,7 +78,7 @@ const Health: React.FC = () => {
 
   useEffect(() => {
     fetchHealth();
-    const interval = setInterval(fetchHealth, 10000); 
+    const interval = setInterval(fetchHealth, 5000); // Polling faster (5s) for demo effect
     return () => clearInterval(interval);
   }, []);
 
@@ -66,7 +107,6 @@ const Health: React.FC = () => {
         return (
             <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 border border-emerald-200 dark:bg-emerald-950/30 dark:border-emerald-900 rounded-sm">
                 <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.6)]" />
-                {/* FIX: Dark Green Text on Light Background */}
                 <span className="text-xs font-mono font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider">
                     SYSTEM_HEALTHY
                 </span>
@@ -290,10 +330,18 @@ const Health: React.FC = () => {
                           <p className="font-mono text-[10px] uppercase text-zinc-400 mb-1">Total Configured</p>
                           <p className="text-2xl font-mono font-bold text-zinc-900 dark:text-zinc-100">{health.metrics.totalSubscriptions}</p>
                       </div>
-                      <div>
-                          <p className="font-mono text-[10px] uppercase text-zinc-400 mb-1">Synced Block</p>
+                      <div className="relative">
+                          <p className="font-mono text-[10px] uppercase text-zinc-400 mb-1 flex items-center gap-2">
+                            Synced Block
+                            {/* LIVE PULSE INDICATOR */}
+                            <span className="relative flex h-2 w-2">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                            </span>
+                          </p>
+                          {/* ANIMATED NUMBER IMPLEMENTATION */}
                           <p className="text-xl font-mono font-bold text-indigo-600 dark:text-indigo-400 truncate" title={health.metrics.lastBlockSynced?.toLocaleString()}>
-                              {health.metrics.lastBlockSynced?.toLocaleString() || 'N/A'}
+                              <AnimatedNumber value={health.metrics.lastBlockSynced} />
                           </p>
                       </div>
                       <div>
