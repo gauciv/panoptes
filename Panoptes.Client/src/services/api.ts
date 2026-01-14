@@ -1,35 +1,39 @@
 import axios from 'axios';
-import { fetchAuthSession } from 'aws-amplify/auth'; // ✅ NEW: Import Amplify Auth
+import { fetchAuthSession } from 'aws-amplify/auth';
 import { WebhookSubscription, DeliveryLog } from '../types';
 
-// Assuming the backend runs on port 5000 (http) or 5001 (https). 
-// Adjust the baseURL as needed.
 const api = axios.create({
-    // baseURL: 'http://localhost:5000', // Removed to use relative path (Vite proxy)
     headers: {
         'Content-Type': 'application/json',
     },
 });
 
-// ✅ NEW: Request Interceptor to inject the Bearer Token
 api.interceptors.request.use(async (config) => {
     try {
         const session = await fetchAuthSession();
-        // We use the Access Token for API authorization
         const token = session.tokens?.accessToken?.toString();
         
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
         }
     } catch (error) {
-        // If session fetch fails (e.g. not logged in), we just proceed without token
-        // The backend will return 401 Unauthorized if required
-        console.debug("No auth session found or error fetching token", error);
+        console.debug("No auth session found", error);
     }
     return config;
 }, (error) => {
     return Promise.reject(error);
 });
+
+api.interceptors.response.use(
+    (response) => response,
+    (error) => {
+        if (error.response?.status === 401) {
+            window.dispatchEvent(new CustomEvent('auth:logout'));
+            return Promise.reject(new Error('Session expired'));
+        }
+        return Promise.reject(error);
+    }
+);
 
 export const getSubscriptions = async (): Promise<WebhookSubscription[]> => {
     const response = await api.get<WebhookSubscription[]>('/Subscriptions');

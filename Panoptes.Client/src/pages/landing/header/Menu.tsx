@@ -1,13 +1,14 @@
 import { useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { TechCurve } from './TechCurve';
 import { GlitchButton } from '@/components/GlitchButton';
 
 const navItems = [
-  { title: "Features", href: "#features" },
-  { title: "Pricing", href: "#pricing" },
-  { title: "Documentation", href: "#docs" },
-  { title: "Contribute", href: "#contribute" },
+  { title: "Features", href: "#features", external: false },
+  { title: "Pricing", href: "#pricing", external: false },
+  { title: "Documentation", href: "/docs", external: false },
+  { title: "Contribute", href: "https://github.com/We-Are-Triji/panoptes", external: true },
 ];
 
 const menuVariants = {
@@ -22,18 +23,27 @@ const menuVariants = {
   }
 };
 
-// 1. UPDATE PROPS INTERFACE
 type MenuProps = {
   closeMenu: () => void;
-  onOpenLogin: () => void; // <--- NEW PROP
+  onOpenLogin: () => void;
 };
 
 export function Menu({ closeMenu, onOpenLogin }: MenuProps) {
+  const navigate = useNavigate();
   
   useEffect(() => {
     document.body.style.overflow = 'hidden';
     return () => { document.body.style.overflow = 'unset'; };
   }, []);
+
+  const handleNavClick = (item: typeof navItems[0]) => {
+    closeMenu();
+    if (item.external) {
+      window.open(item.href, '_blank');
+    } else if (item.href.startsWith('/')) {
+      navigate(item.href);
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-[100] h-screen w-screen">
@@ -67,20 +77,19 @@ export function Menu({ closeMenu, onOpenLogin }: MenuProps) {
                </div>
                
                {navItems.map((item, i) => (
-                  <motion.a
+                  <motion.button
                     key={i}
-                    href={item.href}
-                    onClick={closeMenu}
+                    onClick={() => handleNavClick(item)}
                     initial={{ opacity: 0, x: -50, filter: "blur(10px)" }}
                     animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
                     transition={{ delay: 0.2 + (i * 0.1), duration: 0.5 }}
                     className="relative group text-4xl md:text-6xl font-michroma text-ghost hover:text-white transition-colors"
                   >
                     <span className="absolute -left-8 top-1/2 -translate-y-1/2 text-sm text-sentinel opacity-0 transition-all group-hover:opacity-100 group-hover:-left-10">
-                       ►
+                       {item.external ? '↗' : '►'}
                     </span>
                     {item.title}
-                  </motion.a>
+                  </motion.button>
                ))}
                
                <motion.div 

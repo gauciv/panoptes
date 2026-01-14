@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { 
   signIn, 
   signOut, 
@@ -10,7 +10,6 @@ import {
 } from 'aws-amplify/auth';
 import { configureAuth } from '../config/auth';
 
-// Initialize Amplify
 configureAuth();
 
 interface AuthContextType {
@@ -28,7 +27,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const checkUser = async () => {
+  const checkUser = useCallback(async () => {
     try {
       const currentUser = await getCurrentUser();
       setUser(currentUser);
@@ -37,11 +36,38 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     checkUser();
-  }, []);
+
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key?.includes('CognitoIdentityServiceProvider') || e.key?.includes('amplify')) {
+        checkUser();
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        checkUser();
+      }
+    };
+
+    const handleAuthLogout = () => {
+      setUser(null);
+      window.location.href = '/';
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('auth:logout', handleAuthLogout);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('auth:logout', handleAuthLogout);
+    };
+  }, [checkUser]);
 
   const login = async ({ username, password }: SignInInput) => {
     const result = await signIn({ username, password });

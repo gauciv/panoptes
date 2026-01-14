@@ -154,14 +154,9 @@ function App() {
 
             {/* Fallback */}
             <Route path="*" element={<Navigate to="/" replace />} />
-            <Route 
-              path="/docs" 
-              element={
-                <RequireAuth>
-                  <Docs />
-                </RequireAuth>
-              } 
-            />
+            
+            {/* PUBLIC ROUTE: Documentation */}
+            <Route path="/docs" element={<Docs />} />
 
           </Routes>
         </Router>
