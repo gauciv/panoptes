@@ -1,21 +1,19 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
+using System.Diagnostics;
 using Panoptes.Core.Entities;
 using Panoptes.Core.Interfaces;
 using Panoptes.Infrastructure.Configurations;
-using System;
-using System.Diagnostics;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Authorization; // Required for [Authorize]
-using System.Security.Claims; // Required for User.FindFirst
+using Panoptes.Api.DTOs;
 
 namespace Panoptes.Api.Controllers
 {
     [ApiController]
     [Route("[controller]")]
-    [Authorize] // 🔒 Secure the endpoint so we can get the UserId
+    [Authorize]
     public class HealthController : ControllerBase
     {
         private readonly IAppDbContext _dbContext;
@@ -24,7 +22,7 @@ namespace Panoptes.Api.Controllers
         private static readonly DateTime _startTime = DateTime.UtcNow;
 
         public HealthController(
-            IAppDbContext dbContext, 
+            IAppDbContext dbContext,
             IOptions<PanoptesConfig> config,
             IHttpClientFactory httpClientFactory)
         {
@@ -33,16 +31,14 @@ namespace Panoptes.Api.Controllers
             _httpClientFactory = httpClientFactory;
         }
 
-        // --- 🔐 SECURITY HELPER ---
         private string GetCurrentUserId()
         {
-            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value 
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
                          ?? User.FindFirst("sub")?.Value;
-                         
+
             if (string.IsNullOrEmpty(userId))
-            {
                 throw new UnauthorizedAccessException("User ID claim not found in token.");
-            }
+
             return userId;
         }
 
@@ -57,39 +53,73 @@ namespace Panoptes.Api.Controllers
                 Uptime = DateTime.UtcNow - _startTime
             };
 
-            var checks = new HealthChecks();
-            
-            // Database check (Global connectivity check)
-            checks.Database = await CheckDatabaseHealthAsync();
-            
-            // UtxoRPC service check (Global connectivity check)
-            checks.UtxoRpc = await CheckUtxoRpcHealthAsync();
-            
-            // Get metrics (PERSONALIZED)
-            // We pass the User ID to ensure they only see THEIR data
+            var checks = new HealthChecks
+            {
+                Database = await CheckDatabaseHealthAsync(),
+                UtxoRpc = await CheckUtxoRpcHealthAsync()
+            };
+
             var userId = GetCurrentUserId();
             var metrics = await GetMetricsAsync(userId);
-            
-            // Get system info (Global container stats)
             var systemInfo = GetSystemInfo();
 
             response.Checks = checks;
             response.Metrics = metrics;
             response.System = systemInfo;
 
-            // Determine overall status
             if (checks.Database.Status == "Unhealthy" || checks.UtxoRpc.Status == "Unhealthy")
             {
                 response.Status = "Unhealthy";
                 return StatusCode(503, response);
             }
-            else if (checks.Database.Status == "Degraded" || checks.UtxoRpc.Status == "Degraded")
+
+            if (checks.Database.Status == "Degraded" || checks.UtxoRpc.Status == "Degraded")
             {
                 response.Status = "Degraded";
-                return StatusCode(200, response);
             }
 
             return Ok(response);
+        }
+
+        [HttpGet("system-info")]
+        public async Task<ActionResult<SystemInfo>> GetSystemConfiguration()
+        {
+            var dbConfig = await _dbContext.DemeterConfigs
+                .AsNoTracking()
+                .FirstOrDefaultAsync(c => c.IsActive);
+
+            if (dbConfig != null)
+            {
+                return Ok(new SystemInfo
+                {
+                    Network = dbConfig.Network,
+                    GrpcEndpoint = dbConfig.GrpcEndpoint,
+                    HasApiKey = true,
+                    AvailableNetworks = new[] { "Mainnet", "Preprod", "Preview" },
+                    ConfiguredVia = "Database"
+                });
+            }
+
+            if (!string.IsNullOrWhiteSpace(_config.GrpcEndpoint))
+            {
+                return Ok(new SystemInfo
+                {
+                    Network = _config.Network,
+                    GrpcEndpoint = _config.GrpcEndpoint,
+                    HasApiKey = !string.IsNullOrWhiteSpace(_config.ApiKey),
+                    AvailableNetworks = new[] { "Mainnet", "Preprod", "Preview" },
+                    ConfiguredVia = "AppSettings"
+                });
+            }
+
+            return Ok(new SystemInfo
+            {
+                Network = "Not Configured",
+                GrpcEndpoint = "Not Configured",
+                HasApiKey = false,
+                AvailableNetworks = new[] { "Mainnet", "Preprod", "Preview" },
+                ConfiguredVia = "None"
+            });
         }
 
         private async Task<DatabaseHealth> CheckDatabaseHealthAsync()
@@ -97,18 +127,14 @@ namespace Panoptes.Api.Controllers
             var stopwatch = Stopwatch.StartNew();
             try
             {
-                // Execute a simple query to test connectivity
-                // Using WebhookSubscriptions is fine, we just want to know if DB responds
                 await _dbContext.WebhookSubscriptions.FirstOrDefaultAsync();
                 stopwatch.Stop();
-
-                var time = stopwatch.ElapsedMilliseconds;
 
                 return new DatabaseHealth
                 {
                     Status = "Healthy",
-                    ResponseTimeMs = time,
-                    Message = time == 0 ? "Database connection successful (<1ms)" : "Database connection successful"
+                    ResponseTimeMs = stopwatch.ElapsedMilliseconds,
+                    Message = "Database connection successful"
                 };
             }
             catch (Exception ex)
@@ -127,7 +153,7 @@ namespace Panoptes.Api.Controllers
         private async Task<ServiceHealth> CheckUtxoRpcHealthAsync()
         {
             var stopwatch = Stopwatch.StartNew();
-            
+
             var demeterConfig = await _dbContext.DemeterConfigs
                 .AsNoTracking()
                 .FirstOrDefaultAsync(c => c.IsActive);
@@ -148,31 +174,20 @@ namespace Panoptes.Api.Controllers
             try
             {
                 var httpUrl = endpoint.Replace("grpc://", "http://").Replace("grpcs://", "https://");
-                
                 var client = _httpClientFactory.CreateClient();
                 client.Timeout = TimeSpan.FromSeconds(5);
-                
+
                 var response = await client.GetAsync($"{httpUrl}/health");
                 stopwatch.Stop();
 
-                if (response.IsSuccessStatusCode)
+                return new ServiceHealth
                 {
-                    return new ServiceHealth
-                    {
-                        Status = "Healthy",
-                        LatencyMs = stopwatch.ElapsedMilliseconds,
-                        Message = "UtxoRPC service reachable"
-                    };
-                }
-                else
-                {
-                    return new ServiceHealth
-                    {
-                        Status = "Degraded",
-                        LatencyMs = stopwatch.ElapsedMilliseconds,
-                        Message = $"UtxoRPC service returned status: {response.StatusCode}"
-                    };
-                }
+                    Status = response.IsSuccessStatusCode ? "Healthy" : "Degraded",
+                    LatencyMs = stopwatch.ElapsedMilliseconds,
+                    Message = response.IsSuccessStatusCode
+                        ? "UtxoRPC service reachable"
+                        : $"UtxoRPC service returned status: {response.StatusCode}"
+                };
             }
             catch (Exception ex)
             {
@@ -187,40 +202,31 @@ namespace Panoptes.Api.Controllers
             }
         }
 
-        // 🔒 UPDATED: Accepts UserId to filter data
         private async Task<MetricsInfo> GetMetricsAsync(string userId)
         {
             try
             {
-                // 1. Active: Filter by User + Active + NotDeleted
                 var activeSubscriptions = await _dbContext.WebhookSubscriptions
                     .CountAsync(s => s.UserId == userId && s.IsActive && !s.IsDeleted);
 
-                // 2. Total: Filter by User + NotDeleted
                 var totalSubscriptions = await _dbContext.WebhookSubscriptions
                     .CountAsync(s => s.UserId == userId && !s.IsDeleted);
 
-                // 3. Last Synced Block (System Global State - this remains global)
                 var lastSlotState = await _dbContext.SystemStates
                     .FirstOrDefaultAsync(s => s.Key == "LastSyncedSlot");
-                
+
                 ulong? lastBlockHeight = null;
                 if (lastSlotState != null && ulong.TryParse(lastSlotState.Value, out var slot))
-                {
                     lastBlockHeight = slot;
-                }
 
-                // 4. Logs: Filter by User via Join/Include
                 var last24Hours = DateTime.UtcNow.AddHours(-24);
-                
-                var recentLogsQuery = _dbContext.DeliveryLogs
+                var recentLogs = await _dbContext.DeliveryLogs
                     .Include(l => l.Subscription)
-                    .Where(l => l.AttemptedAt >= last24Hours 
-                                && l.Subscription != null 
-                                && l.Subscription.UserId == userId 
-                                && !l.Subscription.IsDeleted);
-
-                var recentLogs = await recentLogsQuery.ToListAsync();
+                    .Where(l => l.AttemptedAt >= last24Hours
+                                && l.Subscription != null
+                                && l.Subscription.UserId == userId
+                                && !l.Subscription.IsDeleted)
+                    .ToListAsync();
 
                 return new MetricsInfo
                 {
@@ -234,10 +240,7 @@ namespace Panoptes.Api.Controllers
             }
             catch (Exception ex)
             {
-                return new MetricsInfo
-                {
-                    Error = $"Failed to retrieve metrics: {ex.Message}"
-                };
+                return new MetricsInfo { Error = $"Failed to retrieve metrics: {ex.Message}" };
             }
         }
 
@@ -251,8 +254,8 @@ namespace Panoptes.Api.Controllers
 
                 var totalCpuTime = process.TotalProcessorTime.TotalMilliseconds;
                 var totalRunTime = (DateTime.UtcNow - _startTime).TotalMilliseconds;
-                var cpuUsage = totalRunTime > 0 
-                    ? (totalCpuTime / (totalRunTime * Environment.ProcessorCount)) * 100 
+                var cpuUsage = totalRunTime > 0
+                    ? (totalCpuTime / (totalRunTime * Environment.ProcessorCount)) * 100
                     : 0;
 
                 return new SystemHealthInfo
@@ -266,119 +269,8 @@ namespace Panoptes.Api.Controllers
             }
             catch (Exception ex)
             {
-                return new SystemHealthInfo
-                {
-                    Error = $"Failed to retrieve system info: {ex.Message}"
-                };
+                return new SystemHealthInfo { Error = $"Failed to retrieve system info: {ex.Message}" };
             }
         }
-
-        [HttpGet("system-info")]
-        public async Task<ActionResult<SystemInfo>> GetSystemConfiguration()
-        {
-            // Try to load from database first
-            var dbConfig = await _dbContext.DemeterConfigs
-                .AsNoTracking()
-                .FirstOrDefaultAsync(c => c.IsActive);
-
-            if (dbConfig != null)
-            {
-                var info = new SystemInfo
-                {
-                    Network = dbConfig.Network,
-                    GrpcEndpoint = dbConfig.GrpcEndpoint,
-                    HasApiKey = true,
-                    AvailableNetworks = new[] { "Mainnet", "Preprod", "Preview" },
-                    ConfiguredVia = "Database"
-                };
-                return Ok(info);
-            }
-
-            if (!string.IsNullOrWhiteSpace(_config.GrpcEndpoint))
-            {
-                var info = new SystemInfo
-                {
-                    Network = _config.Network,
-                    GrpcEndpoint = _config.GrpcEndpoint,
-                    HasApiKey = !string.IsNullOrWhiteSpace(_config.ApiKey),
-                    AvailableNetworks = new[] { "Mainnet", "Preprod", "Preview" },
-                    ConfiguredVia = "AppSettings"
-                };
-                return Ok(info);
-            }
-
-            var defaultInfo = new SystemInfo
-            {
-                Network = "Not Configured",
-                GrpcEndpoint = "Not Configured",
-                HasApiKey = false,
-                AvailableNetworks = new[] { "Mainnet", "Preprod", "Preview" },
-                ConfiguredVia = "None"
-            };
-            return Ok(defaultInfo);
-        }
-    }
-
-    public class SystemInfo
-    {
-        public string Network { get; set; } = "Preprod";
-        public string GrpcEndpoint { get; set; } = string.Empty;
-        public bool HasApiKey { get; set; }
-        public string[] AvailableNetworks { get; set; } = Array.Empty<string>();
-        public string ConfiguredVia { get; set; } = "None"; 
-    }
-
-    public class HealthResponse
-    {
-        public string Status { get; set; } = "unknown";
-        public DateTime Timestamp { get; set; }
-        public string Version { get; set; } = "1.0.0";
-        public TimeSpan Uptime { get; set; }
-        public HealthChecks Checks { get; set; } = new();
-        public MetricsInfo Metrics { get; set; } = new();
-        public SystemHealthInfo System { get; set; } = new();
-    }
-
-    public class HealthChecks
-    {
-        public DatabaseHealth Database { get; set; } = new();
-        public ServiceHealth UtxoRpc { get; set; } = new();
-    }
-
-    public class DatabaseHealth
-    {
-        public string Status { get; set; } = "Unknown";
-        public long ResponseTimeMs { get; set; }
-        public string Message { get; set; } = string.Empty;
-        public string? Error { get; set; }
-    }
-
-    public class ServiceHealth
-    {
-        public string Status { get; set; } = "Unknown";
-        public long LatencyMs { get; set; }
-        public string Message { get; set; } = string.Empty;
-        public string? Error { get; set; }
-    }
-
-    public class MetricsInfo
-    {
-        public int ActiveSubscriptions { get; set; }
-        public int TotalSubscriptions { get; set; }
-        public ulong? LastBlockSynced { get; set; }
-        public int DeliveriesLast24h { get; set; }
-        public int SuccessfulDeliveries { get; set; }
-        public int FailedDeliveries { get; set; }
-        public string? Error { get; set; }
-    }
-
-    public class SystemHealthInfo
-    {
-        public double MemoryUsageMb { get; set; }
-        public double GcMemoryMb { get; set; }
-        public double CpuUsagePercent { get; set; }
-        public int ThreadCount { get; set; }
-        public DateTime ProcessStartTime { get; set; }
-        public string? Error { get; set; }
     }
 }
