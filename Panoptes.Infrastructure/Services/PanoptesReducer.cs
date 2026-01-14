@@ -256,7 +256,8 @@ namespace Panoptes.Infrastructure.Services
                             
                         case "nft mint":
                         case "mint": 
-                            if (tx.Mint() != null && tx.Mint().Any()) 
+                            var mint = tx.Mint();
+                            if (mint != null && mint.Any()) 
                             { 
                                 shouldDispatch = true; 
                                 matchReason = "Mint event"; 
