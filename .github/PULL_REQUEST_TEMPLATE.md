@@ -1,6 +1,6 @@
 # Pull Request
 
-## 📝 Description
+## Description
 <!-- Provide a clear description of your changes -->
 
 
@@ -9,20 +9,20 @@
 Closes #
 Related to #
 
-## 🎯 Type of Change
+## Type of Change
 <!-- Check all that apply -->
-- [ ] 🐛 Bug fix (non-breaking change which fixes an issue)
-- [ ] ✨ New feature (non-breaking change which adds functionality)
+- [ ] Bug fix (non-breaking change which fixes an issue)
+- [ ] New feature (non-breaking change which adds functionality)
 - [ ] 💥 Breaking change (fix or feature that would cause existing functionality to not work as expected)
-- [ ] 📝 Documentation update
-- [ ] 🎨 Style/UI update (formatting, renaming, etc.)
+- [ ] Documentation update
+- [ ] Style/UI update (formatting, renaming, etc.)
 - [ ] ♻️ Code refactoring (no functional changes)
-- [ ] ⚡ Performance improvement
-- [ ] ✅ Test additions or updates
-- [ ] 🔧 Configuration change
+- [ ] Performance improvement
+- [ ] Test additions or updates
+- [ ] Configuration change
 - [ ] 🔒 Security fix
 
-## 🧪 Testing
+## Testing
 <!-- Describe the tests you ran and how to reproduce them -->
 
 **Test Configuration:**
@@ -41,7 +41,7 @@ Related to #
 2. 
 3. 
 
-## 📊 Checklist
+## Checklist
 <!-- Ensure your PR meets these requirements -->
 
 ### Code Quality
@@ -80,7 +80,7 @@ Related to #
 ### After
 
 
-## 🎯 Performance Impact
+## Performance Impact
 <!-- Describe any performance implications -->
 - [ ] No significant performance impact
 - [ ] Performance improved
@@ -89,7 +89,7 @@ Related to #
 **Performance notes:**
 
 
-## 📦 Dependencies
+## Dependencies
 <!-- List any new dependencies or dependency updates -->
 - [ ] No new dependencies added
 - [ ] Added dependencies:
@@ -97,7 +97,7 @@ Related to #
 - [ ] Updated dependencies:
   - 
 
-## 🔄 Database Changes
+## Database Changes
 <!-- Check if your PR affects the database schema -->
 - [ ] No database changes
 - [ ] Schema changes (describe below)
@@ -106,7 +106,7 @@ Related to #
 **Database migration notes:**
 
 
-## 🚀 Deployment Notes
+## Deployment Notes
 <!-- Any special deployment considerations -->
 - [ ] No special deployment steps required
 - [ ] Requires configuration changes:
@@ -129,7 +129,7 @@ Related to #
 - 
 - 
 
-## ✅ Definition of Done
+## Definition of Done
 <!-- For the PR to be merged, ensure: -->
 - [ ] Code is reviewed and approved
 - [ ] All tests pass

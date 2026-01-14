@@ -6,7 +6,7 @@ labels: security
 assignees: ''
 ---
 
-## ⚠️ IMPORTANT NOTICE
+## IMPORTANT NOTICE
 
 **For sensitive security vulnerabilities, DO NOT create a public issue.**
 
@@ -26,14 +26,14 @@ Instead, please follow our [Security Policy](../../SECURITY.md) and report priva
 <!-- Describe the security concern (non-sensitive issues only) -->
 
 
-## 🎯 Affected Component
+## Affected Component
 - [ ] Backend API
 - [ ] Frontend Dashboard
 - [ ] Documentation
 - [ ] Dependencies
 - [ ] Configuration
 
-## 🔧 Suggested Fix
+## Suggested Fix
 <!-- If you have suggestions for improvement -->
 
 
@@ -41,7 +41,7 @@ Instead, please follow our [Security Policy](../../SECURITY.md) and report priva
 <!-- Link to CVEs, security advisories, or relevant documentation -->
 
 
-## ✅ Checklist
+## Checklist
 - [ ] This is NOT a sensitive vulnerability requiring private disclosure
 - [ ] I have checked the Security Policy
 - [ ] I have verified this with the latest version

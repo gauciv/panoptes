@@ -10,7 +10,7 @@ assignees: ''
 <!-- Ask your question clearly and concisely -->
 
 
-## 🔍 What I've Already Tried
+## What I've Already Tried
 <!-- Help us help you - describe what you've already attempted -->
 
 - [ ] Checked the README documentation
@@ -32,10 +32,10 @@ assignees: ''
 - Network: [Mainnet / Preprod / Preview]
 - Component: [Backend / Frontend / Webhooks]
 
-## 📝 Additional Information
+## Additional Information
 <!-- Any other details that might help -->
 
 
-## 🤝 Community Help
+## Community Help
 <!-- Would you like to help improve documentation after your question is answered? -->
 - [ ] I'd be willing to contribute documentation improvements based on the answer

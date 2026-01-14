@@ -17,7 +17,7 @@ This document provides guidelines for contributing to the project. By participat
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 - [.NET 9.0 SDK](https://dotnet.microsoft.com/download/dotnet/9.0)
@@ -108,29 +108,29 @@ panoptes/
 
 ---
 
-## 🤝 How to Contribute
+## How to Contribute
 
 ### Areas We Need Help With
 
-#### 🐛 Bug Fixes
+#### Bug Fixes
 - Check [open issues](https://github.com/gauciv/panoptes/issues?q=is%3Aissue+is%3Aopen+label%3Abug)
 - Look for issues tagged with `good first issue`
 
-#### ✨ New Features
+#### New Features
 - Review [feature requests](https://github.com/gauciv/panoptes/issues?q=is%3Aissue+is%3Aopen+label%3Aenhancement)
 - Propose new features via issues first
 
-#### 📝 Documentation
+#### Documentation
 - Fix typos or improve clarity
 - Add usage examples
 - Write tutorials or guides
 
-#### 🧪 Testing
+#### Testing
 - Add unit tests
 - Improve test coverage
 - Write integration tests
 
-#### 🎨 UI/UX
+#### UI/UX
 - Improve dashboard design
 - Enhance user experience
 - Add accessibility features
@@ -204,7 +204,7 @@ export const SubscriptionCard: React.FC<SubscriptionCardProps> = ({
 
 ---
 
-## 🧪 Testing
+## Testing
 
 ### Running Tests
 
@@ -251,7 +251,7 @@ public async Task DispatchAsync_WithValidSubscription_ReturnsSuccessLog()
 
 ---
 
-## 📝 Documentation
+## Documentation
 
 ### Code Documentation
 - Add XML comments for public APIs
@@ -335,7 +335,7 @@ Adds common issues and solutions based on user feedback.
 
 ---
 
-## 🔄 Pull Request Process
+## Pull Request Process
 
 ### Before Submitting
 
@@ -462,22 +462,22 @@ Contributors will be:
 
 ---
 
-## 📄 License
+## License
 
 By contributing to Panoptes, you agree that your contributions will be licensed under the [MIT License](../LICENSE).
 
 ---
 
-## 🙏 Thank You!
+## Thank You!
 
-Your contributions make Panoptes better for everyone. We appreciate your time and effort! ❤️
+Your contributions make Panoptes better for everyone. We appreciate your time and effort! 
 
 **Questions?** Don't hesitate to ask in GitHub Issues or Discussions.
 
-**Ready to contribute?** Find an issue and start coding! 🚀
+**Ready to contribute?** Find an issue and start coding! 
 
 ---
 
 <div align="center">
-  <p>Made with ❤️ by the Panoptes Community</p>
+  <p>Made with  by the Panoptes Community</p>
 </div>

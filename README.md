@@ -1,7 +1,7 @@
 <div align="center">
   <img src="./assets/panoptes-banner.png" alt="Panoptes Banner" width="100%">
   
-  <h1>🔭 Panoptes</h1>
+  <h1>Panoptes</h1>
   <p><strong>Real-Time Cardano Blockchain Webhook Notifications</strong></p>
   
   [![Built for SAIB](https://img.shields.io/badge/Built%20for-SAIB%20Competition-blue)](https://github.com/txpipe/saib)
@@ -20,27 +20,27 @@
 
 ---
 
-## 🌟 Features
+## Features
 
 ### Core Capabilities
-- ✅ **Real-Time Blockchain Sync** - Powered by Argus.Sync and UtxoRPC (Demeter)
-- 🎯 **Flexible Filtering** - Monitor specific addresses or policy IDs
-- 🔔 **HTTP Webhooks** - Push notifications to any endpoint
-- 🔄 **Automatic Retries** - Smart retry logic with exponential backoff
-- 🚦 **Rate Limiting** - Per-subscription limits (60/min, 1000/hour configurable)
-- 📊 **Rich Payload** - Enhanced transaction data with proper Bech32 addresses
-- 💾 **Delivery Logs** - Full audit trail of webhook attempts
+- **Real-Time Blockchain Sync** - Powered by Argus.Sync and UtxoRPC (Demeter)
+- **Flexible Filtering** - Monitor specific addresses or policy IDs
+- **HTTP Webhooks** - Push notifications to any endpoint
+- **Automatic Retries** - Smart retry logic with exponential backoff
+- **Rate Limiting** - Per-subscription limits (60/min, 1000/hour configurable)
+- **Rich Payload** - Enhanced transaction data with proper Bech32 addresses
+- **Delivery Logs** - Full audit trail of webhook attempts
 
 ### Developer Experience
-- 🎨 **Modern Dashboard** - React + Tailwind CSS control panel
-- 🔐 **API Key Auth** - Secure your webhook endpoints
-- 📝 **Comprehensive Metadata** - Self-documenting payloads with data quality flags
-- 🐛 **Built-in Diagnostics** - Automatic detection of parsing issues
-- 🔍 **Zero Data Loss Detection** - Alerts when outputs are filtered
+- **Modern Dashboard** - React + Tailwind CSS control panel
+- **API Key Auth** - Secure your webhook endpoints
+- **Comprehensive Metadata** - Self-documenting payloads with data quality flags
+- **Built-in Diagnostics** - Automatic detection of parsing issues
+- **Zero Data Loss Detection** - Alerts when outputs are filtered
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 - [.NET 9.0 SDK](https://dotnet.microsoft.com/download/dotnet/9.0) (9.0.308+)
@@ -98,10 +98,10 @@ Panoptes features a built-in setup wizard for easy configuration:
 4. Complete the Setup Wizard with your Demeter credentials
 
 The wizard will:
-- ✅ Validate your API key by connecting to Demeter
+- Validate your API key by connecting to Demeter
 - 🔒 Encrypt credentials using ASP.NET Core Data Protection
-- 💾 Store configuration securely in PostgreSQL database
-- 🚀 Auto-start the blockchain sync worker
+- Store configuration securely in PostgreSQL database
+- Auto-start the blockchain sync worker
 
 ### Running the Application
 
@@ -125,7 +125,7 @@ npm run dev
 
 ---
 
-## 📖 Usage
+## Usage
 
 ### Creating a Subscription
 
@@ -205,24 +205,24 @@ npm run dev
 
 ### Key Payload Features
 
-#### 🎯 Honest Data Quality Flags
+#### Honest Data Quality Flags
 - **`InputAmountsHydrated: false`** - Inputs don't include amounts (requires querying previous transactions)
 - **`IsChange: null`** - Without input hydration, we can't determine if an output is change or payment
 - **`DataLossWarning`** - Alerts when outputs are filtered due to parsing errors
 
-#### 💰 TotalReceived vs Balance
+#### TotalReceived vs Balance
 - **`TotalReceived`**: Shows ADA received per address in this transaction (OUTPUT ONLY)
 - **NOT** a net balance calculation (would require input amounts)
 - For self-transfers, this doesn't mean the address "gained" money
 
-#### 🏷️ Asset Names
+#### Asset Names
 - **`NameHex`**: Source of truth (always present)
 - **`NameUTF8`**: Human-readable (only if valid UTF-8)
 - Handles binary/special character asset names safely
 
 ---
 
-## 🏗️ Architecture
+## Architecture
 
 ![Architecture](./assets/architectureAdaptive.svg)
 
@@ -298,7 +298,7 @@ panoptes/
 
 ---
 
-## 🔧 Configuration
+## Configuration
 
 ### Rate Limiting
 Configure per-subscription limits:
@@ -319,7 +319,7 @@ Automatic retries with exponential backoff:
 
 ---
 
-## 🐛 Debugging
+## Debugging
 
 ### Suspicious Zero-Value Outputs
 
@@ -330,14 +330,14 @@ If you see `DataLossWarning` in metadata:
   "Metadata": {
     "OutputCount": 3,
     "OutputsIncluded": 2,
-    "DataLossWarning": "⚠️ CRITICAL: Outputs were filtered..."
+    "DataLossWarning": "CRITICAL: Outputs were filtered..."
   }
 }
 ```
 
 **Check the API logs for:**
 ```
-⚠️ SUSPICIOUS ZERO VALUE DETECTED - Parsing may have failed!
+SUSPICIOUS ZERO VALUE DETECTED - Parsing may have failed!
   Address: 01abc...
   Raw Amount Type: Chrysalis.Cbor.Types.Cardano.Core.Common.Value
   Amount object dump: {...}
@@ -347,16 +347,16 @@ This indicates a parsing issue with the CBOR structure. Report these logs for in
 
 ---
 
-## 🔐 Security Best Practices
+## Security Best Practices
 
 ### API Key Management
-✅ **DO:**
+**DO:**
 - Use the built-in Setup Wizard (credentials are encrypted at rest)
 - Update credentials via Settings page (automatic re-encryption)
 - Use environment variables for automated deployments
 - Rotate keys regularly through the Settings interface
 
-❌ **DON'T:**
+**DON'T:**
 - Commit `appsettings.Local.json` if it contains API keys
 - Share database files (`panoptes.db`) between environments
 - Use development keys in production
@@ -368,7 +368,7 @@ This indicates a parsing issue with the CBOR structure. Report these logs for in
 
 ---
 
-## �️ Tech Stack (Verified Versions)
+## Tech Stack (Verified Versions)
 
 | Category | Technology | Version |
 |----------|------------|---------|
@@ -392,7 +392,7 @@ This indicates a parsing issue with the CBOR structure. Report these logs for in
 
 ---
 
-## �📊 Performance
+## �Performance
 
 - **Sync Speed**: ~1000 blocks/minute (Preprod)
 - **Webhook Latency**: <100ms (processing) + network time
@@ -401,7 +401,7 @@ This indicates a parsing issue with the CBOR structure. Report these logs for in
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
 We welcome contributions from the community! Whether you're fixing bugs, adding features, or improving documentation, your help makes Panoptes better for everyone.
 
@@ -414,11 +414,11 @@ We welcome contributions from the community! Whether you're fixing bugs, adding 
 
 ### Ways to Contribute
 
-- 🐛 **Report Bugs**: Use our [Bug Report Template](.github/ISSUE_TEMPLATE/bug_report.md)
-- ✨ **Request Features**: Use our [Feature Request Template](.github/ISSUE_TEMPLATE/feature_request.md)
-- 📝 **Improve Docs**: Fix typos, add examples, write tutorials
-- 🧪 **Write Tests**: Improve test coverage
-- 🔍 **Review PRs**: Help review pull requests from other contributors
+- **Report Bugs**: Use our [Bug Report Template](.github/ISSUE_TEMPLATE/bug_report.md)
+- **Request Features**: Use our [Feature Request Template](.github/ISSUE_TEMPLATE/feature_request.md)
+- **Improve Docs**: Fix typos, add examples, write tutorials
+- **Write Tests**: Improve test coverage
+- **Review PRs**: Help review pull requests from other contributors
 
 ### Built With
 
@@ -432,13 +432,13 @@ This project follows the [Contributor Covenant Code of Conduct](.github/CODE_OF_
 
 ---
 
-## 📝 License
+## License
 
 MIT License - see [LICENSE](LICENSE) for details
 
 ---
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - **TxPipe** - For Argus.Sync and SAIB competition
 - **Demeter.run** - For UtxoRPC infrastructure
@@ -449,5 +449,5 @@ MIT License - see [LICENSE](LICENSE) for details
 <div align="center">
   <img src="./assets/favicon.png" alt="Panoptes Logo" width="64">
   <p><strong>Panoptes - All-Seeing Blockchain Monitoring</strong></p>
-  <p>Made with ❤️ for the Cardano Community</p>
+  <p>Made with  for the Cardano Community</p>
 </div>

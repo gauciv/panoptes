@@ -10,18 +10,18 @@ assignees: ''
 <!-- A clear and concise description of the feature you'd like to see -->
 
 
-## 🎯 Use Case
+## Use Case
 <!-- Describe the problem this feature would solve or the use case it enables -->
 
 **Example scenario:**
 > As a [type of user], I want to [do something], so that [benefit/outcome].
 
 
-## 🔧 Proposed Solution
+## Proposed Solution
 <!-- Describe how you envision this feature working -->
 
 
-## 🎨 API/UI Design (if applicable)
+## API/UI Design (if applicable)
 
 **Webhook Payload Changes:**
 ```json
@@ -34,11 +34,11 @@ assignees: ''
 <!-- Describe UI changes or attach mockups -->
 
 
-## 📊 Alternatives Considered
+## Alternatives Considered
 <!-- Describe alternative solutions or features you've considered -->
 
 
-## 🚀 Priority
+## Priority
 <!-- How important is this feature to you? -->
 - [ ] Critical - Blocks my use case
 - [ ] High - Would significantly improve my workflow
@@ -51,11 +51,11 @@ assignees: ''
 - [ ] Medium - New feature using existing patterns
 - [ ] Complex - Requires significant architectural changes
 
-## 📝 Additional Context
+## Additional Context
 <!-- Add any other context, screenshots, or examples about the feature request -->
 
 
-## ✅ Implementation Ideas (optional)
+## Implementation Ideas (optional)
 <!-- If you have ideas about how to implement this, share them here -->
 
 **Files that might need changes:**
@@ -65,7 +65,7 @@ assignees: ''
 **Potential approach:**
 
 
-## 🤝 Contribution
+## Contribution
 <!-- Are you willing to help implement this feature? -->
 - [ ] I would like to implement this feature myself
 - [ ] I can help with testing

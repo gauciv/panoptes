@@ -6,7 +6,7 @@ labels: bug
 assignees: ''
 ---
 
-## 🐛 Bug Description
+## Bug Description
 <!-- A clear and concise description of what the bug is -->
 
 
@@ -17,11 +17,11 @@ assignees: ''
 3. Send webhook to '...'
 4. See error
 
-## ✅ Expected Behavior
+## Expected Behavior
 <!-- What you expected to happen -->
 
 
-## ❌ Actual Behavior
+## Actual Behavior
 <!-- What actually happened -->
 
 
@@ -29,7 +29,7 @@ assignees: ''
 <!-- If applicable, add screenshots to help explain your problem -->
 
 
-## 📊 Environment
+## Environment
 **Panoptes Version:**
 - [ ] Latest main branch
 - [ ] Release version: v___
@@ -49,13 +49,13 @@ assignees: ''
 - [ ] Docker
 - [ ] Cloud (specify provider)
 
-## 📝 Logs
+## Logs
 <!-- Paste relevant logs here -->
 ```
 Paste logs here
 ```
 
-## 🔍 Additional Context
+## Additional Context
 <!-- Add any other context about the problem here -->
 
 ### Webhook Details (if applicable)
@@ -68,7 +68,7 @@ Paste logs here
 - Block Slot: 
 - Address: 
 
-## ✅ Checklist
+## Checklist
 - [ ] I have searched existing issues to ensure this is not a duplicate
 - [ ] I have included all relevant information above
 - [ ] I have checked the logs for error messages
