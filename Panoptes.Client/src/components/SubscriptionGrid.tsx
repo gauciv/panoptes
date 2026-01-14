@@ -9,8 +9,8 @@ interface SubscriptionGridProps {
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
   onTest: (id: string) => void;
-  onToggleActive: (id: string) => Promise<void>;
-  onReset?: (id: string) => Promise<void>;
+  onToggleActive: (id: string) => void | Promise<void>;
+  onReset?: (id: string) => void | Promise<void>;
 }
 
 export const SubscriptionGrid: React.FC<SubscriptionGridProps> = ({ 
