@@ -140,8 +140,8 @@ function Landing() {
                       <GlitchButton label="Pricing" href="#pricing" className="text-[10px]" maskText maskDelay={0.4} />
                     </div>
                     <div className="flex flex-col gap-2 items-start">
-                      <GlitchButton label="Docs" href="#docs" className="text-[10px]" maskText maskDelay={0.5} />
-                      <GlitchButton label="Contribute" href="#contribute" className="text-[10px]" maskText maskDelay={0.6} />
+                      <GlitchButton label="Docs" href="/docs" className="text-[10px]" maskText maskDelay={0.5} />
+                      <GlitchButton label="Contribute" href="https://github.com/We-Are-Triji/panoptes" external className="text-[10px]" maskText maskDelay={0.6} />
                     </div>
                   </nav>
 
