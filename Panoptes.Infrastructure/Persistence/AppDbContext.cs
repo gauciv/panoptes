@@ -47,6 +47,8 @@ namespace Panoptes.Infrastructure.Persistence
                             System.Text.Json.JsonSerializer.Serialize(c ?? new List<string>(), (System.Text.Json.JsonSerializerOptions?)null), 
                             (System.Text.Json.JsonSerializerOptions?)null) ?? new List<string>()
                     ));
+                
+                entity.HasIndex(e => e.UserId).HasDatabaseName("IX_WebhookSubscriptions_UserId");
             });
             
             // ... (Keep the rest of your configuration for DeliveryLog and DemeterConfig exactly as is) ...
