@@ -97,8 +97,12 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     
-    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;1,400&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;1,400&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;700&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript>
+      <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;1,400&display=swap" rel="stylesheet">
+      <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;700&display=swap" rel="stylesheet">
+    </noscript>
     
     <style>
       @font-face {
@@ -120,6 +124,24 @@
   </head>
   <body>
     <div id="root"></div>
+    <noscript>
+      <div style="max-width: 800px; margin: 0 auto; padding: 40px 20px; font-family: system-ui, sans-serif;">
+        <h1>Panoptes - Real-Time Cardano Webhooks</h1>
+        <p>Panoptes is a production-ready webhook notification system for the Cardano blockchain. Monitor addresses, track native assets, and receive real-time HTTP callbacks with enriched transaction data.</p>
+        <h2>Features</h2>
+        <ul>
+          <li>Real-Time Blockchain Sync - Powered by Argus.Sync and UtxoRPC</li>
+          <li>Flexible Filtering - Monitor specific addresses or policy IDs</li>
+          <li>HTTP Webhooks - Push notifications to any endpoint</li>
+          <li>Automatic Retries - Smart retry logic with exponential backoff</li>
+          <li>Rate Limiting - Per-subscription limits configurable</li>
+          <li>Rich Payload - Enhanced transaction data with Bech32 addresses</li>
+        </ul>
+        <h2>Get Started</h2>
+        <p>Visit our <a href="https://github.com/We-Are-Triji/panoptes">GitHub repository</a> to get started with Panoptes.</p>
+        <p>Read the <a href="/docs">documentation</a> for detailed setup instructions.</p>
+      </div>
+    </noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
