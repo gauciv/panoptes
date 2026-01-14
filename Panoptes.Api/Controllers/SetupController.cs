@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Panoptes.Core.Entities;
@@ -53,6 +54,7 @@ namespace Panoptes.Api.Controllers
         }
 
         [HttpPost("validate-demeter")]
+        [Authorize]
         public async Task<ActionResult<ValidationResult>> ValidateDemeter([FromBody] DemeterCredentials credentials)
         {
             if (string.IsNullOrWhiteSpace(credentials.GrpcEndpoint) || string.IsNullOrWhiteSpace(credentials.ApiKey))
@@ -138,6 +140,7 @@ namespace Panoptes.Api.Controllers
         }
 
         [HttpPost("save-credentials")]
+        [Authorize]
         public async Task<ActionResult> SaveCredentials([FromBody] DemeterCredentials credentials)
         {
             if (string.IsNullOrWhiteSpace(credentials.GrpcEndpoint) || string.IsNullOrWhiteSpace(credentials.ApiKey))
@@ -188,6 +191,7 @@ namespace Panoptes.Api.Controllers
         }
 
         [HttpPost("switch-network")]
+        [Authorize]
         public async Task<ActionResult> SwitchNetwork([FromBody] NetworkSwitchRequest request)
         {
             var targetNetwork = request.Network;
@@ -215,6 +219,7 @@ namespace Panoptes.Api.Controllers
         }
         
         [HttpDelete("clear-credentials")]
+        [Authorize]
         public async Task<ActionResult> ClearCredentials()
         {
             var configs = await _dbContext.DemeterConfigs.ToListAsync();
