@@ -38,19 +38,15 @@ const CreateSubscriptionModal: React.FC<CreateSubscriptionModalProps> = ({
   initialValues,
 }) => {
   const [step, setStep] = useState(1);
-
-  // --- Form State ---
   const [name, setName] = useState('');
   const [targetUrl, setTargetUrl] = useState('');
   const [eventType, setEventType] = useState('Transaction');
   const [minAda, setMinAda] = useState('');
   const [filterTargets, setFilterTargets] = useState<string[]>([]);
   const [headers, setHeaders] = useState<HeaderPair[]>([]);
-
-  // --- UI State ---
   const [isValidatingUrl, setIsValidatingUrl] = useState(false);
   const [showFirehoseWarning, setShowFirehoseWarning] = useState(false);
-  const [showDefaultHeaders, setShowDefaultHeaders] = useState(false); // Toggle for default headers view
+  const [showDefaultHeaders, setShowDefaultHeaders] = useState(false);
   
   useEffect(() => {
     if (isOpen) {
@@ -67,13 +63,11 @@ const CreateSubscriptionModal: React.FC<CreateSubscriptionModalProps> = ({
     }
   }, [isOpen, initialValues]);
 
-  // --- Header Helpers ---
   const addHeader = () => setHeaders([...headers, { id: crypto.randomUUID(), key: '', value: '' }]);
   const updateHeader = (id: string, field: 'key' | 'value', val: string) => 
     setHeaders(headers.map(h => h.id === id ? { ...h, [field]: val } : h));
   const removeHeader = (id: string) => setHeaders(headers.filter(h => h.id !== id));
 
-  // --- Filter Config ---
   const getFilterConfig = (type: string) => {
     switch (type) {
       case 'NFT Mint': return { label: 'Policy IDs', placeholder: 'Paste Policy ID (Hex)...', description: 'Trigger on mint/burn of these Policies.' };
@@ -83,7 +77,6 @@ const CreateSubscriptionModal: React.FC<CreateSubscriptionModalProps> = ({
   };
   const filterConfig = getFilterConfig(eventType);
 
-  // --- FIX: Use Validate Endpoint instead of Test Endpoint ---
   const handleTestConnection = async () => {
     if (!targetUrl || !targetUrl.startsWith('http')) {
       toast.error('Valid URL required for testing');
@@ -94,12 +87,10 @@ const CreateSubscriptionModal: React.FC<CreateSubscriptionModalProps> = ({
     const toastId = toast.loading('Pinging endpoint...');
 
     try {
-      // Use the raw fetch to hit the stateless validation endpoint
-      // This avoids the "Guid Parse" error on the backend
       const response = await fetch('/Subscriptions/validate-url', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(targetUrl) // Send just the string
+        body: JSON.stringify(targetUrl)
       });
 
       const result = await response.json();
@@ -224,14 +215,12 @@ const CreateSubscriptionModal: React.FC<CreateSubscriptionModalProps> = ({
                         step="0.1"
                         placeholder="0"
                         value={minAda}
-                        // FIX: Strict validation - prevents negative signs and negative values
                         onChange={(e) => {
                           const val = e.target.value;
                           if (val === '' || (parseFloat(val) >= 0 && !val.includes('-'))) {
                             setMinAda(val);
                           }
                         }}
-                        // UX: Prevent typing '-' key directly
                         onKeyDown={(e) => {
                           if (e.key === '-' || e.key === 'e') e.preventDefault();
                         }}

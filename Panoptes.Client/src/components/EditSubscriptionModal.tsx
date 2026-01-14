@@ -3,7 +3,6 @@ import { WebhookSubscription } from '../types';
 import { EventTypeSelector } from './subscription/EventTypeSelector';
 import { WalletAddressInput } from './subscription/WalletAddressInput';
 import toast from 'react-hot-toast';
-// ADDED: Info icon
 import { Plus, Trash2, Info } from 'lucide-react';
 
 interface EditSubscriptionModalProps {
@@ -15,7 +14,6 @@ interface EditSubscriptionModalProps {
 
 type HeaderPair = { id: string; key: string; value: string };
 
-// ADDED: Default Headers Constant
 const DEFAULT_HEADERS = [
   { key: 'Content-Type', value: 'application/json' },
   { key: 'User-Agent', value: 'Panoptes-Webhook/1.0' },
@@ -30,48 +28,38 @@ const EditSubscriptionModal: React.FC<EditSubscriptionModalProps> = ({
     onClose,
     onSave,
 }) => {
-    // --- State ---
     const [name, setName] = useState('');
     const [targetUrl, setTargetUrl] = useState('');
     const [eventType, setEventType] = useState('Transaction');
     const [isActive, setIsActive] = useState(true);
     const [minAda, setMinAda] = useState('');
     const [filterTargets, setFilterTargets] = useState<string[]>([]);
-    
-    // Headers State
     const [headers, setHeaders] = useState<HeaderPair[]>([]);
-    // ADDED: UI Toggle State
     const [showDefaultHeaders, setShowDefaultHeaders] = useState(false);
-
-    // --- Validation State ---
     const [isValidatingUrl, setIsValidatingUrl] = useState(false);
     const [showValidationWarning, setShowValidationWarning] = useState(false);
     const [validationWarningMessage, setValidationWarningMessage] = useState('');
 
-    // --- Initialization ---
     useEffect(() => {
         if (subscription) {
             setName(subscription.name);
             setTargetUrl(subscription.targetUrl);
             setEventType(subscription.eventType);
             setIsActive(subscription.isActive);
-            setShowDefaultHeaders(false); // Reset toggle
+            setShowDefaultHeaders(false);
             
-            // Consolidate filters
             let initialFilters = [...(subscription.walletAddresses || [])];
             if (initialFilters.length === 0) {
                 if (subscription.targetAddress) initialFilters.push(subscription.targetAddress);
             }
             setFilterTargets(initialFilters);
 
-            // Min ADA
             if (subscription.minimumLovelace) {
                 setMinAda((subscription.minimumLovelace / 1000000).toString());
             } else {
                 setMinAda('');
             }
 
-            // Parse Headers
             if (subscription.customHeaders) {
                 try {
                     const parsed = JSON.parse(subscription.customHeaders);
@@ -91,7 +79,6 @@ const EditSubscriptionModal: React.FC<EditSubscriptionModalProps> = ({
         }
     }, [subscription]);
 
-    // --- Helpers ---
     const addHeader = () => setHeaders([...headers, { id: crypto.randomUUID(), key: '', value: '' }]);
     const updateHeader = (id: string, field: 'key' | 'value', val: string) => 
         setHeaders(headers.map(h => h.id === id ? { ...h, [field]: val } : h));
@@ -108,7 +95,6 @@ const EditSubscriptionModal: React.FC<EditSubscriptionModalProps> = ({
 
     if (!isOpen || !subscription) return null;
 
-    // --- Logic ---
     const validateUrl = (url: string): boolean => {
         try {
             const parsed = new URL(url);
@@ -236,14 +222,12 @@ const EditSubscriptionModal: React.FC<EditSubscriptionModalProps> = ({
                                                 step="0.1" 
                                                 placeholder="0" 
                                                 value={minAda} 
-                                                // FIX: Strict validation prevents negative signs and values
                                                 onChange={(e) => {
                                                     const val = e.target.value;
                                                     if (val === '' || (parseFloat(val) >= 0 && !val.includes('-'))) {
                                                         setMinAda(val);
                                                     }
                                                 }}
-                                                // UX: Prevent typing '-' key directly
                                                 onKeyDown={(e) => {
                                                     if (e.key === '-' || e.key === 'e') e.preventDefault();
                                                 }}
