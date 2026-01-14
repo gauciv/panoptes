@@ -29,7 +29,7 @@ import {
 // --- COMPONENTS ---
 import StatCard from '../components/StatCard';
 import { SubscriptionGrid } from '../components/SubscriptionGrid';
-import { SubscriptionCardSkeleton } from '../components/skeletons/SubscriptionCardSkeleton';
+import { SubscriptionCardSkeleton } from '../components/SubscriptionCardSkeleton';
 import SubscriptionDetail from '../pages/SubscriptionDetail';
 import SubscriptionFilters from '../components/SubscriptionFilters';
 import LogViewer from '../components/LogViewer';

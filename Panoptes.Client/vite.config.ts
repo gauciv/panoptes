@@ -6,6 +6,18 @@ import path from 'path'
 export default defineConfig({
   plugins: [react()],
   publicDir: 'public',
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          'vendor-aws': ['aws-amplify'],
+          'vendor-charts': ['recharts'],
+          'vendor-animation': ['framer-motion'],
+        }
+      }
+    }
+  },
   server: {
     port: 5173,
     strictPort: true,
