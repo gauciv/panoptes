@@ -3,6 +3,7 @@ import { EventTypeSelector } from './subscription/EventTypeSelector';
 import { WalletAddressInput } from './subscription/WalletAddressInput';
 import { Plus, Trash2, ArrowRight, ArrowLeft, Check, Info, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
+import api from '../services/api';
 
 interface CreateSubscriptionModalProps {
   isOpen: boolean;
@@ -87,21 +88,15 @@ const CreateSubscriptionModal: React.FC<CreateSubscriptionModalProps> = ({
     const toastId = toast.loading('Pinging endpoint...');
 
     try {
-      const response = await fetch('/Subscriptions/validate-url', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(targetUrl)
-      });
+      const response = await api.post('/Subscriptions/validate-url', targetUrl);
 
-      const result = await response.json();
-
-      if (response.ok && result.valid) {
-        toast.success(`Success: ${result.message}`, { id: toastId });
+      if (response.data.valid) {
+        toast.success(`Success: ${response.data.message}`, { id: toastId });
       } else {
-        toast.error(`Unreachable: ${result.message || response.statusText}`, { id: toastId });
+        toast.error(`Unreachable: ${response.data.message}`, { id: toastId });
       }
     } catch (err: any) {
-      toast.error(`Connection Failed: ${err.message}`, { id: toastId });
+      toast.error(`Connection Failed: ${err.response?.data?.message || err.message}`, { id: toastId });
     } finally {
       setIsValidatingUrl(false);
     }

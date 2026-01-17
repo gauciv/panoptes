@@ -4,6 +4,7 @@ import { EventTypeSelector } from './subscription/EventTypeSelector';
 import { WalletAddressInput } from './subscription/WalletAddressInput';
 import toast from 'react-hot-toast';
 import { Plus, Trash2, Info } from 'lucide-react';
+import api from '../services/api';
 
 interface EditSubscriptionModalProps {
     isOpen: boolean;
@@ -113,21 +114,10 @@ const EditSubscriptionModal: React.FC<EditSubscriptionModalProps> = ({
         if (targetUrl !== subscription.targetUrl) {
             setIsValidatingUrl(true);
             try {
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 10000);
+                const response = await api.post('/Subscriptions/validate-url', targetUrl);
 
-                const response = await fetch('/Subscriptions/validate-url', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(targetUrl),
-                    signal: controller.signal
-                });
-
-                clearTimeout(timeoutId);
-                const result = await response.json();
-
-                if (!result.valid) {
-                    setValidationWarningMessage(result.message || 'The webhook URL appears to be unreachable.');
+                if (!response.data.valid) {
+                    setValidationWarningMessage(response.data.message || 'The webhook URL appears to be unreachable.');
                     setShowValidationWarning(true);
                     setIsValidatingUrl(false);
                     return;
