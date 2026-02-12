@@ -37,12 +37,20 @@ export function SideNavFooter({ isCollapsed }: SideNavFooterProps) {
         const attributes = await fetchUserAttributes();
         if (attributes.email) {
           setUserEmail(attributes.email);
-        } else {
-          setUserEmail("External Account");
+          return;
         }
       } catch (e) {
-        // Fallback if everything fails
-        setUserEmail("Unknown Operator");
+        console.debug('Could not fetch user attributes:', e);
+      }
+
+      // Plan C: Detect provider from federated username (e.g. "Google_123456")
+      const username = user.username || '';
+      if (username.toLowerCase().startsWith('google_')) {
+        setUserEmail('Google Account');
+      } else if (username.includes('_')) {
+        setUserEmail('External Account');
+      } else {
+        setUserEmail(username || 'Operator');
       }
     };
 

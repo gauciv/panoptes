@@ -37,7 +37,13 @@ export function UserDetails() {
           provider: provider
         });
       } catch (e) {
-        console.error("Failed to fetch user attributes:", e);
+        console.debug('Could not fetch user attributes, using defaults:', e);
+        // Provide a sensible default profile so the UI doesn't stay empty
+        setProfile({
+          name: 'Operator',
+          email: '',
+          provider: 'Email'
+        });
       }
     };
     loadData();
