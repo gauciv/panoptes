@@ -9,7 +9,7 @@ import {
   AuthUser
 } from 'aws-amplify/auth';
 import { configureAuth } from '../config/auth';
-
+// test
 configureAuth();
 
 interface AuthContextType {
