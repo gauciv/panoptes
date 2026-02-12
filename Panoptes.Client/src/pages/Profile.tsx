@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { User, LogOut, Mail, Type } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { fetchUserAttributes } from 'aws-amplify/auth';
 import toast from 'react-hot-toast';
 
 const Profile: React.FC = () => {
@@ -15,9 +16,27 @@ const Profile: React.FC = () => {
 
     // 1. Get a unique identifier for the current user
     const userId = user?.username || user?.signInDetails?.loginId || 'guest';
-    const email = user?.signInDetails?.loginId || 'user@example.com';
+    const [email, setEmail] = useState(user?.signInDetails?.loginId || '');
 
-    // 2. Load saved name SPECIFIC to this user ID
+    // 2. Resolve email (handles Google/federated logins where signInDetails.loginId is empty)
+    useEffect(() => {
+        const resolveEmail = async () => {
+            if (!user) return;
+            if (user.signInDetails?.loginId) {
+                setEmail(user.signInDetails.loginId);
+                return;
+            }
+            try {
+                const attributes = await fetchUserAttributes();
+                setEmail(attributes.email || 'External Account');
+            } catch {
+                setEmail('External Account');
+            }
+        };
+        resolveEmail();
+    }, [user]);
+
+    // 3. Load saved name SPECIFIC to this user ID
     useEffect(() => {
         if (userId === 'guest') return;
 
@@ -29,7 +48,7 @@ const Profile: React.FC = () => {
         setLastName(savedLast || '');
     }, [userId]);
 
-    // 3. Save locally with the USER ID in the key
+    // 4. Save locally with the USER ID in the key
     const handleSaveName = () => {
         if (userId === 'guest') return;
 
